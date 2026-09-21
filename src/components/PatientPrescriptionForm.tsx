@@ -95,7 +95,7 @@ export default function PatientPrescriptionForm({ onAnalyze, isAnalyzing }: Pati
   };
 
   return (
-    <Card sx={{ borderRadius: 4, height: '100%' }}>
+    <Card sx={{ borderRadius: 1, height: '100%' }}>
       <CardContent sx={{ p: { xs: 2.5, md: 3.5 } }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
           <Box>

@@ -81,7 +81,7 @@ export default function PrescriptionUploader({ onAutoExtract }: PrescriptionUplo
   };
 
   return (
-    <Card sx={{ borderRadius: 4, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+    <Card sx={{ borderRadius: 1, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
       <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
         <Stack direction="row" alignItems="center" spacing={1} mb={1}>
           <DocumentScanner sx={{ color: '#6C5CE7', fontSize: 28 }} />

@@ -50,7 +50,7 @@ export default function PrescriptionPreviewModal({ open, onClose, analysisData }
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 4 } }}>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 1 } }}>
       <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Stack direction="row" alignItems="center" spacing={1}>
           <LocalHospital sx={{ color: '#00C9A7' }} />

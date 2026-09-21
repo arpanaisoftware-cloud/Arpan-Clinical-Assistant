@@ -127,7 +127,7 @@ export default function LoginScreen({ staffList, onLoginSuccess }: LoginScreenPr
         sx={{
           maxWidth: 540,
           width: '100%',
-          borderRadius: 4,
+          borderRadius: 1,
           boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)',
           background: 'linear-gradient(180deg, rgba(16, 24, 44, 0.96) 0%, rgba(10, 15, 29, 0.99) 100%)',
           border: '1px solid rgba(0, 201, 167, 0.35)',

@@ -100,7 +100,7 @@ export default function DietsModule({
   return (
     <Card
       sx={{
-        borderRadius: 4,
+        borderRadius: 1,
         boxShadow: '0 12px 40px rgba(0, 0, 0, 0.25)',
         background: 'linear-gradient(180deg, rgba(16, 24, 44, 0.95) 0%, rgba(10, 15, 29, 0.98) 100%)',
         border: '1px solid rgba(0, 201, 167, 0.3)'
@@ -387,7 +387,7 @@ export default function DietsModule({
       </CardContent>
 
       {/* Printable Clinical Diet Guide Dialog */}
-      <Dialog open={printOpen} onClose={() => setPrintOpen(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 4 } }}>
+      <Dialog open={printOpen} onClose={() => setPrintOpen(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 1 } }}>
         <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Stack direction="row" alignItems="center" spacing={1}>
             <LocalHospital sx={{ color: '#00C9A7' }} />

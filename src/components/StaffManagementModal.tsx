@@ -109,7 +109,7 @@ export default function StaffManagementModal({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 4 } }}>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 1 } }}>
       <DialogTitle sx={{ m: 0, p: 2.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: 'rgba(108, 92, 231, 0.08)' }}>
         <Stack direction="row" alignItems="center" spacing={1.5}>
           <SupervisorAccount sx={{ color: '#6C5CE7', fontSize: 30 }} />

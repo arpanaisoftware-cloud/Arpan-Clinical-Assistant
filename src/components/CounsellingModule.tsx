@@ -88,7 +88,7 @@ export default function CounsellingModule({
   return (
     <Card
       sx={{
-        borderRadius: 4,
+        borderRadius: 1,
         boxShadow: '0 12px 40px rgba(0, 0, 0, 0.25)',
         background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 15, 29, 0.98) 100%)',
         border: '1px solid rgba(108, 92, 231, 0.3)'
@@ -125,7 +125,7 @@ export default function CounsellingModule({
           sx={{
             p: { xs: 2.5, md: 3 },
             mb: 3.5,
-            borderRadius: 4,
+            borderRadius: 1,
             background: 'linear-gradient(135deg, rgba(108, 92, 231, 0.08) 0%, rgba(0, 201, 167, 0.06) 100%)',
             border: '1px solid rgba(108, 92, 231, 0.35)',
             boxShadow: '0 12px 32px rgba(108, 92, 231, 0.1)'
@@ -451,7 +451,7 @@ export default function CounsellingModule({
       </CardContent>
 
       {/* Printable Patient Counselling Sheet Dialog */}
-      <Dialog open={printOpen} onClose={() => setPrintOpen(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 4 } }}>
+      <Dialog open={printOpen} onClose={() => setPrintOpen(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 1 } }}>
         <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Stack direction="row" alignItems="center" spacing={1}>
             <LocalHospital sx={{ color: '#6C5CE7' }} />

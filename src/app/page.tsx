@@ -412,7 +412,7 @@ export default function Home() {
                   </>
                 ) : (
                   /* Module Permission Restricted Card */
-                  <Paper variant="outlined" sx={{ p: 5, borderRadius: 4, textAlign: 'center', bgcolor: 'rgba(255, 77, 109, 0.04)', borderColor: 'rgba(255, 77, 109, 0.3)', my: 4 }}>
+                  <Paper variant="outlined" sx={{ p: 5, borderRadius: 1, textAlign: 'center', bgcolor: 'rgba(255, 77, 109, 0.04)', borderColor: 'rgba(255, 77, 109, 0.3)', my: 4 }}>
                     <Box sx={{ width: 64, height: 64, borderRadius: '50%', bgcolor: 'rgba(255, 77, 109, 0.15)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
                       <Lock sx={{ color: '#FF4D6D', fontSize: 36 }} />
                     </Box>
@@ -450,7 +450,7 @@ export default function Home() {
                     patientDisease={analysisResult?.patientInfo?.disease || 'Essential Hypertension, Type 2 Diabetes'}
                   />
                 ) : (
-                  <Paper variant="outlined" sx={{ p: 5, borderRadius: 4, textAlign: 'center', bgcolor: 'rgba(255, 77, 109, 0.04)', borderColor: 'rgba(255, 77, 109, 0.3)', my: 4 }}>
+                  <Paper variant="outlined" sx={{ p: 5, borderRadius: 1, textAlign: 'center', bgcolor: 'rgba(255, 77, 109, 0.04)', borderColor: 'rgba(255, 77, 109, 0.3)', my: 4 }}>
                     <Lock sx={{ color: '#FF4D6D', fontSize: 40, mb: 1 }} />
                     <Typography variant="h5" sx={{ fontWeight: 800, mb: 1, color: '#FF4D6D' }}>
                       Counselling Module Access Restricted
@@ -478,7 +478,7 @@ export default function Home() {
                     patientDisease={analysisResult?.patientInfo?.disease || 'Essential Hypertension, Type 2 Diabetes'}
                   />
                 ) : (
-                  <Paper variant="outlined" sx={{ p: 5, borderRadius: 4, textAlign: 'center', bgcolor: 'rgba(255, 77, 109, 0.04)', borderColor: 'rgba(255, 77, 109, 0.3)', my: 4 }}>
+                  <Paper variant="outlined" sx={{ p: 5, borderRadius: 1, textAlign: 'center', bgcolor: 'rgba(255, 77, 109, 0.04)', borderColor: 'rgba(255, 77, 109, 0.3)', my: 4 }}>
                     <Lock sx={{ color: '#FF4D6D', fontSize: 40, mb: 1 }} />
                     <Typography variant="h5" sx={{ fontWeight: 800, mb: 1, color: '#FF4D6D' }}>
                       Diets Module Access Restricted
@@ -499,7 +499,7 @@ export default function Home() {
             {/* STAFF & USER MANAGEMENT CENTER PAGE (ACCESSED VIA HEADER BUTTON) */}
             {activeModuleTab === 3 && (
               <Box sx={{ mt: 2 }}>
-                <Paper variant="outlined" sx={{ p: 2, mb: 3, borderRadius: 3, bgcolor: 'rgba(108, 92, 231, 0.08)', borderColor: '#6C5CE7', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Paper variant="outlined" sx={{ p: 2, mb: 3, borderRadius: 1, bgcolor: 'rgba(108, 92, 231, 0.08)', borderColor: '#6C5CE7', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#6C5CE7' }}>
                     Admin Staff & User Management Workspace
                   </Typography>
@@ -521,7 +521,7 @@ export default function Home() {
                     onToggleStatus={handleToggleStaffStatus}
                   />
                 ) : (
-                  <Paper variant="outlined" sx={{ p: 5, borderRadius: 4, textAlign: 'center', bgcolor: 'rgba(255, 77, 109, 0.04)', borderColor: 'rgba(255, 77, 109, 0.3)', my: 4 }}>
+                  <Paper variant="outlined" sx={{ p: 5, borderRadius: 1, textAlign: 'center', bgcolor: 'rgba(255, 77, 109, 0.04)', borderColor: 'rgba(255, 77, 109, 0.3)', my: 4 }}>
                     <Lock sx={{ color: '#FF4D6D', fontSize: 40, mb: 1 }} />
                     <Typography variant="h5" sx={{ fontWeight: 800, mb: 1, color: '#FF4D6D' }}>
                       Staff & User Management Restricted to Doctor Access

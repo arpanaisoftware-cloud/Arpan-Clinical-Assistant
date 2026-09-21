@@ -70,12 +70,12 @@ export default function HistoryTable({ onLoadRecord }: HistoryTableProps) {
 
   const filteredHistory = INITIAL_HISTORY.filter(
     h => h.patientName.toLowerCase().includes(search.toLowerCase()) ||
-         h.disease.toLowerCase().includes(search.toLowerCase()) ||
-         h.id.toLowerCase().includes(search.toLowerCase())
+      h.disease.toLowerCase().includes(search.toLowerCase()) ||
+      h.id.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
-    <Card sx={{ borderRadius: 4, mt: 4 }}>
+    <Card sx={{ borderRadius: 1, mt: 4 }}>
       <CardContent sx={{ p: { xs: 2.5, md: 3.5 } }}>
         <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={2} mb={3}>
           <Stack direction="row" alignItems="center" spacing={1}>
