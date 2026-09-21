@@ -104,3 +104,86 @@ export interface HistoryRecord {
   color: string;
   date: string;
 }
+
+export type UserRole = 'Doctor' | 'Staff';
+
+export type ModulePermission =
+  | 'Counselling Only'
+  | 'Diets Only'
+  | 'Counselling + Diets'
+  | 'Full Access';
+
+export interface StaffUser {
+  id: string;
+  name: string;
+  staffId: string;
+  department: string;
+  role: UserRole;
+  modulePermissions: ModulePermission;
+  active: boolean;
+  createdAt: string;
+  passcode?: string;
+}
+
+export interface AuthUser {
+  id: string;
+  name: string;
+  staffId: string;
+  role: UserRole;
+  modulePermissions: ModulePermission;
+  department: string;
+}
+
+export type RiskCategoryType =
+  | 'cardiovascular'
+  | 'retinopathy'
+  | 'nephropathy'
+  | 'neuropathy'
+  | 'footRisk';
+
+export interface RiskAssessmentItem {
+  id: RiskCategoryType;
+  title: string;
+  subtitle: string;
+  riskLevel: 'OPTIMAL / LOW' | 'MODERATE CAUTION' | 'HIGH RISK';
+  score: number;
+  color: string;
+  keyIndicators: string[];
+  clinicalGuidance: string[];
+  patientAdvice: string[];
+  screeningSchedule: string;
+}
+
+export interface MealScheduleItem {
+  time: string;
+  mealName: string;
+  portion: string;
+  focus: string;
+}
+
+export interface DietPlanItem {
+  id: string;
+  name: string;
+  diseaseCategory: string;
+  calories: number;
+  bmiCategory: string;
+  macroBreakdown: {
+    carbs: string;
+    protein: string;
+    fats: string;
+    fiber: string;
+  };
+  electrolyteLimits: {
+    sodium: string;
+    potassium: string;
+    phosphorus: string;
+    calcium: string;
+  };
+  mealFrequency: {
+    frequency: string;
+    schedule: MealScheduleItem[];
+  };
+  recommendedFoods: string[];
+  foodsToAvoid: string[];
+}
+

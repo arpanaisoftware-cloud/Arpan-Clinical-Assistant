@@ -37,6 +37,10 @@ interface PrescriptionPreviewModalProps {
 }
 
 export default function PrescriptionPreviewModal({ open, onClose, analysisData }: PrescriptionPreviewModalProps) {
+  const rxId = React.useMemo(() => {
+    return 884920;
+  }, []);
+
   if (!analysisData) return null;
 
   const { patientInfo, medications, safetyScore, timestamp } = analysisData;
@@ -71,7 +75,7 @@ export default function PrescriptionPreviewModal({ open, onClose, analysisData }
                 DOCPULSE CLINICAL MEDICAL CENTER
               </Typography>
               <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#475569' }}>
-                Dr. Sarah Wright, M.D. • Chief Cardiologist & Internal Medicine
+                Dr. Yashwant Dubey • Chief Cardiologist & Internal Medicine
               </Typography>
               <Typography variant="caption" sx={{ color: '#64748B', display: 'block' }}>
                 Reg. No: MED-8849204 • Tel: +1 (800) 555-0199 • Dept of General Clinical Care
@@ -79,8 +83,8 @@ export default function PrescriptionPreviewModal({ open, onClose, analysisData }
             </Grid>
             <Grid item xs={4} textAlign="right">
               <QrCode2 sx={{ fontSize: 60, color: '#1E293B' }} />
-              <Typography variant="caption" sx={{ display: 'block', color: '#64748B', fontSize: '0.65rem' }}>
-                Verified Rx ID: #{Math.floor(100000 + Math.random() * 900000)}
+              <Typography variant="caption" sx={{ display: 'block', color: '#64748B', fontSize: '0.65rem' }} suppressHydrationWarning>
+                Verified Rx ID: #{rxId}
               </Typography>
             </Grid>
           </Grid>
@@ -155,7 +159,7 @@ export default function PrescriptionPreviewModal({ open, onClose, analysisData }
                   <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#00967D', lineHeight: 1.1 }}>
                     DocPulse AI Safety Verified ({safetyScore}/100)
                   </Typography>
-                  <Typography variant="caption" sx={{ color: '#64748B', display: 'block' }}>
+                  <Typography variant="caption" sx={{ color: '#64748B', display: 'block' }} suppressHydrationWarning>
                     Multi-drug conflict & allergy scan executed on {timestamp}
                   </Typography>
                 </Box>
@@ -165,7 +169,7 @@ export default function PrescriptionPreviewModal({ open, onClose, analysisData }
             <Grid item xs={5} textAlign="right">
               <Box sx={{ borderBottom: '1px solid #94A3B8', width: 160, ml: 'auto', mb: 0.5, height: 30 }}>
                 <Typography variant="caption" sx={{ fontFamily: 'cursive', fontSize: '1.1rem', color: '#1E293B' }}>
-                  Dr. S. Wright
+                  Dr. Y. Dubey
                 </Typography>
               </Box>
               <Typography variant="caption" sx={{ fontWeight: 700, color: '#475569', display: 'block' }}>

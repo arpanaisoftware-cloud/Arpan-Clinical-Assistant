@@ -36,7 +36,7 @@ export default function DoctorCopilotChat({ open, onClose, currentPatientData }:
   const [messages, setMessages] = useState<Message[]>([
     {
       sender: 'ai',
-      text: `Hello Dr. Wright! I am your AI Clinical Assistant. ${
+      text: `Hello Dr. Dubey! I am your AI Clinical Assistant. ${
         currentPatientData?.patientName
           ? `I've loaded ${currentPatientData.patientName}'s case details (${currentPatientData.disease}).`
           : 'How can I assist you with drug interactions, dosage guidelines, or generic alternatives today?'

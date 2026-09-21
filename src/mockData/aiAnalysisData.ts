@@ -208,7 +208,7 @@ export const DRUG_DATABASE: DrugDatabaseEntry[] = [
   }
 ];
 
-export function analyzePrescription(patientData: PatientInput, medications: MedicationInput[]): AnalysisResult {
+export function analyzePrescription(patientData: PatientInput, medications: MedicationInput[], customTimestamp?: string): AnalysisResult {
   const patientAllergies = (patientData.allergies || "")
     .toLowerCase()
     .split(",")
@@ -395,7 +395,7 @@ export function analyzePrescription(patientData: PatientInput, medications: Medi
     dietLifestyleDonts: Array.from(new Set(dietLifestyleDonts)),
     aiClinicalOverview,
     estimatedMonthlySavings: "$45.00 - $120.00 (via Generic Equivalents)",
-    timestamp: new Date().toLocaleString()
+    timestamp: customTimestamp || new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
   };
 }
 

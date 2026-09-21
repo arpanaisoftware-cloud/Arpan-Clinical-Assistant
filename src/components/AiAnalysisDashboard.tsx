@@ -102,7 +102,7 @@ export default function AiAnalysisDashboard({
                   px: 1
                 }}
               />
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" color="text.secondary" suppressHydrationWarning>
                 Analysis Completed • {timestamp}
               </Typography>
             </Stack>
