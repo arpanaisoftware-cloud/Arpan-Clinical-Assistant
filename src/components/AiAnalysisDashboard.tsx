@@ -15,7 +15,8 @@ import {
   Paper,
   Divider,
   Alert,
-  AlertTitle
+  AlertTitle,
+  useTheme
 } from '@mui/material';
 import {
   Shield,
@@ -45,6 +46,9 @@ export default function AiAnalysisDashboard({
   onOpenCopilot
 }: AiAnalysisDashboardProps) {
   const [activeTab, setActiveTab] = useState<number>(0);
+
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
 
   if (!analysisResult) return null;
 
@@ -81,9 +85,11 @@ export default function AiAnalysisDashboard({
     <Card
       sx={{
         borderRadius: 1,
-        boxShadow: '0 12px 40px rgba(0, 0, 0, 0.25)',
-        background: 'linear-gradient(180deg, rgba(16, 24, 44, 0.95) 0%, rgba(10, 15, 29, 0.98) 100%)',
-        border: '1px solid rgba(0, 201, 167, 0.3)'
+        boxShadow: isDark ? '0 12px 40px rgba(0, 0, 0, 0.25)' : '0 4px 20px rgba(0, 0, 0, 0.08)',
+        background: isDark
+          ? 'linear-gradient(180deg, rgba(16, 24, 44, 0.95) 0%, rgba(10, 15, 29, 0.98) 100%)'
+          : 'linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)',
+        border: isDark ? '1px solid rgba(0, 201, 167, 0.3)' : '1px solid #E2E8F0'
       }}
     >
       <CardContent sx={{ p: { xs: 2.5, md: 4 } }}>
@@ -121,8 +127,8 @@ export default function AiAnalysisDashboard({
               variant="outlined"
               sx={{
                 p: 2.5,
-                borderRadius: 3,
-                background: 'rgba(255, 255, 255, 0.03)',
+                borderRadius: 1,
+                background: isDark ? 'rgba(255, 255, 255, 0.03)' : '#F8FAFC',
                 borderColor: statusColor,
                 display: 'flex',
                 alignItems: 'center',
@@ -151,7 +157,7 @@ export default function AiAnalysisDashboard({
                     triggerConfetti();
                     onOpenPrintModal();
                   }}
-                  sx={{ borderRadius: 2 }}
+                  sx={{ borderRadius: 1 }}
                 >
                   Print Digital Rx
                 </Button>
@@ -196,24 +202,14 @@ export default function AiAnalysisDashboard({
         {/* TAB 0: Clinical Overview */}
         {activeTab === 0 && (
           <Box>
-            <Alert severity={flaggedAllergies.length > 0 ? "error" : flaggedInteractions.length > 0 ? "warning" : "success"} sx={{ mb: 3, borderRadius: 3 }}>
+            <Alert severity={flaggedAllergies.length > 0 ? "error" : flaggedInteractions.length > 0 ? "warning" : "success"} sx={{ mb: 3, borderRadius: 1 }}>
               <AlertTitle sx={{ fontWeight: 800 }}>Clinical Assessment Overview</AlertTitle>
               {aiClinicalOverview}
             </Alert>
 
             <Grid container spacing={2.5}>
-              <Grid item xs={12} sm={6} md={3}>
-                <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, textAlign: 'center' }}>
-                  <MonetizationOn sx={{ color: '#00C9A7', fontSize: 36, mb: 0.5 }} />
-                  <Typography variant="subtitle2" color="text.secondary">Est. Monthly Savings</Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 800, color: '#00C9A7' }}>
-                    {estimatedMonthlySavings}
-                  </Typography>
-                </Paper>
-              </Grid>
-
-              <Grid item xs={12} sm={6} md={3}>
-                <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, textAlign: 'center' }}>
+              <Grid item xs={12} sm={4} md={4}>
+                <Paper variant="outlined" sx={{ p: 2, borderRadius: 1, textAlign: 'center' }}>
                   <LocalPharmacy sx={{ color: '#6C5CE7', fontSize: 36, mb: 0.5 }} />
                   <Typography variant="subtitle2" color="text.secondary">Prescribed Agents</Typography>
                   <Typography variant="h6" sx={{ fontWeight: 800 }}>
@@ -222,8 +218,8 @@ export default function AiAnalysisDashboard({
                 </Paper>
               </Grid>
 
-              <Grid item xs={12} sm={6} md={3}>
-                <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, textAlign: 'center' }}>
+              <Grid item xs={12} sm={4} md={4}>
+                <Paper variant="outlined" sx={{ p: 2, borderRadius: 1, textAlign: 'center' }}>
                   <Warning sx={{ color: flaggedInteractions.length > 0 ? '#FFB703' : '#00C9A7', fontSize: 36, mb: 0.5 }} />
                   <Typography variant="subtitle2" color="text.secondary">Drug Conflicts</Typography>
                   <Typography variant="h6" sx={{ fontWeight: 800, color: flaggedInteractions.length > 0 ? '#FFB703' : '#00C9A7' }}>
@@ -232,8 +228,8 @@ export default function AiAnalysisDashboard({
                 </Paper>
               </Grid>
 
-              <Grid item xs={12} sm={6} md={3}>
-                <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, textAlign: 'center' }}>
+              <Grid item xs={12} sm={4} md={4}>
+                <Paper variant="outlined" sx={{ p: 2, borderRadius: 1, textAlign: 'center' }}>
                   <Shield sx={{ color: flaggedAllergies.length > 0 ? '#FF4D6D' : '#00C9A7', fontSize: 36, mb: 0.5 }} />
                   <Typography variant="subtitle2" color="text.secondary">Allergy Conflicts</Typography>
                   <Typography variant="h6" sx={{ fontWeight: 800, color: flaggedAllergies.length > 0 ? '#FF4D6D' : '#00C9A7' }}>
@@ -257,7 +253,7 @@ export default function AiAnalysisDashboard({
 
             <Stack spacing={3}>
               {alternativesList.map((item, idx) => (
-                <Paper key={idx} variant="outlined" sx={{ p: 2.5, borderRadius: 3, bgcolor: 'rgba(255, 255, 255, 0.02)' }}>
+                <Paper key={idx} variant="outlined" sx={{ p: 2.5, borderRadius: 1, bgcolor: 'rgba(255, 255, 255, 0.02)' }}>
                   <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
                     <Box>
                       <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#00C9A7' }}>
@@ -270,7 +266,7 @@ export default function AiAnalysisDashboard({
                   <Grid container spacing={2}>
                     {item.options.map((alt, altIdx) => (
                       <Grid item xs={12} md={6} key={altIdx}>
-                        <Card variant="outlined" sx={{ p: 2, borderRadius: 3, borderLeft: '4px solid #6C5CE7' }}>
+                        <Card variant="outlined" sx={{ p: 2, borderRadius: 1, borderLeft: '4px solid #6C5CE7' }}>
                           <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
                             <Box>
                               <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
@@ -321,21 +317,21 @@ export default function AiAnalysisDashboard({
             </Typography>
 
             {flaggedAllergies.length === 0 && flaggedInteractions.length === 0 ? (
-              <Alert severity="success" icon={<CheckCircle fontSize="inherit" />} sx={{ borderRadius: 3 }}>
+              <Alert severity="success" icon={<CheckCircle fontSize="inherit" />} sx={{ borderRadius: 1 }}>
                 <AlertTitle sx={{ fontWeight: 800 }}>Clean Safety Record</AlertTitle>
                 No harmful drug interactions or patient allergy conflicts detected in this prescription.
               </Alert>
             ) : (
               <Stack spacing={2}>
                 {flaggedAllergies.map((alg, i) => (
-                  <Alert severity="error" key={i} sx={{ borderRadius: 3 }}>
+                  <Alert severity="error" key={i} sx={{ borderRadius: 1 }}>
                     <AlertTitle sx={{ fontWeight: 800 }}>CRITICAL ALLERGY CONFLICT: {alg.medication}</AlertTitle>
                     {alg.message}
                   </Alert>
                 ))}
 
                 {flaggedInteractions.map((int, i) => (
-                  <Paper key={i} variant="outlined" sx={{ p: 2.5, borderRadius: 3, borderLeft: int.severity === 'High' ? '6px solid #FF4D6D' : '6px solid #FFB703' }}>
+                  <Paper key={i} variant="outlined" sx={{ p: 2.5, borderRadius: 1, borderLeft: int.severity === 'High' ? '6px solid #FF4D6D' : '6px solid #FFB703' }}>
                     <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
                       <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
                         Conflict: {int.drugA} ⚡ {int.drugB}
@@ -350,7 +346,7 @@ export default function AiAnalysisDashboard({
                     <Typography variant="body2" color="text.secondary" mb={1.5}>
                       <strong>Clinical Effect:</strong> {int.effect}
                     </Typography>
-                    <Alert severity="info" sx={{ borderRadius: 2 }}>
+                    <Alert severity="info" sx={{ borderRadius: 1 }}>
                       <strong>Recommendation:</strong> {int.recommendation}
                     </Alert>
                   </Paper>
@@ -373,7 +369,7 @@ export default function AiAnalysisDashboard({
             <Grid container spacing={2}>
               {/* Morning */}
               <Grid item xs={12} sm={6} md={3}>
-                <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, borderTop: '4px solid #FFB703', minHeight: 180 }}>
+                <Paper variant="outlined" sx={{ p: 2, borderRadius: 1, borderTop: '4px solid #FFB703', minHeight: 180 }}>
                   <Typography variant="subtitle1" sx={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1, color: '#FFB703', mb: 1.5 }}>
                     ☀️ Morning (Breakfast)
                   </Typography>
@@ -392,7 +388,7 @@ export default function AiAnalysisDashboard({
 
               {/* Afternoon */}
               <Grid item xs={12} sm={6} md={3}>
-                <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, borderTop: '4px solid #00B4D8', minHeight: 180 }}>
+                <Paper variant="outlined" sx={{ p: 2, borderRadius: 1, borderTop: '4px solid #00B4D8', minHeight: 180 }}>
                   <Typography variant="subtitle1" sx={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1, color: '#00B4D8', mb: 1.5 }}>
                     🌤️ Afternoon (Lunch)
                   </Typography>
@@ -411,7 +407,7 @@ export default function AiAnalysisDashboard({
 
               {/* Evening */}
               <Grid item xs={12} sm={6} md={3}>
-                <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, borderTop: '4px solid #6C5CE7', minHeight: 180 }}>
+                <Paper variant="outlined" sx={{ p: 2, borderRadius: 1, borderTop: '4px solid #6C5CE7', minHeight: 180 }}>
                   <Typography variant="subtitle1" sx={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1, color: '#6C5CE7', mb: 1.5 }}>
                     🌙 Evening (Dinner)
                   </Typography>
@@ -430,7 +426,7 @@ export default function AiAnalysisDashboard({
 
               {/* Bedtime */}
               <Grid item xs={12} sm={6} md={3}>
-                <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, borderTop: '4px solid #00C9A7', minHeight: 180 }}>
+                <Paper variant="outlined" sx={{ p: 2, borderRadius: 1, borderTop: '4px solid #00C9A7', minHeight: 180 }}>
                   <Typography variant="subtitle1" sx={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1, color: '#00C9A7', mb: 1.5 }}>
                     💤 Bedtime (Night)
                   </Typography>
@@ -462,7 +458,7 @@ export default function AiAnalysisDashboard({
 
             <Grid container spacing={3}>
               <Grid item xs={12} md={6}>
-                <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 3, borderLeft: '5px solid #00C9A7' }}>
+                <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 1, borderLeft: '5px solid #00C9A7' }}>
                   <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#00C9A7', mb: 2 }}>
                     ✅ Recommended Dietary Habits (DOs)
                   </Typography>
@@ -478,7 +474,7 @@ export default function AiAnalysisDashboard({
               </Grid>
 
               <Grid item xs={12} md={6}>
-                <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 3, borderLeft: '5px solid #FF4D6D' }}>
+                <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 1, borderLeft: '5px solid #FF4D6D' }}>
                   <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#FF4D6D', mb: 2 }}>
                     🚫 Foods & Activities to Avoid (DON'Ts)
                   </Typography>

@@ -1,6 +1,6 @@
 import { createTheme, PaletteMode } from '@mui/material';
 
-export const getCustomTheme = (mode: PaletteMode = 'dark') => createTheme({
+export const getCustomTheme = (mode: PaletteMode = 'light') => createTheme({
   palette: {
     mode,
     primary: {

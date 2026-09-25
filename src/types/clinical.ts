@@ -123,6 +123,7 @@ export interface StaffUser {
   active: boolean;
   createdAt: string;
   passcode?: string;
+  email?: string;
 }
 
 export interface AuthUser {

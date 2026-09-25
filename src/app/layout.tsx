@@ -3,8 +3,8 @@ import './globals.css';
 import ThemeRegistry from '../theme/ThemeRegistry';
 
 export const metadata = {
-  title: 'DocPulse AI - Prescription Analyzer & Doctor Clinical Copilot',
-  description: 'AI-Powered Prescription Analysis, Alternative Drug Recommendations, Interaction Warning System & Digital Rx Builder for Physicians.',
+  title: 'Arpan Clinical Assistant - Clinical Care & Patient Management OS',
+  description: 'AI-Powered Clinical Care OS: Prescription Analysis, Patient Counselling, Clinical Diets & Nutrition Management for Physicians and Staff.',
 };
 
 interface RootLayoutProps {

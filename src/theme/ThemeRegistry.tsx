@@ -5,6 +5,7 @@ import { ThemeProvider, CssBaseline, PaletteMode } from '@mui/material';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { getCustomTheme } from './theme';
+import { AuthProvider } from '../context/AuthContext';
 
 interface ColorModeContextType {
   mode: PaletteMode;
@@ -12,7 +13,7 @@ interface ColorModeContextType {
 }
 
 export const ColorModeContext = createContext<ColorModeContextType>({
-  mode: 'dark',
+  mode: 'light',
   toggleColorMode: () => {}
 });
 
@@ -21,7 +22,7 @@ interface ThemeRegistryProps {
 }
 
 export default function ThemeRegistry({ children }: ThemeRegistryProps) {
-  const [mode, setMode] = useState<PaletteMode>('dark');
+  const [mode, setMode] = useState<PaletteMode>('light');
 
   const toggleColorMode = () => {
     setMode((prevMode) => (prevMode === 'light' ? 'dark' : 'light'));
@@ -33,7 +34,9 @@ export default function ThemeRegistry({ children }: ThemeRegistryProps) {
     <ColorModeContext.Provider value={{ mode, toggleColorMode }}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
         <ToastContainer
           position="bottom-right"
           autoClose={3500}

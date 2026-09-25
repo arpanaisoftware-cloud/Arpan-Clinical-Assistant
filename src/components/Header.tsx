@@ -117,7 +117,7 @@ export default function Header({
                     startIcon={<SupervisorAccount />}
                     onClick={onOpenManageStaff}
                     size="small"
-                    sx={{ borderRadius: 2, fontWeight: 700, display: { xs: 'none', sm: 'inline-flex' } }}
+                    sx={{ borderRadius: 1, fontWeight: 700, display: { xs: 'none', sm: 'inline-flex' } }}
                   >
                     Manage Staff
                   </Button>
@@ -182,7 +182,7 @@ export default function Header({
                   alignItems: 'center',
                   bgcolor: userRole === 'Doctor' ? 'rgba(0, 201, 167, 0.12)' : 'rgba(108, 92, 231, 0.12)',
                   border: userRole === 'Doctor' ? '1px solid rgba(0, 201, 167, 0.4)' : '1px solid rgba(108, 92, 231, 0.4)',
-                  borderRadius: 3,
+                  borderRadius: 1,
                   px: 1,
                   py: 0.5
                 }}
@@ -210,7 +210,7 @@ export default function Header({
                     color="error"
                     startIcon={<Logout fontSize="small" />}
                     onClick={onLogout}
-                    sx={{ borderRadius: 2, px: 1.2, py: 0.3, fontSize: '0.75rem', fontWeight: 800, ml: 0.5 }}
+                    sx={{ borderRadius: 1, px: 1.2, py: 0.3, fontSize: '0.75rem', fontWeight: 800, ml: 0.5 }}
                   >
                     Logout
                   </Button>

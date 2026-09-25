@@ -50,47 +50,47 @@ export default function PrescriptionPreviewModal({ open, onClose, analysisData }
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 1 } }}>
-      <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 1, bgcolor: '#FFFFFF !important', color: '#0F172A !important', backgroundImage: 'none !important', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.3)' } }}>
+      <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: '#FFFFFF !important', color: '#0F172A !important', borderBottom: '1px solid #E2E8F0 !important' }}>
         <Stack direction="row" alignItems="center" spacing={1}>
           <LocalHospital sx={{ color: '#00C9A7' }} />
-          <Typography variant="h6" sx={{ fontWeight: 800 }}>
+          <Typography variant="h6" sx={{ fontWeight: 800, color: '#0F172A !important' }}>
             Official Digital Prescription & AI Clearance Certificate
           </Typography>
         </Stack>
-        <IconButton onClick={onClose} size="small">
+        <IconButton onClick={onClose} size="small" sx={{ color: '#475569 !important', '&:hover': { bgcolor: '#F1F5F9 !important' } }}>
           <Close />
         </IconButton>
       </DialogTitle>
 
-      <Divider />
+      <Divider sx={{ borderColor: '#E2E8F0 !important' }} />
 
-      <DialogContent id="printable-prescription" sx={{ p: 4, bgcolor: '#FFFFFF', color: '#1E293B' }}>
+      <DialogContent id="printable-prescription" sx={{ p: 4, bgcolor: '#FFFFFF !important', color: '#1E293B !important' }}>
         {/* Printable Prescription Layout */}
-        <Box sx={{ border: '2px solid #00C9A7', borderRadius: 3, p: 3, position: 'relative' }}>
+        <Box sx={{ border: '2px solid #00C9A7', borderRadius: 1, p: 3, position: 'relative' }}>
           {/* Header */}
           <Grid container spacing={2} alignItems="center" sx={{ borderBottom: '2px solid #E2E8F0', pb: 2, mb: 3 }}>
             <Grid item xs={8}>
               <Typography variant="h5" sx={{ fontWeight: 900, color: '#00967D', letterSpacing: '-0.02em' }}>
-                DOCPULSE CLINICAL MEDICAL CENTER
+                ARPAN CLINICAL MEDICAL CENTER
               </Typography>
               <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#475569' }}>
                 Dr. Yashwant Dubey • Chief Cardiologist & Internal Medicine
               </Typography>
-              <Typography variant="caption" sx={{ color: '#64748B', display: 'block' }}>
+              {/* <Typography variant="caption" sx={{ color: '#64748B', display: 'block' }}>
                 Reg. No: MED-8849204 • Tel: +1 (800) 555-0199 • Dept of General Clinical Care
-              </Typography>
+              </Typography> */}
             </Grid>
-            <Grid item xs={4} textAlign="right">
+            {/* <Grid item xs={4} textAlign="right">
               <QrCode2 sx={{ fontSize: 60, color: '#1E293B' }} />
               <Typography variant="caption" sx={{ display: 'block', color: '#64748B', fontSize: '0.65rem' }} suppressHydrationWarning>
                 Verified Rx ID: #{rxId}
               </Typography>
-            </Grid>
+            </Grid> */}
           </Grid>
 
           {/* Patient Info Bar */}
-          <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: '#F8FAFC', borderColor: '#E2E8F0', borderRadius: 2 }}>
+          <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: '#F8FAFC', borderColor: '#E2E8F0', borderRadius: 1 }}>
             <Grid container spacing={2}>
               <Grid item xs={6} sm={3}>
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>Patient Name</Typography>
@@ -125,7 +125,7 @@ export default function PrescriptionPreviewModal({ open, onClose, analysisData }
           </Typography>
 
           {/* Prescribed Table */}
-          <TableContainer component={Paper} variant="outlined" sx={{ mb: 3, borderColor: '#E2E8F0', borderRadius: 2 }}>
+          <TableContainer component={Paper} variant="outlined" sx={{ mb: 3, borderColor: '#E2E8F0', borderRadius: 1 }}>
             <Table size="small">
               <TableHead sx={{ bgcolor: '#F1F5F9' }}>
                 <TableRow>
@@ -157,7 +157,7 @@ export default function PrescriptionPreviewModal({ open, onClose, analysisData }
                 <Verified sx={{ color: '#00C9A7', fontSize: 28 }} />
                 <Box>
                   <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#00967D', lineHeight: 1.1 }}>
-                    DocPulse AI Safety Verified ({safetyScore}/100)
+                    Arpan Clinical AI Safety Verified ({safetyScore}/100)
                   </Typography>
                   <Typography variant="caption" sx={{ color: '#64748B', display: 'block' }} suppressHydrationWarning>
                     Multi-drug conflict & allergy scan executed on {timestamp}
@@ -167,11 +167,7 @@ export default function PrescriptionPreviewModal({ open, onClose, analysisData }
             </Grid>
 
             <Grid item xs={5} textAlign="right">
-              <Box sx={{ borderBottom: '1px solid #94A3B8', width: 160, ml: 'auto', mb: 0.5, height: 30 }}>
-                <Typography variant="caption" sx={{ fontFamily: 'cursive', fontSize: '1.1rem', color: '#1E293B' }}>
-                  Dr. Y. Dubey
-                </Typography>
-              </Box>
+              <Box sx={{ borderBottom: '1px solid #94A3B8', width: 160, ml: 'auto', mb: 0.5, height: 30 }} />
               <Typography variant="caption" sx={{ fontWeight: 700, color: '#475569', display: 'block' }}>
                 Physician Signature & Seal
               </Typography>
@@ -180,11 +176,11 @@ export default function PrescriptionPreviewModal({ open, onClose, analysisData }
         </Box>
       </DialogContent>
 
-      <DialogActions sx={{ p: 2.5 }}>
-        <Button onClick={onClose} variant="outlined" color="inherit">
+      <DialogActions sx={{ p: 2.5, bgcolor: '#FFFFFF !important', borderTop: '1px solid #E2E8F0 !important' }}>
+        <Button onClick={onClose} variant="outlined" color="inherit" sx={{ color: '#475569 !important', borderColor: '#CBD5E1 !important', '&:hover': { bgcolor: '#F8FAFC !important', borderColor: '#94A3B8 !important' } }}>
           Close
         </Button>
-        <Button onClick={handlePrint} variant="contained" color="primary" startIcon={<Print />}>
+        <Button onClick={handlePrint} variant="contained" color="primary" startIcon={<Print />} sx={{ bgcolor: '#00C9A7 !important', color: '#FFFFFF !important', fontWeight: 800, '&:hover': { bgcolor: '#00B395 !important' } }}>
           Print / Save PDF
         </Button>
       </DialogActions>

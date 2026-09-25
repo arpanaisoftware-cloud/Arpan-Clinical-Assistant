@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import * as Yup from 'yup';
 import {
   Dialog,
   DialogTitle,
@@ -24,7 +25,8 @@ import {
   IconButton,
   Divider,
   Switch,
-  FormControlLabel
+  FormControlLabel,
+  useTheme
 } from '@mui/material';
 import {
   Close,
@@ -40,12 +42,27 @@ import {
 import { StaffUser, UserRole, ModulePermission } from '../types/clinical';
 import { toast } from 'react-toastify';
 
+// ─── Yup Validation Schema ────────────────────────────────────────────────────
+const staffSchema = Yup.object({
+  name: Yup.string().trim().required('Full name is required'),
+  department: Yup.string().required('Clinical department is required'),
+  role: Yup.string().required('System role is required'),
+  permission: Yup.string().when('role', {
+    is: (val: string) => val !== 'Doctor',
+    then: (schema) => schema.required('Module permissions are required'),
+    otherwise: (schema) => schema.optional(),
+  }),
+});
+
+type FormErrors = { name?: string; department?: string; role?: string; permission?: string };
+
 interface StaffManagementModalProps {
   open: boolean;
   onClose: () => void;
   staffList: StaffUser[];
-  onAddStaff: (newStaff: StaffUser) => void;
-  onToggleStatus: (staffId: string) => void;
+  onAddStaff: (newStaff: Omit<StaffUser, 'id' | 'createdAt'>) => void;
+  onToggleStatus: (id: string) => void;
+  onUpdatePermissions: (id: string, modulePermissions: ModulePermission) => void;
 }
 
 export default function StaffManagementModal({
@@ -53,36 +70,60 @@ export default function StaffManagementModal({
   onClose,
   staffList,
   onAddStaff,
-  onToggleStatus
+  onToggleStatus,
+  onUpdatePermissions
 }: StaffManagementModalProps) {
+  const theme = useTheme();
+  const isDarkMode = theme.palette.mode === 'dark';
+
   const [name, setName] = useState('');
   const [staffIdInput, setStaffIdInput] = useState('');
   const [customPasscode, setCustomPasscode] = useState('');
-  const [department, setDepartment] = useState('Diabetic & Chronic Care');
-  const [role, setRole] = useState<UserRole>('Staff');
-  const [permission, setPermission] = useState<ModulePermission>('Counselling + Diets');
+  const [department, setDepartment] = useState('');
+  const [role, setRole] = useState<UserRole | ''>('');
+  const [permission, setPermission] = useState<ModulePermission | ''>('');
+  const [errors, setErrors] = useState<FormErrors>({});
 
   // Recently created user credential slip state
   const [issuedUser, setIssuedUser] = useState<StaffUser | null>(null);
 
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) {
-      toast.error('Please enter staff member full name');
-      return;
+    setErrors({});
+
+    const formValues = { name, department, role, permission };
+
+    try {
+      await staffSchema.validate(formValues, { abortEarly: false });
+    } catch (err) {
+      if (err instanceof Yup.ValidationError) {
+        const fieldErrors: FormErrors = {};
+        err.inner.forEach((ve) => {
+          if (ve.path) fieldErrors[ve.path as keyof FormErrors] = ve.message;
+        });
+        setErrors(fieldErrors);
+        toast.error('Please fix the highlighted fields before submitting.', {
+          toastId: 'staff-modal-validation-error',
+        });
+        return;
+      }
     }
+
+    const assignedRole: UserRole = role as UserRole;
+    const assignedPermissions: ModulePermission =
+      assignedRole === 'Doctor' ? 'Full Access' : (permission as ModulePermission);
+    const assignedDept = department.trim();
 
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const generatedId = staffIdInput.trim() || `STAFF-${randomSuffix}`;
     const generatedPass = customPasscode.trim() || `staff${randomSuffix}`;
-    const assignedPermissions = role === 'Doctor' ? 'Full Access' : permission;
 
     const newMember: StaffUser = {
       id: `ST-${Date.now()}`,
       name: name.trim(),
       staffId: generatedId,
-      department: department.trim() || 'General Clinical Care',
-      role,
+      department: assignedDept,
+      role: assignedRole,
       modulePermissions: assignedPermissions,
       active: true,
       createdAt: new Date().toISOString().split('T')[0],
@@ -91,33 +132,37 @@ export default function StaffManagementModal({
 
     onAddStaff(newMember);
     setIssuedUser(newMember);
-    toast.success(`Staff Account Issued! Login ID: ${generatedId} | Perms: ${assignedPermissions}`);
+    toast.success(
+      `Staff Account Issued! Login ID: ${generatedId} | Perms: ${assignedPermissions}`,
+      { toastId: `staff-modal-created-${newMember.id}` }
+    );
 
     // Reset form
     setName('');
     setStaffIdInput('');
     setCustomPasscode('');
-    setDepartment('Diabetic & Chronic Care');
-    setRole('Staff');
-    setPermission('Counselling + Diets');
+    setDepartment('');
+    setRole('');
+    setPermission('');
+    setErrors({});
   };
 
   const handleCopyCredentials = (user: StaffUser) => {
     const text = `Arpan Clinical Assistant Login Credentials:\nName: ${user.name}\nRole: ${user.role}\nDepartment: ${user.department}\nPermissions: ${user.modulePermissions}\nLogin ID: ${user.staffId}\nPassword: ${user.passcode || 'staff123'}`;
     navigator.clipboard.writeText(text);
-    toast.info('Credentials copied to clipboard!');
+    toast.info('Credentials copied to clipboard!', { toastId: 'copy-credentials-modal' });
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 1 } }}>
-      <DialogTitle sx={{ m: 0, p: 2.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: 'rgba(108, 92, 231, 0.08)' }}>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 1, bgcolor: isDarkMode ? '#1E293B !important' : '#FFFFFF !important', color: isDarkMode ? '#F8FAFC !important' : '#0F172A !important', opacity: 1, backgroundImage: 'none !important', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' } }}>
+      <DialogTitle sx={{ m: 0, p: 2.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: isDarkMode ? 'rgba(108, 92, 231, 0.15) !important' : 'rgba(108, 92, 231, 0.08) !important' }}>
         <Stack direction="row" alignItems="center" spacing={1.5}>
           <SupervisorAccount sx={{ color: '#6C5CE7', fontSize: 30 }} />
           <Box>
             <Typography variant="h6" sx={{ fontWeight: 800 }}>
               Staff & User Management Center
             </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color={isDarkMode ? 'grey.400' : 'text.secondary'}>
               Doctor Access Panel: Issue Login IDs, Passwords & Granular Module Permissions.
             </Typography>
           </Box>
@@ -127,12 +172,12 @@ export default function StaffManagementModal({
         </IconButton>
       </DialogTitle>
 
-      <Divider />
+      <Divider sx={{ borderColor: isDarkMode ? '#334155' : '#E2E8F0' }} />
 
-      <DialogContent sx={{ p: 3.5 }}>
+      <DialogContent sx={{ p: 3.5, bgcolor: isDarkMode ? '#1E293B !important' : '#FFFFFF !important' }}>
         {/* Issued Credential Slip Alert Banner if user just created */}
         {issuedUser && (
-          <Paper variant="outlined" sx={{ p: 3, mb: 4, borderRadius: 3, bgcolor: 'rgba(0, 201, 167, 0.08)', borderColor: '#00C9A7' }}>
+          <Paper variant="outlined" sx={{ p: 3, mb: 4, borderRadius: 1, bgcolor: 'rgba(0, 201, 167, 0.08)', borderColor: '#00C9A7' }}>
             <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={1.5}>
               <Stack direction="row" alignItems="center" spacing={1}>
                 <Verified sx={{ color: '#00C9A7', fontSize: 26 }} />
@@ -198,22 +243,23 @@ export default function StaffManagementModal({
         )}
 
         {/* Create Staff Form Card */}
-        <Paper variant="outlined" sx={{ p: 2.5, mb: 4, borderRadius: 3, bgcolor: 'rgba(0, 201, 167, 0.03)', borderColor: 'rgba(0, 201, 167, 0.3)' }}>
+        <Paper variant="outlined" sx={{ p: 2.5, mb: 4, borderRadius: 1, bgcolor: 'rgba(0, 201, 167, 0.03)', borderColor: 'rgba(0, 201, 167, 0.3)' }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#00C9A7', display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
             <PersonAdd fontSize="small" /> Issue Login Credentials & Module Access
           </Typography>
 
-          <form onSubmit={handleCreate}>
+          <form onSubmit={handleCreate} noValidate>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
                   size="small"
-                  label="Full Name"
+                  label="Full Name *"
                   placeholder="e.g. Nurse Alex Rivera"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  required
+                  error={!!errors.name}
+                  helperText={errors.name}
                 />
               </Grid>
 
@@ -245,10 +291,17 @@ export default function StaffManagementModal({
                   fullWidth
                   select
                   size="small"
-                  label="Clinical Department"
+                  label="Clinical Department *"
                   value={department}
                   onChange={(e) => setDepartment(e.target.value)}
+                  SelectProps={{ displayEmpty: true }}
+                  InputLabelProps={{ shrink: true }}
+                  error={!!errors.department}
+                  helperText={errors.department}
                 >
+                  <MenuItem value="">
+                    <em>Select Clinical Department</em>
+                  </MenuItem>
                   <MenuItem value="Diabetic & Chronic Care">Diabetic & Chronic Care</MenuItem>
                   <MenuItem value="Cardiology & ASCVD Risk">Cardiology & ASCVD Risk</MenuItem>
                   <MenuItem value="Clinical Nutrition & Metabolic Health">Clinical Nutrition & Metabolic Health</MenuItem>
@@ -262,15 +315,22 @@ export default function StaffManagementModal({
                   fullWidth
                   select
                   size="small"
-                  label="Assigned System Role"
+                  label="Assigned System Role *"
                   value={role}
                   onChange={(e) => {
                     const r = e.target.value as UserRole;
                     setRole(r);
                     if (r === 'Doctor') setPermission('Full Access');
-                    else setPermission('Counselling + Diets');
+                    else if (r === 'Staff' && !permission) setPermission('Counselling + Diets');
                   }}
+                  SelectProps={{ displayEmpty: true }}
+                  InputLabelProps={{ shrink: true }}
+                  error={!!errors.role}
+                  helperText={errors.role}
                 >
+                  <MenuItem value="">
+                    <em>Select System Role</em>
+                  </MenuItem>
                   <MenuItem value="Staff">Staff (Granular Access)</MenuItem>
                   <MenuItem value="Doctor">Doctor (Full Access)</MenuItem>
                 </TextField>
@@ -281,11 +341,18 @@ export default function StaffManagementModal({
                   fullWidth
                   select
                   size="small"
-                  label="Module Permissions"
+                  label={role === 'Doctor' ? 'Module Permissions' : 'Module Permissions *'}
                   value={role === 'Doctor' ? 'Full Access' : permission}
                   disabled={role === 'Doctor'}
                   onChange={(e) => setPermission(e.target.value as ModulePermission)}
+                  SelectProps={{ displayEmpty: true }}
+                  InputLabelProps={{ shrink: true }}
+                  error={!!errors.permission}
+                  helperText={errors.permission}
                 >
+                  <MenuItem value="">
+                    <em>Select Module Permissions</em>
+                  </MenuItem>
                   <MenuItem value="Counselling Only">1. Counselling Only</MenuItem>
                   <MenuItem value="Diets Only">2. Diets Only</MenuItem>
                   <MenuItem value="Counselling + Diets">3. Counselling + Diets</MenuItem>
@@ -294,7 +361,7 @@ export default function StaffManagementModal({
               </Grid>
 
               <Grid item xs={12} textAlign="right" sx={{ mt: 1 }}>
-                <Button variant="contained" color="primary" type="submit" startIcon={<PersonAdd />} sx={{ borderRadius: 2, height: 42, px: 3, fontWeight: 800 }}>
+                <Button variant="contained" color="primary" type="submit" startIcon={<PersonAdd />} sx={{ borderRadius: 1, height: 42, px: 3, fontWeight: 800 }}>
                   Issue Credentials & Access
                 </Button>
               </Grid>
@@ -307,7 +374,7 @@ export default function StaffManagementModal({
           <Badge color="primary" /> Issued Accounts & Permissions Directory ({staffList.length})
         </Typography>
 
-        <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 3 }}>
+        <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 1 }}>
           <Table size="small">
             <TableHead sx={{ bgcolor: 'rgba(255, 255, 255, 0.04)' }}>
               <TableRow>
@@ -377,7 +444,7 @@ export default function StaffManagementModal({
         </TableContainer>
       </DialogContent>
 
-      <DialogActions sx={{ p: 2.5 }}>
+      <DialogActions sx={{ p: 2.5, bgcolor: isDarkMode ? '#0F172A !important' : '#F8FAFC !important', borderTop: isDarkMode ? '1px solid #334155 !important' : '1px solid #E2E8F0 !important' }}>
         <Button onClick={onClose} variant="contained" color="inherit">
           Close Directory
         </Button>

@@ -37,42 +37,37 @@ import CounsellingModule from '../components/CounsellingModule';
 import DietsModule from '../components/DietsModule';
 import StaffManagementModule from '../components/StaffManagementModule';
 import LoginScreen from '../components/LoginScreen';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '../context/AuthContext';
 import { ColorModeContext } from '../theme/ThemeRegistry';
 import { analyzePrescription, SAMPLE_CLINICAL_CASE } from '../mockData/aiAnalysisData';
-import { INITIAL_STAFF_USERS } from '../mockData/clinicalModulesData';
 import { PatientInput, AnalysisResult, HistoryRecord, UserRole, StaffUser, AuthUser } from '../types/clinical';
 import { toast } from 'react-toastify';
 
 export default function Home() {
+  const router = useRouter();
   const { mode, toggleColorMode } = useContext(ColorModeContext);
-
-  // Authenticated User State (Default Doctor logged in)
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>({
-    id: 'ST-103',
-    name: 'Dr. Yashwant Dubey',
-    staffId: 'DOC-8849',
-    role: 'Doctor',
-    modulePermissions: 'Full Access',
-    department: 'Chief Cardiology & Internal Medicine'
-  });
-
-  // Staff List State
-  const [staffList, setStaffList] = useState<StaffUser[]>(INITIAL_STAFF_USERS);
+  const {
+    currentUser,
+    staffList,
+    login,
+    logout,
+    addStaffUser,
+    toggleStaffStatus,
+    updateStaffPermissions
+  } = useAuth();
 
   // Active Module Tab: 0 = Prescription, 1 = Counselling, 2 = Diets, 3 = Staff Management
   const [activeModuleTab, setActiveModuleTab] = useState<number>(0);
 
   // Prescription Analysis State
-  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(() =>
-    analyzePrescription(SAMPLE_CLINICAL_CASE, SAMPLE_CLINICAL_CASE.medications, 'Sep 21, 2026, 09:30 AM')
-  );
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [printModalOpen, setPrintModalOpen] = useState<boolean>(false);
   const [copilotOpen, setCopilotOpen] = useState<boolean>(false);
 
   const handleLoginSuccess = (user: AuthUser) => {
-    setCurrentUser(user);
-
+    login(user);
     // Auto navigate to the first allowed tab based on permissions
     const perm = user.modulePermissions;
     if (perm === 'Full Access' || user.role === 'Doctor') {
@@ -85,8 +80,9 @@ export default function Home() {
   };
 
   const handleLogout = () => {
-    setCurrentUser(null);
+    logout();
     toast.info('Logged out from Arpan Clinical Assistant.');
+    router.push('/login');
   };
 
   const handleAnalyze = (formData: PatientInput) => {
@@ -130,13 +126,11 @@ export default function Home() {
   };
 
   const handleAddStaff = (newStaff: StaffUser) => {
-    setStaffList(prev => [newStaff, ...prev]);
+    addStaffUser(newStaff);
   };
 
   const handleToggleStaffStatus = (staffId: string) => {
-    setStaffList(prev =>
-      prev.map(s => (s.id === staffId ? { ...s, active: !s.active } : s))
-    );
+    toggleStaffStatus(staffId);
     toast.info('Staff status updated.');
   };
 
@@ -154,7 +148,7 @@ export default function Home() {
     {
       id: 0,
       name: 'Prescription',
-      desc: 'AI Drug Interaction Scan, Allergy Guard & Generic Savings.',
+      desc: 'AI Drug Interaction Scan, Allergy Guard & Bio-Equivalents.',
       icon: <LocalPharmacy />,
       canAccess: canAccessPrescriptions,
       activeColor: '#00C9A7',
@@ -207,7 +201,7 @@ export default function Home() {
         activeModuleTab={activeModuleTab}
         currentUser={currentUser}
         onLogout={handleLogout}
-        onOpenManageStaff={() => setActiveModuleTab(3)}
+        onOpenManageStaff={() => router.push('/staff-management')}
       />
 
       <Container maxWidth="xl" sx={{ mt: 4 }}>
@@ -256,7 +250,7 @@ export default function Home() {
                     elevation={0}
                     sx={{
                       p: 2,
-                      borderRadius: 3,
+                      borderRadius: 1,
                       bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.9)',
                       backdropFilter: 'blur(12px)',
                       border: '1px solid',
@@ -326,7 +320,7 @@ export default function Home() {
             {activeModuleTab !== 3 && (
               <>
                 <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 1 }}>
-                  ❖ Clinical Workspaces & Active Modules:
+                  Clinical Workspaces & Active Modules:
                 </Typography>
 
                 <Grid container spacing={2.5} mb={4}>
@@ -342,7 +336,7 @@ export default function Home() {
                           onClick={() => mod.canAccess && setActiveModuleTab(mod.id)}
                           sx={{
                             p: 2.5,
-                            borderRadius: 3.5,
+                            borderRadius: 1.5,
                             cursor: mod.canAccess ? 'pointer' : 'not-allowed',
                             bgcolor: activeModuleTab === mod.id ? mod.bgActive : 'background.paper',
                             borderColor: activeModuleTab === mod.id ? mod.activeColor : mod.canAccess ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 77, 109, 0.3)',
@@ -356,7 +350,7 @@ export default function Home() {
                           }}
                         >
                           <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
-                            <Box sx={{ width: 42, height: 42, borderRadius: 2.5, bgcolor: mod.bgIcon, color: mod.activeColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Box sx={{ width: 42, height: 42, borderRadius: 1.5, bgcolor: mod.bgIcon, color: mod.activeColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               {mod.icon}
                             </Box>
                             <Chip
@@ -408,7 +402,7 @@ export default function Home() {
                     )}
 
                     {/* History Table */}
-                    <HistoryTable onLoadRecord={handleLoadHistoryRecord} />
+                    {/* <HistoryTable onLoadRecord={handleLoadHistoryRecord} /> */}
                   </>
                 ) : (
                   /* Module Permission Restricted Card */
@@ -508,7 +502,7 @@ export default function Home() {
                     color="primary"
                     startIcon={<ArrowForward sx={{ transform: 'rotate(180deg)' }} />}
                     onClick={() => setActiveModuleTab(0)}
-                    sx={{ borderRadius: 2, fontWeight: 800 }}
+                    sx={{ borderRadius: 1, fontWeight: 800 }}
                   >
                     Return to Patient Clinical Workspaces
                   </Button>

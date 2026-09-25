@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import * as Yup from 'yup';
 import {
   Card,
   CardContent,
@@ -23,7 +24,8 @@ import {
   Switch,
   FormControlLabel,
   IconButton,
-  Tooltip
+  Tooltip,
+  useTheme
 } from '@mui/material';
 import {
   PersonAdd,
@@ -37,6 +39,24 @@ import {
 import { StaffUser, UserRole, ModulePermission } from '../types/clinical';
 import { toast } from 'react-toastify';
 
+// ─── Yup Validation Schema ────────────────────────────────────────────────────
+const staffSchema = Yup.object({
+  name: Yup.string().trim().required('Full name is required'),
+  email: Yup.string()
+    .trim()
+    .email('Enter a valid email address')
+    .required('Registered clinical email is required'),
+  department: Yup.string().required('Clinical department is required'),
+  role: Yup.string().required('System role is required'),
+  permission: Yup.string().when('role', {
+    is: (val: string) => val !== 'Doctor',
+    then: (schema) => schema.required('Module permissions are required'),
+    otherwise: (schema) => schema.optional(),
+  }),
+});
+
+type FormErrors = { name?: string; email?: string; department?: string; role?: string; permission?: string };
+
 interface StaffManagementModuleProps {
   staffList: StaffUser[];
   onAddStaff: (newStaff: StaffUser) => void;
@@ -49,33 +69,56 @@ export default function StaffManagementModule({
   onToggleStatus
 }: StaffManagementModuleProps) {
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [staffIdInput, setStaffIdInput] = useState('');
   const [customPasscode, setCustomPasscode] = useState('');
-  const [department, setDepartment] = useState('Diabetic & Chronic Care');
-  const [role, setRole] = useState<UserRole>('Staff');
-  const [permission, setPermission] = useState<ModulePermission>('Counselling + Diets');
+  const [department, setDepartment] = useState('');
+  const [role, setRole] = useState<UserRole | ''>('');
+  const [permission, setPermission] = useState<ModulePermission | ''>('');
+  const [errors, setErrors] = useState<FormErrors>({});
 
   // Recently created user credential slip state
   const [issuedUser, setIssuedUser] = useState<StaffUser | null>(null);
 
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) {
-      toast.error('Please enter staff member full name');
-      return;
+    setErrors({});
+
+    const formValues = { name, email, department, role, permission };
+
+    try {
+      await staffSchema.validate(formValues, { abortEarly: false });
+    } catch (err) {
+      if (err instanceof Yup.ValidationError) {
+        const fieldErrors: FormErrors = {};
+        err.inner.forEach((ve) => {
+          if (ve.path) fieldErrors[ve.path as keyof FormErrors] = ve.message;
+        });
+        setErrors(fieldErrors);
+        toast.error('Please fix the highlighted fields before submitting.', {
+          toastId: 'staff-form-validation-error',
+        });
+        return;
+      }
     }
+
+    const assignedRole: UserRole = role as UserRole;
+    const assignedPermissions: ModulePermission =
+      assignedRole === 'Doctor' ? 'Full Access' : (permission as ModulePermission);
+    const assignedDept = department.trim();
 
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const generatedId = staffIdInput.trim() || `STAFF-${randomSuffix}`;
     const generatedPass = customPasscode.trim() || `staff${randomSuffix}`;
-    const assignedPermissions = role === 'Doctor' ? 'Full Access' : permission;
+    const generatedEmail = email.trim();
 
     const newMember: StaffUser = {
       id: `ST-${Date.now()}`,
       name: name.trim(),
       staffId: generatedId,
-      department: department.trim() || 'General Clinical Care',
-      role,
+      email: generatedEmail,
+      department: assignedDept,
+      role: assignedRole,
       modulePermissions: assignedPermissions,
       active: true,
       createdAt: new Date().toISOString().split('T')[0],
@@ -84,42 +127,52 @@ export default function StaffManagementModule({
 
     onAddStaff(newMember);
     setIssuedUser(newMember);
-    toast.success(`Staff Account Issued! Login ID: ${generatedId} | Password: ${generatedPass}`);
+    toast.success(
+      `Staff Account Issued! Login ID: ${generatedId} | Password: ${generatedPass}`,
+      { toastId: `staff-created-${newMember.id}` }
+    );
 
     // Reset form
     setName('');
+    setEmail('');
     setStaffIdInput('');
     setCustomPasscode('');
-    setDepartment('Diabetic & Chronic Care');
-    setRole('Staff');
-    setPermission('Counselling + Diets');
+    setDepartment('');
+    setRole('');
+    setPermission('');
+    setErrors({});
   };
 
   const handleCopyCredentials = (user: StaffUser) => {
-    const text = `Arpan Clinical Assistant Login Credentials:\nName: ${user.name}\nRole: ${user.role}\nDepartment: ${user.department}\nPermissions: ${user.modulePermissions}\nLogin ID: ${user.staffId}\nPassword: ${user.passcode || 'staff123'}`;
+    const text = `Arpan Clinical Assistant Login Credentials:\nName: ${user.name}\nEmail: ${user.email || 'N/A'}\nRole: ${user.role}\nDepartment: ${user.department}\nPermissions: ${user.modulePermissions}\nLogin ID: ${user.staffId}\nPassword: ${user.passcode || 'staff123'}`;
     navigator.clipboard.writeText(text);
-    toast.info('Credentials copied to clipboard!');
+    toast.info('Credentials copied to clipboard!', { toastId: 'copy-credentials' });
   };
+
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
 
   return (
     <Card
       sx={{
         borderRadius: 1,
-        boxShadow: '0 12px 40px rgba(0, 0, 0, 0.25)',
-        background: 'linear-gradient(180deg, rgba(16, 24, 44, 0.95) 0%, rgba(10, 15, 29, 0.98) 100%)',
-        border: '1px solid rgba(108, 92, 231, 0.3)'
+        boxShadow: isDark ? '0 12px 40px rgba(0, 0, 0, 0.25)' : '0 4px 20px rgba(0, 0, 0, 0.08)',
+        background: isDark
+          ? 'linear-gradient(180deg, rgba(16, 24, 44, 0.95) 0%, rgba(10, 15, 29, 0.98) 100%)'
+          : 'linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)',
+        color: 'text.primary',
+        border: isDark ? '1px solid rgba(108, 92, 231, 0.3)' : '1px solid #E2E8F0'
       }}
     >
       <CardContent sx={{ p: { xs: 2.5, md: 4 } }}>
         {/* Module Header Banner */}
         <Grid container spacing={3} alignItems="center" mb={3}>
           <Grid item xs={12} md={8}>
-
             <Typography variant="h4" sx={{ fontWeight: 900, mb: 1 }}>
               Clinic Roster & Staff Credential Management
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              Manage clinical team access, issue secure credentials, and control granular module permissions.
+              Manage clinical team access, issue secure credentials with registered email, and control granular module permissions.
             </Typography>
           </Grid>
         </Grid>
@@ -128,7 +181,7 @@ export default function StaffManagementModule({
 
         {/* Issued Credential Slip Alert Banner if user just created */}
         {issuedUser && (
-          <Paper variant="outlined" sx={{ p: 3, mb: 4, borderRadius: 3, bgcolor: 'rgba(0, 201, 167, 0.08)', borderColor: '#00C9A7' }}>
+          <Paper variant="outlined" sx={{ p: 3, mb: 4, borderRadius: 1, bgcolor: 'rgba(0, 201, 167, 0.08)', borderColor: '#00C9A7' }}>
             <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={1.5}>
               <Stack direction="row" alignItems="center" spacing={1}>
                 <Verified sx={{ color: '#00C9A7', fontSize: 26 }} />
@@ -157,16 +210,16 @@ export default function StaffManagementModule({
               </Grid>
 
               <Grid item xs={6} sm={3}>
-                <Typography variant="caption" color="text.secondary" display="block">Module Permissions</Typography>
-                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#6C5CE7' }}>
-                  {issuedUser.modulePermissions}
+                <Typography variant="caption" color="text.secondary" display="block">Registered Email</Typography>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#38BDF8' }}>
+                  {issuedUser.email}
                 </Typography>
               </Grid>
 
               <Grid item xs={6} sm={3}>
-                <Typography variant="caption" color="text.secondary" display="block">Department</Typography>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                  {issuedUser.department}
+                <Typography variant="caption" color="text.secondary" display="block">Module Permissions</Typography>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#6C5CE7' }}>
+                  {issuedUser.modulePermissions}
                 </Typography>
               </Grid>
             </Grid>
@@ -194,7 +247,7 @@ export default function StaffManagementModule({
         )}
 
         {/* Issue Credentials Form */}
-        <Paper variant="outlined" sx={{ p: 3, mb: 4, borderRadius: 3, bgcolor: 'rgba(0, 201, 167, 0.03)', borderColor: 'rgba(0, 201, 167, 0.3)' }}>
+        <Paper variant="outlined" sx={{ p: 3, mb: 4, borderRadius: 1, bgcolor: 'rgba(0, 201, 167, 0.03)', borderColor: 'rgba(0, 201, 167, 0.3)' }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#00C9A7', display: 'flex', alignItems: 'center', gap: 1, mb: 2.5 }}>
             <PersonAdd fontSize="small" /> Issue Login Credentials & Access Level
           </Typography>
@@ -205,11 +258,26 @@ export default function StaffManagementModule({
                 <TextField
                   fullWidth
                   size="small"
-                  label="Full Name"
+                  label="Full Name *"
                   placeholder="e.g. Nurse Alex Rivera"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  required
+                  error={!!errors.name}
+                  helperText={errors.name}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={4}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  type="email"
+                  label="Registered Clinical Email *"
+                  placeholder="e.g. alex.rivera@arpanclinical.org"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  error={!!errors.email}
+                  helperText={errors.email}
                 />
               </Grid>
 
@@ -241,10 +309,17 @@ export default function StaffManagementModule({
                   fullWidth
                   select
                   size="small"
-                  label="Clinical Department"
+                  label="Clinical Department *"
                   value={department}
                   onChange={(e) => setDepartment(e.target.value)}
+                  SelectProps={{ displayEmpty: true }}
+                  InputLabelProps={{ shrink: true }}
+                  error={!!errors.department}
+                  helperText={errors.department}
                 >
+                  <MenuItem value="">
+                    <em>Select Clinical Department</em>
+                  </MenuItem>
                   <MenuItem value="Diabetic & Chronic Care">Diabetic & Chronic Care</MenuItem>
                   <MenuItem value="Cardiology & ASCVD Risk">Cardiology & ASCVD Risk</MenuItem>
                   <MenuItem value="Clinical Nutrition & Metabolic Health">Clinical Nutrition & Metabolic Health</MenuItem>
@@ -258,15 +333,22 @@ export default function StaffManagementModule({
                   fullWidth
                   select
                   size="small"
-                  label="Assigned System Role"
+                  label="Assigned System Role *"
                   value={role}
                   onChange={(e) => {
                     const r = e.target.value as UserRole;
                     setRole(r);
                     if (r === 'Doctor') setPermission('Full Access');
-                    else setPermission('Counselling + Diets');
+                    else if (r === 'Staff' && !permission) setPermission('Counselling + Diets');
                   }}
+                  SelectProps={{ displayEmpty: true }}
+                  InputLabelProps={{ shrink: true }}
+                  error={!!errors.role}
+                  helperText={errors.role}
                 >
+                  <MenuItem value="">
+                    <em>Select System Role</em>
+                  </MenuItem>
                   <MenuItem value="Staff">Staff (Granular Access)</MenuItem>
                   <MenuItem value="Doctor">Doctor (Full Access)</MenuItem>
                 </TextField>
@@ -277,11 +359,18 @@ export default function StaffManagementModule({
                   fullWidth
                   select
                   size="small"
-                  label="Module Permissions"
+                  label={role === 'Doctor' ? 'Module Permissions' : 'Module Permissions *'}
                   value={role === 'Doctor' ? 'Full Access' : permission}
                   disabled={role === 'Doctor'}
                   onChange={(e) => setPermission(e.target.value as ModulePermission)}
+                  SelectProps={{ displayEmpty: true }}
+                  InputLabelProps={{ shrink: true }}
+                  error={!!errors.permission}
+                  helperText={errors.permission}
                 >
+                  <MenuItem value="">
+                    <em>Select Module Permissions</em>
+                  </MenuItem>
                   <MenuItem value="Counselling Only">1. Counselling Only</MenuItem>
                   <MenuItem value="Diets Only">2. Diets Only</MenuItem>
                   <MenuItem value="Counselling + Diets">3. Counselling + Diets</MenuItem>
@@ -290,9 +379,9 @@ export default function StaffManagementModule({
               </Grid>
 
               <Grid item xs={12} textAlign="right">
-                <Tooltip title="Create staff user profile and issue Login ID with Passcode" arrow placement="top">
-                  <Button variant="contained" color="primary" type="submit" startIcon={<PersonAdd />} sx={{ borderRadius: 2, height: 42, px: 3, fontWeight: 800 }}>
-                    Issue Credentials & Access Account
+                <Tooltip title="Create staff user profile and issue Login ID with Passcode and Email" arrow placement="top">
+                  <Button variant="contained" color="primary" type="submit" startIcon={<PersonAdd />} sx={{ borderRadius: 1, height: 42, px: 3, fontWeight: 800 }}>
+                    Issue Credentials &amp; Access Account
                   </Button>
                 </Tooltip>
               </Grid>
@@ -305,13 +394,14 @@ export default function StaffManagementModule({
           <Badge color="primary" /> Clinic Roster & Account Directory ({staffList.length} Users)
         </Typography>
 
-        <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 3 }}>
+        <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 1 }}>
           <Table>
             <TableHead sx={{ bgcolor: 'rgba(255, 255, 255, 0.04)' }}>
               <TableRow>
                 <TableCell sx={{ fontWeight: 800 }}>Login ID</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>Password</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>Name</TableCell>
+                <TableCell sx={{ fontWeight: 800 }}>Registered Email</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>Department</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>Role</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>Module Permissions</TableCell>
@@ -326,6 +416,9 @@ export default function StaffManagementModule({
                     {user.passcode || 'staff123'}
                   </TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>{user.name}</TableCell>
+                  <TableCell sx={{ fontSize: '0.82rem', color: isDark ? '#94A3B8' : '#64748B' }}>
+                    {user.email || `${user.name.toLowerCase().replace(/[^a-z]/g, '')}@arpanclinical.org`}
+                  </TableCell>
                   <TableCell sx={{ fontSize: '0.88rem' }}>{user.department}</TableCell>
                   <TableCell>
                     <Chip
@@ -346,7 +439,7 @@ export default function StaffManagementModule({
                   </TableCell>
                   <TableCell align="center">
                     <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
-                      <Tooltip title="Copy staff Login ID & Passcode to clipboard" arrow placement="top">
+                      <Tooltip title="Copy staff Login ID, Email & Passcode to clipboard" arrow placement="top">
                         <IconButton
                           size="small"
                           color="primary"

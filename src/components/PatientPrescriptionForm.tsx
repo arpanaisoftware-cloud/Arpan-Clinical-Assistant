@@ -243,7 +243,7 @@ export default function PatientPrescriptionForm({ onAnalyze, isAnalyzing }: Pati
                         sx={{
                           p: 2,
                           mb: 2,
-                          borderRadius: 3,
+                          borderRadius: 1,
                           borderColor: 'rgba(255, 255, 255, 0.1)',
                           bgcolor: 'rgba(255, 255, 255, 0.02)'
                         }}
@@ -344,7 +344,7 @@ export default function PatientPrescriptionForm({ onAnalyze, isAnalyzing }: Pati
                     startIcon={<Add />}
                     size="small"
                     onClick={() => push({ name: '', dosage: '', frequency: 'Once Daily', duration: '7 Days', timing: 'After meals' })}
-                    sx={{ mb: 2, textTransform: 'none', borderRadius: 2 }}
+                    sx={{ mb: 2, textTransform: 'none', borderRadius: 1 }}
                   >
                     Add Another Medication
                   </Button>

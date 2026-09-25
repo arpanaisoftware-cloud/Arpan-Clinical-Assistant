@@ -36,11 +36,10 @@ export default function DoctorCopilotChat({ open, onClose, currentPatientData }:
   const [messages, setMessages] = useState<Message[]>([
     {
       sender: 'ai',
-      text: `Hello Dr. Dubey! I am your AI Clinical Assistant. ${
-        currentPatientData?.patientName
+      text: `Hello Dr. Dubey! I am your AI Clinical Assistant. ${currentPatientData?.patientName
           ? `I've loaded ${currentPatientData.patientName}'s case details (${currentPatientData.disease}).`
           : 'How can I assist you with drug interactions, dosage guidelines, or generic alternatives today?'
-      }`
+        }`
     }
   ]);
   const [input, setInput] = useState<string>('');
@@ -85,7 +84,7 @@ export default function DoctorCopilotChat({ open, onClose, currentPatientData }:
   };
 
   return (
-    <Drawer anchor="right" open={open} onClose={onClose} PaperProps={{ sx: { width: { xs: '100%', sm: 420 }, p: 0 } }}>
+    <Drawer anchor="right" open={open} onClose={onClose} PaperProps={{ sx: { width: { xs: '100%', sm: 420 }, p: 0, bgcolor: 'background.paper', opacity: 1, backgroundImage: 'none' } }}>
       <Box sx={{ p: 2.5, bgcolor: '#6C5CE7', color: '#FFF', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Stack direction="row" alignItems="center" spacing={1.5}>
           <Avatar sx={{ bgcolor: 'rgba(255, 255, 255, 0.2)', width: 40, height: 40 }}>
@@ -93,7 +92,7 @@ export default function DoctorCopilotChat({ open, onClose, currentPatientData }:
           </Avatar>
           <Box>
             <Typography variant="subtitle1" sx={{ fontWeight: 800, lineHeight: 1.1 }}>
-              DocPulse AI Copilot
+              Arpan Clinical AI Copilot
             </Typography>
             <Typography variant="caption" sx={{ opacity: 0.9 }}>
               Clinical Decision Assistant
@@ -120,7 +119,7 @@ export default function DoctorCopilotChat({ open, onClose, currentPatientData }:
                 variant="outlined"
                 sx={{
                   p: 1.8,
-                  borderRadius: 3,
+                  borderRadius: 1,
                   bgcolor: m.sender === 'user' ? '#6C5CE7' : 'background.paper',
                   color: m.sender === 'user' ? '#FFF' : 'text.primary',
                   borderColor: m.sender === 'user' ? 'transparent' : 'rgba(255, 255, 255, 0.1)'

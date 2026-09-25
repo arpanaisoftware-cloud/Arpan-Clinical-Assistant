@@ -35,21 +35,30 @@ body {
 
 /* Print Styles for Printable Digital Prescription */
 @media print {
+  /* Remove browser default print header (date/time) and footer (page title/URL) */
+  @page {
+    margin: 0;
+    size: A4;
+  }
+
   body * {
     visibility: hidden;
   }
+
   #printable-prescription,
   #printable-prescription * {
     visibility: visible;
   }
+
   #printable-prescription {
     position: absolute;
     left: 0;
     top: 0;
     width: 100%;
     margin: 0;
-    padding: 20px;
+    padding: 24px 28px;
     background: #FFFFFF !important;
     color: #000000 !important;
+    box-sizing: border-box;
   }
 }

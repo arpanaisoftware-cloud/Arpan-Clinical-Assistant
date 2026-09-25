@@ -106,7 +106,7 @@ export default function HistoryTable({ onLoadRecord }: HistoryTableProps) {
           />
         </Stack>
 
-        <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 3, borderColor: 'rgba(255, 255, 255, 0.08)' }}>
+        <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 1, borderColor: 'rgba(255, 255, 255, 0.08)' }}>
           <Table>
             <TableHead sx={{ bgcolor: 'rgba(255, 255, 255, 0.03)' }}>
               <TableRow>

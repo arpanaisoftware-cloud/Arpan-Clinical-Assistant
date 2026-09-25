@@ -100,7 +100,7 @@ export default function PrescriptionUploader({ onAutoExtract }: PrescriptionUplo
           sx={{
             p: 3,
             border: isDragging ? '2px dashed #00C9A7' : '2px dashed rgba(108, 92, 231, 0.4)',
-            borderRadius: 3,
+            borderRadius: 1,
             bgcolor: isDragging ? 'rgba(0, 201, 167, 0.08)' : 'rgba(108, 92, 231, 0.04)',
             textAlign: 'center',
             cursor: 'pointer',
@@ -145,7 +145,7 @@ export default function PrescriptionUploader({ onAutoExtract }: PrescriptionUplo
             sx={{
               mt: 2,
               p: 2,
-              borderRadius: 3,
+              borderRadius: 1,
               borderColor: 'rgba(0, 201, 167, 0.3)',
               bgcolor: 'rgba(0, 201, 167, 0.05)'
             }}

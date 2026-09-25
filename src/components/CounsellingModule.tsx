@@ -23,7 +23,8 @@ import {
   DialogContent,
   DialogActions,
   IconButton,
-  Tooltip
+  Tooltip,
+  useTheme
 } from '@mui/material';
 import {
   Favorite,
@@ -85,13 +86,19 @@ export default function CounsellingModule({
     setPrintOpen(true);
   };
 
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+
   return (
     <Card
       sx={{
         borderRadius: 1,
-        boxShadow: '0 12px 40px rgba(0, 0, 0, 0.25)',
-        background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 15, 29, 0.98) 100%)',
-        border: '1px solid rgba(108, 92, 231, 0.3)'
+        boxShadow: isDark ? '0 12px 40px rgba(0, 0, 0, 0.25)' : '0 4px 20px rgba(0, 0, 0, 0.08)',
+        background: isDark
+          ? 'linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 15, 29, 0.98) 100%)'
+          : 'linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)',
+        color: 'text.primary',
+        border: isDark ? '1px solid rgba(108, 92, 231, 0.3)' : '1px solid #E2E8F0'
       }}
     >
       <CardContent sx={{ p: { xs: 2.5, md: 4 } }}>
@@ -111,7 +118,7 @@ export default function CounsellingModule({
                 size="large"
                 startIcon={<Print />}
                 onClick={handlePrint}
-                sx={{ borderRadius: 2, px: 3, py: 1.2, fontWeight: 800 }}
+                sx={{ borderRadius: 1, px: 3, py: 1.2, fontWeight: 800 }}
               >
                 Print Patient Care Sheet
               </Button>
@@ -126,9 +133,11 @@ export default function CounsellingModule({
             p: { xs: 2.5, md: 3 },
             mb: 3.5,
             borderRadius: 1,
-            background: 'linear-gradient(135deg, rgba(108, 92, 231, 0.08) 0%, rgba(0, 201, 167, 0.06) 100%)',
-            border: '1px solid rgba(108, 92, 231, 0.35)',
-            boxShadow: '0 12px 32px rgba(108, 92, 231, 0.1)'
+            background: isDark
+              ? 'linear-gradient(135deg, rgba(108, 92, 231, 0.08) 0%, rgba(0, 201, 167, 0.06) 100%)'
+              : 'linear-gradient(135deg, rgba(108, 92, 231, 0.04) 0%, rgba(0, 201, 167, 0.03) 100%)',
+            border: isDark ? '1px solid rgba(108, 92, 231, 0.35)' : '1px solid #CBD5E1',
+            boxShadow: isDark ? '0 12px 32px rgba(108, 92, 231, 0.1)' : '0 4px 16px rgba(0, 0, 0, 0.04)'
           }}
         >
           {/* Header Badge & Title */}
@@ -138,7 +147,7 @@ export default function CounsellingModule({
                 sx={{
                   width: 42,
                   height: 42,
-                  borderRadius: 2.5,
+                  borderRadius: 1.5,
                   background: 'linear-gradient(135deg, #6C5CE7 0%, #00C9A7 100%)',
                   display: 'flex',
                   alignItems: 'center',
@@ -150,7 +159,7 @@ export default function CounsellingModule({
                 <MedicalServices sx={{ fontSize: 24 }} />
               </Box>
               <Box>
-                <Typography variant="h6" sx={{ fontWeight: 900, color: '#F0F4FC', letterSpacing: '-0.01em' }}>
+                <Typography variant="h6" sx={{ fontWeight: 900, color: 'text.primary', letterSpacing: '-0.01em' }}>
                   Patient Intake & Clinical Vitals Risk Calculator
                 </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
@@ -174,9 +183,9 @@ export default function CounsellingModule({
             sx={{
               p: 2,
               mb: 2,
-              borderRadius: 3,
-              bgcolor: 'rgba(15, 23, 42, 0.6)',
-              borderColor: 'rgba(255, 255, 255, 0.08)'
+              borderRadius: 1,
+              bgcolor: isDark ? 'rgba(15, 23, 42, 0.6)' : '#FFFFFF',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E2E8F0'
             }}
           >
             <Typography variant="caption" sx={{ fontWeight: 800, color: '#00C9A7', display: 'flex', alignItems: 'center', gap: 0.8, mb: 1.5, letterSpacing: 0.5 }}>
@@ -193,7 +202,7 @@ export default function CounsellingModule({
                   placeholder="e.g. Robert Vance"
                   value={currPatientName}
                   onChange={(e) => setCurrPatientName(e.target.value)}
-                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
                 />
               </Grid>
               <Grid item xs={6} sm={2}>
@@ -205,7 +214,7 @@ export default function CounsellingModule({
                   placeholder="58"
                   value={currPatientAge}
                   onChange={(e) => setCurrPatientAge(e.target.value)}
-                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
                 />
               </Grid>
               <Grid item xs={6} sm={2}>
@@ -216,7 +225,7 @@ export default function CounsellingModule({
                   label="Gender"
                   value={currPatientGender}
                   onChange={(e) => setCurrPatientGender(e.target.value)}
-                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
                 >
                   <MenuItem value="Male">Male</MenuItem>
                   <MenuItem value="Female">Female</MenuItem>
@@ -231,7 +240,7 @@ export default function CounsellingModule({
                   placeholder="e.g. Essential Hypertension, Type 2 Diabetes"
                   value={currPatientDisease}
                   onChange={(e) => setCurrPatientDisease(e.target.value)}
-                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
                 />
               </Grid>
             </Grid>
@@ -242,9 +251,9 @@ export default function CounsellingModule({
             variant="outlined"
             sx={{
               p: 2,
-              borderRadius: 3,
-              bgcolor: 'rgba(15, 23, 42, 0.6)',
-              borderColor: 'rgba(255, 255, 255, 0.08)'
+              borderRadius: 1,
+              bgcolor: isDark ? 'rgba(15, 23, 42, 0.6)' : '#FFFFFF',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E2E8F0'
             }}
           >
             <Typography variant="caption" sx={{ fontWeight: 800, color: '#6C5CE7', display: 'flex', alignItems: 'center', gap: 0.8, mb: 1.5, letterSpacing: 0.5 }}>
@@ -261,7 +270,7 @@ export default function CounsellingModule({
                   label="Systolic BP (mmHg)"
                   value={sbp}
                   onChange={(e) => setSbp(Number(e.target.value))}
-                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
                 />
               </Grid>
               <Grid item xs={12} sm={4} md={2.4}>
@@ -273,7 +282,7 @@ export default function CounsellingModule({
                   label="HbA1c (%)"
                   value={hba1c}
                   onChange={(e) => setHba1c(Number(e.target.value))}
-                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
                 />
               </Grid>
               <Grid item xs={12} sm={4} md={2.4}>
@@ -284,7 +293,7 @@ export default function CounsellingModule({
                   label="eGFR (mL/min)"
                   value={egfr}
                   onChange={(e) => setEgfr(Number(e.target.value))}
-                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
                 />
               </Grid>
               <Grid item xs={12} sm={6} md={2.4}>
@@ -295,7 +304,7 @@ export default function CounsellingModule({
                   label="Monofilament Sensation"
                   value={sensationLoss}
                   onChange={(e) => setSensationLoss(e.target.value)}
-                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
                 >
                   <MenuItem value="Normal">Normal (10/10 points)</MenuItem>
                   <MenuItem value="Mild Loss">Mild Loss (7-9 points)</MenuItem>
@@ -310,7 +319,7 @@ export default function CounsellingModule({
                   label="Wagner Foot Grade"
                   value={footGrade}
                   onChange={(e) => setFootGrade(e.target.value)}
-                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
                 >
                   <MenuItem value="Grade 0 (Intact Skin)">Grade 0 (Intact Skin)</MenuItem>
                   <MenuItem value="Grade 1 (Superficial Ulcer)">Grade 1 (Superficial Ulcer)</MenuItem>
@@ -322,7 +331,7 @@ export default function CounsellingModule({
         </Paper>
 
         {/* 5 Risk Category Tabs */}
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3, justifyContent: "space-between" }}>
           <Tabs
             value={selectedCategory}
             onChange={handleTabChange}
@@ -330,6 +339,7 @@ export default function CounsellingModule({
             indicatorColor="secondary"
             variant="scrollable"
             scrollButtons="auto"
+
           >
             <Tab
               value="cardiovascular"
@@ -372,8 +382,8 @@ export default function CounsellingModule({
               variant="outlined"
               sx={{
                 p: 3,
-                borderRadius: 3,
-                bgcolor: 'rgba(255, 255, 255, 0.02)',
+                borderRadius: 1,
+                bgcolor: isDark ? 'rgba(255, 255, 255, 0.02)' : '#F8FAFC',
                 borderColor: activeRisk.color,
                 height: '100%'
               }}
@@ -407,7 +417,7 @@ export default function CounsellingModule({
                 ))}
               </Stack>
 
-              <Alert severity="info" sx={{ borderRadius: 2 }}>
+              <Alert severity="info" sx={{ borderRadius: 1 }}>
                 <strong>Screening Protocol:</strong> {activeRisk.screeningSchedule}
               </Alert>
             </Paper>
@@ -417,7 +427,7 @@ export default function CounsellingModule({
           <Grid item xs={12} md={7}>
             <Stack spacing={2.5}>
               {/* Clinical Guidelines for Staff & Doctor */}
-              <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 3, borderLeft: '5px solid #6C5CE7' }}>
+              <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 1, borderLeft: '5px solid #6C5CE7' }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#6C5CE7', mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
                   🩺 Clinical Decision Support & Target Thresholds
                 </Typography>
@@ -432,7 +442,7 @@ export default function CounsellingModule({
               </Paper>
 
               {/* Patient Education & Counselling Points */}
-              <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 3, borderLeft: '5px solid #00C9A7' }}>
+              <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 1, borderLeft: '5px solid #00C9A7' }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#00C9A7', mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
                   💡 Patient Counselling & Take-Home Instructions
                 </Typography>
@@ -451,90 +461,88 @@ export default function CounsellingModule({
       </CardContent>
 
       {/* Printable Patient Counselling Sheet Dialog */}
-      <Dialog open={printOpen} onClose={() => setPrintOpen(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 1 } }}>
-        <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Dialog open={printOpen} onClose={() => setPrintOpen(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 1, bgcolor: '#FFFFFF !important', color: '#0F172A !important', backgroundImage: 'none !important', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.3)' } }}>
+        <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: '#FFFFFF !important', color: '#0F172A !important', borderBottom: '1px solid #E2E8F0 !important' }}>
           <Stack direction="row" alignItems="center" spacing={1}>
             <LocalHospital sx={{ color: '#6C5CE7' }} />
-            <Typography variant="h6" sx={{ fontWeight: 800 }}>
+            <Typography variant="h6" sx={{ fontWeight: 800, color: '#0F172A !important' }}>
               Official Patient Chronic Care & Risk Counselling Sheet
             </Typography>
           </Stack>
-          <IconButton onClick={() => setPrintOpen(false)} size="small">
+          <IconButton onClick={() => setPrintOpen(false)} size="small" sx={{ color: '#475569 !important', '&:hover': { bgcolor: '#F1F5F9 !important' } }}>
             <Close />
           </IconButton>
         </DialogTitle>
 
-        <Divider />
-
-        <DialogContent sx={{ p: 4, bgcolor: '#FFFFFF', color: '#1E293B' }}>
-          <Box sx={{ border: '2px solid #6C5CE7', borderRadius: 3, p: 3 }}>
+        <DialogContent sx={{ p: 4, bgcolor: '#FFFFFF !important', color: '#1E293B !important' }}>
+          <Box sx={{ border: '2px solid #6C5CE7', borderRadius: 1, p: 3, bgcolor: '#FFFFFF !important', color: '#1E293B !important' }}>
             {/* Header */}
             <Grid container spacing={2} sx={{ borderBottom: '2px solid #E2E8F0', pb: 2, mb: 3 }}>
               <Grid item xs={8}>
-                <Typography variant="h5" sx={{ fontWeight: 900, color: '#4C1D95' }}>
-                  DOCPULSE CLINICAL COUNSELLING CENTER
+                <Typography variant="h5" sx={{ fontWeight: 900, color: '#4C1D95 !important' }}>
+                  ARPAN CLINICAL COUNSELLING CENTER
                 </Typography>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#475569' }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#475569 !important' }}>
                   Patient Education & Complication Prevention Advisory
                 </Typography>
               </Grid>
               <Grid item xs={4} textAlign="right">
-                <Typography variant="caption" sx={{ color: '#64748B', display: 'block' }} suppressHydrationWarning>
+                <Typography variant="caption" sx={{ color: '#64748B !important', display: 'block' }} suppressHydrationWarning>
                   Date: {new Date().toLocaleDateString('en-US', { dateStyle: 'medium' })}
                 </Typography>
-                <Typography variant="caption" sx={{ fontWeight: 700, color: '#6C5CE7' }}>
+                {/* <Typography variant="caption" sx={{ fontWeight: 700, color: '#6C5CE7 !important' }}>
                   Ref: #COUNSEL-9941
-                </Typography>
+                </Typography> */}
               </Grid>
             </Grid>
 
             {/* Patient Header */}
-            <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: '#F8FAFC', borderRadius: 2 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+            <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: '#F8FAFC !important', borderColor: '#E2E8F0 !important', borderRadius: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#0F172A !important' }}>
                 Patient: {currPatientName} ({currPatientAge} Y, {currPatientGender}) • Diagnosis: {currPatientDisease}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Evaluated Target Area: <strong>{activeRisk.title}</strong> ({activeRisk.riskLevel})
+              <Typography variant="caption" sx={{ color: '#475569 !important' }}>
+                Evaluated Target Area: <strong style={{ color: '#0F172A' }}>{activeRisk.title}</strong> ({activeRisk.riskLevel})
               </Typography>
             </Paper>
 
             {/* Content List */}
-            <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#4C1D95', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#4C1D95 !important', mb: 1 }}>
               Key Health Action Steps For Patient:
             </Typography>
             <Box sx={{ pl: 2, mb: 3 }}>
               {activeRisk.patientAdvice.map((adv, idx) => (
-                <Typography key={idx} variant="body2" sx={{ mb: 1, color: '#334155' }}>
+                <Typography key={idx} variant="body2" sx={{ mb: 1, color: '#334155 !important' }}>
                   • {adv}
                 </Typography>
               ))}
             </Box>
 
-            <Divider sx={{ mb: 2 }} />
+            <Divider sx={{ mb: 2, borderColor: '#E2E8F0 !important' }} />
 
             <Grid container spacing={2} alignItems="center">
               <Grid item xs={8}>
                 <Stack direction="row" alignItems="center" spacing={1}>
                   <Verified sx={{ color: '#6C5CE7' }} />
-                  <Typography variant="caption" sx={{ fontWeight: 700, color: '#475569' }}>
+                  <Typography variant="caption" sx={{ fontWeight: 700, color: '#475569 !important' }}>
                     Verified by Clinical Care Team & Doctor
                   </Typography>
                 </Stack>
               </Grid>
               <Grid item xs={4} textAlign="right">
-                <Typography variant="caption" sx={{ fontStyle: 'italic', display: 'block' }}>
-                  DocPulse Clinical Care OS
+                <Typography variant="caption" sx={{ fontStyle: 'italic', display: 'block', color: '#64748B !important' }}>
+                  Arpan Clinical Care OS
                 </Typography>
               </Grid>
             </Grid>
           </Box>
         </DialogContent>
 
-        <DialogActions sx={{ p: 2.5 }}>
-          <Button onClick={() => setPrintOpen(false)} variant="outlined">
+        <DialogActions sx={{ p: 2.5, bgcolor: '#FFFFFF !important', borderTop: '1px solid #E2E8F0 !important' }}>
+          <Button onClick={() => setPrintOpen(false)} variant="outlined" color="inherit" sx={{ color: '#475569 !important', borderColor: '#CBD5E1 !important', '&:hover': { bgcolor: '#F8FAFC !important', borderColor: '#94A3B8 !important' } }}>
             Close
           </Button>
-          <Button onClick={() => window.print()} variant="contained" color="secondary" startIcon={<Print />}>
+          <Button onClick={() => window.print()} variant="contained" color="secondary" startIcon={<Print />} sx={{ bgcolor: '#6C5CE7 !important', color: '#FFFFFF !important', fontWeight: 800, '&:hover': { bgcolor: '#5B4BC4 !important' } }}>
             Print Document
           </Button>
         </DialogActions>
