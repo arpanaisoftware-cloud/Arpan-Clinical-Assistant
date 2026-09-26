@@ -507,7 +507,7 @@ export default function DietsModule({
           </IconButton>
         </DialogTitle>
 
-        <DialogContent sx={{ p: 4, bgcolor: '#FFFFFF !important', color: '#1E293B !important' }}>
+        <DialogContent id="printable-diets" sx={{ p: 4, bgcolor: '#FFFFFF !important', color: '#1E293B !important' }}>
           <Box sx={{ border: '2px solid #00C9A7', borderRadius: 1, p: 3, bgcolor: '#FFFFFF !important', color: '#1E293B !important' }}>
             <Grid container spacing={2} sx={{ borderBottom: '2px solid #E2E8F0', pb: 2, mb: 3 }}>
               <Grid item xs={8}>
@@ -642,7 +642,7 @@ export default function DietsModule({
                 Copy From Preset ({presetDiet.name})
               </Button>
               <Button size="small" variant="contained" color="secondary" startIcon={<Add />} onClick={handleAddCustomRow}>
-                + Add Meal Row
+                Add Meal Row
               </Button>
             </Stack>
           </Stack>

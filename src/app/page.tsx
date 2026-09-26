@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import {
   Container,
   Box,
@@ -11,7 +11,8 @@ import {
   Paper,
   Button,
   Avatar,
-  Tooltip
+  Tooltip,
+  CircularProgress
 } from '@mui/material';
 import {
   AutoAwesome,
@@ -65,6 +66,23 @@ export default function Home() {
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [printModalOpen, setPrintModalOpen] = useState<boolean>(false);
   const [copilotOpen, setCopilotOpen] = useState<boolean>(false);
+
+  // Redirect to dedicated login page if not authenticated
+  useEffect(() => {
+    if (!currentUser) {
+      router.push('/login');
+    }
+  }, [currentUser, router]);
+
+  // If we are redirecting, don't render the dashboard to prevent flash
+  if (!currentUser) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', flexDirection: 'column' }}>
+        <CircularProgress color="primary" sx={{ mb: 2 }} />
+        <Typography variant="body1" color="text.secondary">Redirecting to login portal...</Typography>
+      </Box>
+    );
+  }
 
   const handleLoginSuccess = (user: AuthUser) => {
     login(user);
@@ -188,30 +206,28 @@ export default function Home() {
 
   return (
     <Box sx={{ minHeight: '100vh', pb: 8, bgcolor: 'background.default', color: 'text.primary' }}>
-      {/* Header Bar (Clean top bar without inner tabs) */}
-      <Header
-        mode={mode}
-        onToggleMode={toggleColorMode}
-        onNewRx={handleNewRx}
-        onUploadClick={() => {
-          const el = document.getElementById('uploader-section');
-          if (el) el.scrollIntoView({ behavior: 'smooth' });
-        }}
-        onOpenCopilot={() => setCopilotOpen(true)}
-        activeModuleTab={activeModuleTab}
-        currentUser={currentUser}
-        onLogout={handleLogout}
-        onOpenManageStaff={() => router.push('/staff-management')}
-      />
+      {/* Header Bar (Clean top bar without inner tabs) - only show when logged in */}
+      {currentUser && (
+        <Header
+          mode={mode}
+          onToggleMode={toggleColorMode}
+          onNewRx={handleNewRx}
+          onUploadClick={() => {
+            const el = document.getElementById('uploader-section');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+          }}
+          onOpenCopilot={() => setCopilotOpen(true)}
+          activeModuleTab={activeModuleTab}
+          currentUser={currentUser}
+          onLogout={handleLogout}
+          onOpenManageStaff={() => router.push('/staff-management')}
+        />
+      )}
 
       <Container maxWidth="xl" sx={{ mt: 4 }}>
-        {/* LOGGED OUT STATE: Render Login Screen */}
-        {!currentUser ? (
-          <LoginScreen staffList={staffList} onLoginSuccess={handleLoginSuccess} />
-        ) : (
-          /* LOGGED IN STATE: Render Modules & Dashboards */
-          <>
-            {/* Top Hero Banner */}
+        {/* LOGGED IN STATE: Render Modules & Dashboards */}
+        <>
+          {/* Top Hero Banner */}
             <Paper
               elevation={0}
               sx={{
@@ -528,7 +544,6 @@ export default function Home() {
               </Box>
             )}
           </>
-        )}
       </Container>
 
       {/* Prescription Print Modal */}

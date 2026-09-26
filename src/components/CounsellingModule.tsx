@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import * as Yup from 'yup';
 import {
   Card,
   CardContent,
@@ -40,11 +41,42 @@ import {
   Shield,
   Close,
   Verified,
-  LocalHospital
+  LocalHospital,
+  Biotech
 } from '@mui/icons-material';
 import { COUNSELLING_RISK_DATABASE } from '../mockData/clinicalModulesData';
 import { RiskAssessmentItem, RiskCategoryType } from '../types/clinical';
 import confetti from 'canvas-confetti';
+import { toast } from 'react-toastify';
+
+// ─── Yup Validation Schema ────────────────────────────────────────────────────
+const counsellingSchema = Yup.object({
+  currPatientName: Yup.string().trim().required('Patient name is required'),
+  currPatientAge: Yup.mixed()
+    .test('required', 'Age is required', (v) => v !== '' && v !== null && v !== undefined)
+    .test('positive', 'Enter a valid age', (v) => Number(v) > 0 && Number(v) < 130),
+  currPatientGender: Yup.string().required('Gender is required'),
+  currPatientDisease: Yup.string().trim().required('Diagnosis / condition is required'),
+  sbp: Yup.mixed()
+    .test('required', 'Systolic BP is required', (v) => v !== '' && v !== null && v !== undefined)
+    .test('range', 'Enter a valid BP (60–300 mmHg)', (v) => Number(v) >= 60 && Number(v) <= 300),
+  hba1c: Yup.mixed()
+    .test('required', 'HbA1c is required', (v) => v !== '' && v !== null && v !== undefined)
+    .test('range', 'Enter a valid HbA1c (3–20%)', (v) => Number(v) >= 3 && Number(v) <= 20),
+  egfr: Yup.mixed()
+    .test('required', 'eGFR is required', (v) => v !== '' && v !== null && v !== undefined)
+    .test('range', 'Enter a valid eGFR (1–200)', (v) => Number(v) >= 1 && Number(v) <= 200),
+});
+
+type FormErrors = {
+  currPatientName?: string;
+  currPatientAge?: string;
+  currPatientGender?: string;
+  currPatientDisease?: string;
+  sbp?: string;
+  hba1c?: string;
+  egfr?: string;
+};
 
 interface CounsellingModuleProps {
   patientName?: string;
@@ -57,28 +89,73 @@ export default function CounsellingModule({
   patientAge = 58,
   patientDisease = 'Essential Hypertension, Type 2 Diabetes'
 }: CounsellingModuleProps) {
-  const [selectedCategory, setSelectedCategory] = useState<RiskCategoryType>('cardiovascular');
+  // Patient Profile Form State — start empty, show placeholders only
+  const [currPatientName, setCurrPatientName] = useState<string>('');
+  const [currPatientAge, setCurrPatientAge] = useState<number | string>('');
+  const [currPatientGender, setCurrPatientGender] = useState<string>('');
+  const [currPatientDisease, setCurrPatientDisease] = useState<string>('');
 
-  // Patient Profile Form State
-  const [currPatientName, setCurrPatientName] = useState<string>(patientName);
-  const [currPatientAge, setCurrPatientAge] = useState<number | string>(patientAge);
-  const [currPatientGender, setCurrPatientGender] = useState<string>('Male');
-  const [currPatientDisease, setCurrPatientDisease] = useState<string>(patientDisease);
-
-  // Custom patient parameters state
-  const [sbp, setSbp] = useState<number>(142);
-  const [hba1c, setHba1c] = useState<number>(7.8);
-  const [egfr, setEgfr] = useState<number>(68);
-  const [sensationLoss, setSensationLoss] = useState<string>('Normal');
-  const [footGrade, setFootGrade] = useState<string>('Grade 0 (Intact Skin)');
+  // Custom patient parameters state — start empty
+  const [sbp, setSbp] = useState<number | string>('');
+  const [hba1c, setHba1c] = useState<number | string>('');
+  const [egfr, setEgfr] = useState<number | string>('');
+  const [sensationLoss, setSensationLoss] = useState<string>('');
+  const [footGrade, setFootGrade] = useState<string>('');
 
   // Print modal state
   const [printOpen, setPrintOpen] = useState<boolean>(false);
 
-  const activeRisk = COUNSELLING_RISK_DATABASE.find(r => r.id === selectedCategory) || COUNSELLING_RISK_DATABASE[0];
+  // Controls whether the risk section is visible (only after form submit)
+  const [submitted, setSubmitted] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<number>(0);
 
-  const handleTabChange = (_e: React.SyntheticEvent, newValue: RiskCategoryType) => {
-    setSelectedCategory(newValue);
+  // Field-level validation errors
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
+
+  const handleSubmitForm = async () => {
+    setFormErrors({});
+    try {
+      await counsellingSchema.validate(
+        { currPatientName, currPatientAge, currPatientGender, currPatientDisease, sbp, hba1c, egfr },
+        { abortEarly: false }
+      );
+    } catch (err) {
+      if (err instanceof Yup.ValidationError) {
+        const errs: FormErrors = {};
+        err.inner.forEach((e) => { if (e.path) errs[e.path as keyof FormErrors] = e.message; });
+        setFormErrors(errs);
+        toast.error('Please fill in all required fields before generating the report.', {
+          toastId: 'counselling-form-validation',
+        });
+        return;
+      }
+    }
+    confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
+    setSubmitted(true);
+    setTimeout(() => {
+      const el = document.getElementById('counselling-risk-section');
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
+
+  const handleLoadDemo = () => {
+    // Fill all fields with a realistic demo patient
+    setCurrPatientName('Robert Vance');
+    setCurrPatientAge(58);
+    setCurrPatientGender('Male');
+    setCurrPatientDisease('Essential Hypertension, Type 2 Diabetes, Dyslipidaemia');
+    setSbp(152);
+    setHba1c(8.4);
+    setEgfr(61);
+    setSensationLoss('Mild Loss');
+    setFootGrade('Grade 1 (Superficial Ulcer)');
+    // Auto-submit after filling
+    confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
+    setSubmitted(true);
+    setTimeout(() => {
+      const el = document.getElementById('counselling-risk-section');
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }, 150);
   };
 
   const handlePrint = () => {
@@ -168,13 +245,25 @@ export default function CounsellingModule({
               </Box>
             </Stack>
 
-            <Chip
-              icon={<Verified sx={{ fontSize: '14px !important', color: '#FFF !important' }} />}
-              label="UNIFIED CLINICAL INTAKE"
-              size="small"
-              color="secondary"
-              sx={{ fontWeight: 800, fontSize: '0.65rem', px: 1, height: 26 }}
-            />
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <Button
+                size="small"
+                variant="outlined"
+                color="secondary"
+                startIcon={<Biotech />}
+                onClick={handleLoadDemo}
+                sx={{ borderStyle: 'dashed', fontWeight: 700, borderRadius: 1 }}
+              >
+                Load Demo Patient
+              </Button>
+              {/* <Chip
+                icon={<Verified sx={{ fontSize: '14px !important', color: '#FFF !important' }} />}
+                label="UNIFIED CLINICAL INTAKE"
+                size="small"
+                color="secondary"
+                sx={{ fontWeight: 800, fontSize: '0.65rem', px: 1, height: 26 }}
+              /> */}
+            </Stack>
           </Stack>
 
           {/* Section 1: Demographics & Diagnosis */}
@@ -198,10 +287,12 @@ export default function CounsellingModule({
                 <TextField
                   fullWidth
                   size="small"
-                  label="Patient Full Name"
+                  label="Patient Full Name *"
                   placeholder="e.g. Robert Vance"
                   value={currPatientName}
                   onChange={(e) => setCurrPatientName(e.target.value)}
+                  error={!!formErrors.currPatientName}
+                  helperText={formErrors.currPatientName}
                   sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
                 />
               </Grid>
@@ -209,11 +300,13 @@ export default function CounsellingModule({
                 <TextField
                   fullWidth
                   size="small"
-                  label="Age (Years)"
+                  label="Age (Years) *"
                   type="number"
-                  placeholder="58"
+                  placeholder="e.g. 58"
                   value={currPatientAge}
                   onChange={(e) => setCurrPatientAge(e.target.value)}
+                  error={!!formErrors.currPatientAge}
+                  helperText={formErrors.currPatientAge}
                   sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
                 />
               </Grid>
@@ -222,11 +315,16 @@ export default function CounsellingModule({
                   fullWidth
                   select
                   size="small"
-                  label="Gender"
+                  label="Gender *"
                   value={currPatientGender}
                   onChange={(e) => setCurrPatientGender(e.target.value)}
+                  SelectProps={{ displayEmpty: true }}
+                  InputLabelProps={{ shrink: true }}
+                  error={!!formErrors.currPatientGender}
+                  helperText={formErrors.currPatientGender}
                   sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
                 >
+                  <MenuItem value=""><em>Select Patient Gender</em></MenuItem>
                   <MenuItem value="Male">Male</MenuItem>
                   <MenuItem value="Female">Female</MenuItem>
                   <MenuItem value="Other">Other</MenuItem>
@@ -236,10 +334,12 @@ export default function CounsellingModule({
                 <TextField
                   fullWidth
                   size="small"
-                  label="Clinical Condition / Diagnosis"
+                  label="Clinical Condition / Diagnosis *"
                   placeholder="e.g. Essential Hypertension, Type 2 Diabetes"
                   value={currPatientDisease}
                   onChange={(e) => setCurrPatientDisease(e.target.value)}
+                  error={!!formErrors.currPatientDisease}
+                  helperText={formErrors.currPatientDisease}
                   sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
                 />
               </Grid>
@@ -267,9 +367,12 @@ export default function CounsellingModule({
                   fullWidth
                   size="small"
                   type="number"
-                  label="Systolic BP (mmHg)"
+                  label="Systolic BP (mmHg) *"
+                  placeholder="e.g. 142"
                   value={sbp}
-                  onChange={(e) => setSbp(Number(e.target.value))}
+                  onChange={(e) => setSbp(e.target.value)}
+                  error={!!formErrors.sbp}
+                  helperText={formErrors.sbp}
                   sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
                 />
               </Grid>
@@ -279,9 +382,12 @@ export default function CounsellingModule({
                   size="small"
                   type="number"
                   inputProps={{ step: 0.1 }}
-                  label="HbA1c (%)"
+                  label="HbA1c (%) *"
+                  placeholder="e.g. 7.8"
                   value={hba1c}
-                  onChange={(e) => setHba1c(Number(e.target.value))}
+                  onChange={(e) => setHba1c(e.target.value)}
+                  error={!!formErrors.hba1c}
+                  helperText={formErrors.hba1c}
                   sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
                 />
               </Grid>
@@ -290,9 +396,12 @@ export default function CounsellingModule({
                   fullWidth
                   size="small"
                   type="number"
-                  label="eGFR (mL/min)"
+                  label="eGFR (mL/min) *"
+                  placeholder="e.g. 68"
                   value={egfr}
-                  onChange={(e) => setEgfr(Number(e.target.value))}
+                  onChange={(e) => setEgfr(e.target.value)}
+                  error={!!formErrors.egfr}
+                  helperText={formErrors.egfr}
                   sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
                 />
               </Grid>
@@ -304,8 +413,11 @@ export default function CounsellingModule({
                   label="Monofilament Sensation"
                   value={sensationLoss}
                   onChange={(e) => setSensationLoss(e.target.value)}
+                  SelectProps={{ displayEmpty: true }}
+                  InputLabelProps={{ shrink: true }}
                   sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
                 >
+                  <MenuItem value=""><em>Select Monofilament Sensation Level</em></MenuItem>
                   <MenuItem value="Normal">Normal (10/10 points)</MenuItem>
                   <MenuItem value="Mild Loss">Mild Loss (7-9 points)</MenuItem>
                   <MenuItem value="Severe Loss">Severe Numbness (&lt;6 points)</MenuItem>
@@ -319,8 +431,11 @@ export default function CounsellingModule({
                   label="Wagner Foot Grade"
                   value={footGrade}
                   onChange={(e) => setFootGrade(e.target.value)}
+                  SelectProps={{ displayEmpty: true }}
+                  InputLabelProps={{ shrink: true }}
                   sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
                 >
+                  <MenuItem value=""><em>Select Wagner Foot Grade</em></MenuItem>
                   <MenuItem value="Grade 0 (Intact Skin)">Grade 0 (Intact Skin)</MenuItem>
                   <MenuItem value="Grade 1 (Superficial Ulcer)">Grade 1 (Superficial Ulcer)</MenuItem>
                   <MenuItem value="Grade 2 (Deep Ulcer)">Grade 2 (Deep Ulcer)</MenuItem>
@@ -328,136 +443,191 @@ export default function CounsellingModule({
               </Grid>
             </Grid>
           </Paper>
+
+          {/* Submit Button */}
+          <Box sx={{ mt: 2.5, textAlign: 'right' }}>
+            <Button
+              variant="contained"
+              color="secondary"
+              size="large"
+              startIcon={<Shield />}
+              onClick={handleSubmitForm}
+              sx={{ borderRadius: 1, px: 4, py: 1.2, fontWeight: 800, fontSize: '0.95rem' }}
+            >
+              Generate Counselling Report
+            </Button>
+          </Box>
         </Paper>
 
-        {/* 5 Risk Category Tabs */}
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3, justifyContent: "space-between" }}>
-          <Tabs
-            value={selectedCategory}
-            onChange={handleTabChange}
-            textColor="secondary"
-            indicatorColor="secondary"
-            variant="scrollable"
-            scrollButtons="auto"
-
+        {/* 5 Risk Category Tabs — shown only after form is submitted */}
+        {!submitted && (
+          <Paper
+            variant="outlined"
+            sx={{
+              p: 4,
+              borderRadius: 1,
+              textAlign: 'center',
+              mt: 2,
+              bgcolor: isDark ? 'rgba(108, 92, 231, 0.05)' : 'rgba(108, 92, 231, 0.03)',
+              borderColor: isDark ? 'rgba(108, 92, 231, 0.2)' : '#E2E8F0',
+              borderStyle: 'dashed'
+            }}
           >
-            <Tab
-              value="cardiovascular"
-              icon={<Favorite sx={{ color: '#FF4D6D' }} />}
-              iconPosition="start"
-              label="1. Heart Attack & Stroke"
-            />
-            <Tab
-              value="retinopathy"
-              icon={<Visibility sx={{ color: '#FFB703' }} />}
-              iconPosition="start"
-              label="2. Diabetic Retinopathy"
-            />
-            <Tab
-              value="nephropathy"
-              icon={<WaterDrop sx={{ color: '#00B4D8' }} />}
-              iconPosition="start"
-              label="3. Diabetic Nephropathy"
-            />
-            <Tab
-              value="neuropathy"
-              icon={<FlashOn sx={{ color: '#6C5CE7' }} />}
-              iconPosition="start"
-              label="4. Diabetic Neuropathy"
-            />
-            <Tab
-              value="footRisk"
-              icon={<Pets sx={{ color: '#00C9A7' }} />}
-              iconPosition="start"
-              label="5. Diabetic Foot Risk"
-            />
-          </Tabs>
-        </Box>
+            <Shield sx={{ fontSize: 48, color: 'text.disabled', mb: 1.5 }} />
+            <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.secondary', mb: 0.5 }}>
+              Counselling Report Not Generated Yet
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Fill in the patient details and vitals above, then click <strong>Generate Counselling Report</strong> to view all 5 risk category assessments.
+            </Typography>
+          </Paper>
+        )}
 
-        {/* Selected Risk Category Overview */}
-        <Grid container spacing={3}>
-          {/* Left Column: Risk Score & Key Indicators */}
-          <Grid item xs={12} md={5}>
-            <Paper
-              variant="outlined"
+        {submitted && (
+          <Box id="counselling-risk-section">
+            {/* Tabs for Risk Categories */}
+            <Tabs
+              value={activeTab}
+              onChange={(e, newValue) => setActiveTab(newValue)}
+              variant="scrollable"
+              scrollButtons="auto"
               sx={{
-                p: 3,
-                borderRadius: 1,
-                bgcolor: isDark ? 'rgba(255, 255, 255, 0.02)' : '#F8FAFC',
-                borderColor: activeRisk.color,
-                height: '100%'
+                mb: 3,
+                borderBottom: 1,
+                borderColor: 'divider',
+                '& .MuiTab-root': { fontWeight: 800, textTransform: 'none', fontSize: '0.9rem', minHeight: 64 },
+                '& .Mui-selected': { color: COUNSELLING_RISK_DATABASE[activeTab]?.color }
               }}
+              TabIndicatorProps={{ style: { backgroundColor: COUNSELLING_RISK_DATABASE[activeTab]?.color } }}
             >
-              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-                <Chip
-                  label={activeRisk.riskLevel}
-                  sx={{ bgcolor: activeRisk.color, color: '#FFF', fontWeight: 800, fontSize: '0.85rem' }}
-                />
-                <Typography variant="h4" sx={{ fontWeight: 900, color: activeRisk.color }}>
-                  {activeRisk.score}<Typography component="span" variant="h6" color="text.secondary">/100 Risk</Typography>
-                </Typography>
-              </Stack>
+              {COUNSELLING_RISK_DATABASE.map((risk, idx) => {
+                const Icon = [Favorite, Visibility, WaterDrop, FlashOn, Pets][idx] || Shield;
+                return (
+                  <Tab
+                    key={risk.id}
+                    icon={<Icon />}
+                    iconPosition="start"
+                    label={`${idx + 1}. ${risk.title.split('(')[0].trim()}`}
+                    sx={{ color: activeTab === idx ? risk.color : 'text.secondary' }}
+                  />
+                );
+              })}
+            </Tabs>
 
-              <Typography variant="h6" sx={{ fontWeight: 800, mb: 0.5 }}>
-                {activeRisk.title}
-              </Typography>
-              <Typography variant="caption" color="text.secondary" display="block" mb={2.5}>
-                {activeRisk.subtitle}
-              </Typography>
+            {/* Selected Risk Category Overview */}
+            <Box>
+              {[COUNSELLING_RISK_DATABASE[activeTab]].filter(Boolean).map((risk) => (
+                <Grid container spacing={3} key={risk.id}>
+                  {/* Left Column: Risk Score & Key Indicators */}
+                  <Grid item xs={12} md={5}>
+                    <Paper
+                      variant="outlined"
+                      sx={{
+                        p: 3,
+                        borderRadius: 1,
+                        bgcolor: isDark ? 'rgba(255, 255, 255, 0.02)' : '#F8FAFC',
+                        borderColor: risk.color,
+                        height: '100%'
+                      }}
+                    >
+                      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+                        <Chip
+                          label={risk.riskLevel}
+                          sx={{ bgcolor: risk.color, color: '#FFF', fontWeight: 800, fontSize: '0.85rem' }}
+                        />
+                        <Typography variant="h4" sx={{ fontWeight: 900, color: risk.color }}>
+                          {risk.score}<Typography component="span" variant="h6" color="text.secondary">/100 Risk</Typography>
+                        </Typography>
+                      </Stack>
 
-              <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#00C9A7', mb: 1 }}>
-                🔍 Primary Risk Factors Flagged:
-              </Typography>
-              <Stack spacing={1} mb={3}>
-                {activeRisk.keyIndicators.map((ind, i) => (
-                  <Stack key={i} direction="row" alignItems="flex-start" spacing={1}>
-                    <Warning sx={{ color: activeRisk.color, fontSize: 18, mt: 0.2 }} />
-                    <Typography variant="body2" sx={{ fontSize: '0.88rem' }}>{ind}</Typography>
-                  </Stack>
-                ))}
-              </Stack>
+                      <Typography variant="h6" sx={{ fontWeight: 800, mb: 0.5 }}>
+                        {risk.title}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" display="block" mb={2.5}>
+                        {risk.subtitle}
+                      </Typography>
 
-              <Alert severity="info" sx={{ borderRadius: 1 }}>
-                <strong>Screening Protocol:</strong> {activeRisk.screeningSchedule}
-              </Alert>
-            </Paper>
-          </Grid>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#00C9A7', mb: 1 }}>
+                        🔍 Primary Risk Factors Flagged:
+                      </Typography>
+                      <Stack spacing={1} mb={3}>
+                        {risk.keyIndicators.map((ind, i) => (
+                          <Stack key={i} direction="row" alignItems="flex-start" spacing={1}>
+                            <Warning sx={{ color: risk.color, fontSize: 18, mt: 0.2 }} />
+                            <Typography variant="body2" sx={{ fontSize: '0.88rem' }}>{ind}</Typography>
+                          </Stack>
+                        ))}
+                      </Stack>
 
-          {/* Right Column: Physician Guidelines & Patient Advice */}
-          <Grid item xs={12} md={7}>
-            <Stack spacing={2.5}>
-              {/* Clinical Guidelines for Staff & Doctor */}
-              <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 1, borderLeft: '5px solid #6C5CE7' }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#6C5CE7', mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-                  🩺 Clinical Decision Support & Target Thresholds
-                </Typography>
-                <Stack spacing={1.2}>
-                  {activeRisk.clinicalGuidance.map((cg, i) => (
-                    <Stack key={i} direction="row" alignItems="flex-start" spacing={1}>
-                      <CheckCircle sx={{ color: '#6C5CE7', fontSize: 18, mt: 0.3 }} />
-                      <Typography variant="body2">{cg}</Typography>
+                      <Alert severity="info" sx={{ borderRadius: 1 }}>
+                        <strong>Screening Protocol:</strong> {risk.screeningSchedule}
+                      </Alert>
+                    </Paper>
+                  </Grid>
+
+                  {/* Right Column: Physician Guidelines & Patient Advice */}
+                  <Grid item xs={12} md={7}>
+                    <Stack spacing={2.5}>
+                      {/* Clinical Guidelines for Staff & Doctor */}
+                      <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 1, borderLeft: '5px solid #6C5CE7' }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#6C5CE7', mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+                          🩺 Clinical Decision Support & Target Thresholds
+                        </Typography>
+                        <Stack spacing={1.2}>
+                          {risk.clinicalGuidance.map((cg, i) => (
+                            <Stack key={i} direction="row" alignItems="flex-start" spacing={1}>
+                              <CheckCircle sx={{ color: '#6C5CE7', fontSize: 18, mt: 0.3 }} />
+                              <Typography variant="body2">{cg}</Typography>
+                            </Stack>
+                          ))}
+                        </Stack>
+                      </Paper>
+
+                      {/* Patient Education & Counselling Points */}
+                      <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 1, borderLeft: '5px solid #00C9A7' }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#00C9A7', mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+                          💡 Patient Counselling & Take-Home Instructions
+                        </Typography>
+                        <Stack spacing={1.2}>
+                          {risk.patientAdvice.map((pa, i) => (
+                            <Stack key={i} direction="row" alignItems="flex-start" spacing={1}>
+                              <Info sx={{ color: '#00C9A7', fontSize: 18, mt: 0.3 }} />
+                              <Typography variant="body2">{pa}</Typography>
+                            </Stack>
+                          ))}
+                        </Stack>
+                      </Paper>
                     </Stack>
-                  ))}
-                </Stack>
-              </Paper>
+                  </Grid>
+                </Grid>
+              ))}
+            </Box>
 
-              {/* Patient Education & Counselling Points */}
-              <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 1, borderLeft: '5px solid #00C9A7' }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#00C9A7', mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-                  💡 Patient Counselling & Take-Home Instructions
-                </Typography>
-                <Stack spacing={1.2}>
-                  {activeRisk.patientAdvice.map((pa, i) => (
-                    <Stack key={i} direction="row" alignItems="flex-start" spacing={1}>
-                      <Info sx={{ color: '#00C9A7', fontSize: 18, mt: 0.3 }} />
-                      <Typography variant="body2">{pa}</Typography>
-                    </Stack>
-                  ))}
-                </Stack>
-              </Paper>
-            </Stack>
-          </Grid>
-        </Grid>
+            {/* Reset button */}
+            <Box sx={{ textAlign: 'right', mt: 3 }}>
+              <Button
+                variant="outlined"
+                color="inherit"
+                size="small"
+                onClick={() => {
+                  setSubmitted(false);
+                  setCurrPatientName('');
+                  setCurrPatientAge('');
+                  setCurrPatientGender('');
+                  setCurrPatientDisease('');
+                  setSbp('');
+                  setHba1c('');
+                  setEgfr('');
+                  setSensationLoss('');
+                  setFootGrade('');
+                }}
+                sx={{ fontWeight: 700, borderRadius: 1 }}
+              >
+                ↺ Reset &amp; Edit Patient Info
+              </Button>
+            </Box>
+          </Box>
+        )}
       </CardContent>
 
       {/* Printable Patient Counselling Sheet Dialog */}
@@ -474,7 +644,7 @@ export default function CounsellingModule({
           </IconButton>
         </DialogTitle>
 
-        <DialogContent sx={{ p: 4, bgcolor: '#FFFFFF !important', color: '#1E293B !important' }}>
+        <DialogContent id="printable-counselling" sx={{ p: 4, bgcolor: '#FFFFFF !important', color: '#1E293B !important' }}>
           <Box sx={{ border: '2px solid #6C5CE7', borderRadius: 1, p: 3, bgcolor: '#FFFFFF !important', color: '#1E293B !important' }}>
             {/* Header */}
             <Grid container spacing={2} sx={{ borderBottom: '2px solid #E2E8F0', pb: 2, mb: 3 }}>
@@ -502,19 +672,26 @@ export default function CounsellingModule({
                 Patient: {currPatientName} ({currPatientAge} Y, {currPatientGender}) • Diagnosis: {currPatientDisease}
               </Typography>
               <Typography variant="caption" sx={{ color: '#475569 !important' }}>
-                Evaluated Target Area: <strong style={{ color: '#0F172A' }}>{activeRisk.title}</strong> ({activeRisk.riskLevel})
+                Comprehensive 5-Point Diabetic & Hypertensive Risk Evaluation
               </Typography>
             </Paper>
 
             {/* Content List */}
-            <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#4C1D95 !important', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#4C1D95 !important', mb: 2 }}>
               Key Health Action Steps For Patient:
             </Typography>
-            <Box sx={{ pl: 2, mb: 3 }}>
-              {activeRisk.patientAdvice.map((adv, idx) => (
-                <Typography key={idx} variant="body2" sx={{ mb: 1, color: '#334155 !important' }}>
-                  • {adv}
-                </Typography>
+            <Box sx={{ pl: 1, mb: 3 }}>
+              {COUNSELLING_RISK_DATABASE.map((risk) => (
+                <Box key={risk.id} sx={{ mb: 2 }}>
+                  <Typography variant="caption" sx={{ fontWeight: 800, color: risk.color }}>
+                    {risk.title} ({risk.riskLevel})
+                  </Typography>
+                  {risk.patientAdvice.map((adv, idx) => (
+                    <Typography key={idx} variant="body2" sx={{ mb: 0.5, color: '#334155 !important' }}>
+                      • {adv}
+                    </Typography>
+                  ))}
+                </Box>
               ))}
             </Box>
 

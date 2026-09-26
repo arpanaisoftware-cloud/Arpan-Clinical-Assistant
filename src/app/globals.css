@@ -33,32 +33,51 @@ body {
   background: rgba(0, 201, 167, 0.8);
 }
 
-/* Print Styles for Printable Digital Prescription */
+/* Print Styles — Prescription, Counselling & Diets */
 @media print {
-  /* Remove browser default print header (date/time) and footer (page title/URL) */
+
+  /* Remove browser default header (date/time) and footer (title/URL) */
   @page {
     margin: 0;
     size: A4;
   }
 
-  body * {
-    visibility: hidden;
+  /* Clamp document height so no blank overflow pages are generated */
+  html,
+  body {
+    height: auto !important;
+    overflow: hidden !important;
   }
 
+  /* Hide everything by removing from layout (display:none), not just visually */
+  body>* {
+    display: none !important;
+  }
+
+  /* Make MUI Dialog portals visible when a print dialog is open */
+  .MuiDialog-root,
+  .MuiModal-root {
+    display: block !important;
+  }
+
+  /* Hide all dialog chrome (title bar, actions, backdrop) */
+  .MuiBackdrop-root,
+  .MuiDialogTitle-root,
+  .MuiDialogActions-root {
+    display: none !important;
+  }
+
+  /* Show only the printable content area */
   #printable-prescription,
-  #printable-prescription * {
-    visibility: visible;
-  }
-
-  #printable-prescription {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    margin: 0;
-    padding: 24px 28px;
+  #printable-counselling,
+  #printable-diets {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 24px 28px !important;
     background: #FFFFFF !important;
     color: #000000 !important;
-    box-sizing: border-box;
+    box-sizing: border-box !important;
   }
 }

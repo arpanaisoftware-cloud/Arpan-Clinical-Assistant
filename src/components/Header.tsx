@@ -87,7 +87,7 @@ export default function Header({
                   Arpan Clinical Assistant
                 </Typography>
                 <Chip
-                  label="CARE OS v3.0"
+                  label="CARE OS v7.0"
                   size="small"
                   sx={{
                     height: 20,

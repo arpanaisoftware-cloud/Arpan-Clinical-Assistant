@@ -26,7 +26,8 @@ import {
   Divider,
   Switch,
   FormControlLabel,
-  useTheme
+  useTheme,
+  InputAdornment
 } from '@mui/material';
 import {
   Close,
@@ -37,7 +38,9 @@ import {
   LocalHospital,
   Lock,
   ContentCopy,
-  Verified
+  Verified,
+  Visibility,
+  VisibilityOff
 } from '@mui/icons-material';
 import { StaffUser, UserRole, ModulePermission } from '../types/clinical';
 import { toast } from 'react-toastify';
@@ -79,6 +82,7 @@ export default function StaffManagementModal({
   const [name, setName] = useState('');
   const [staffIdInput, setStaffIdInput] = useState('');
   const [customPasscode, setCustomPasscode] = useState('');
+  const [showCustomPasscode, setShowCustomPasscode] = useState(false);
   const [department, setDepartment] = useState('');
   const [role, setRole] = useState<UserRole | ''>('');
   const [permission, setPermission] = useState<ModulePermission | ''>('');
@@ -278,11 +282,20 @@ export default function StaffManagementModal({
                 <TextField
                   fullWidth
                   size="small"
-                  type="password"
+                  type={showCustomPasscode ? 'text' : 'password'}
                   label="Initial Password / Passcode (Optional)"
                   placeholder="Auto-generated if blank (e.g. staff123)"
                   value={customPasscode}
                   onChange={(e) => setCustomPasscode(e.target.value)}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton onClick={() => setShowCustomPasscode(!showCustomPasscode)} edge="end" size="small">
+                          {showCustomPasscode ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                        </IconButton>
+                      </InputAdornment>
+                    )
+                  }}
                 />
               </Grid>
 

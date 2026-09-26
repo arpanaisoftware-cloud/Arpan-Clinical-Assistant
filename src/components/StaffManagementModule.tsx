@@ -25,7 +25,8 @@ import {
   FormControlLabel,
   IconButton,
   Tooltip,
-  useTheme
+  useTheme,
+  InputAdornment
 } from '@mui/material';
 import {
   PersonAdd,
@@ -34,7 +35,9 @@ import {
   Verified,
   Close,
   Shield,
-  Key
+  Key,
+  Visibility,
+  VisibilityOff
 } from '@mui/icons-material';
 import { StaffUser, UserRole, ModulePermission } from '../types/clinical';
 import { toast } from 'react-toastify';

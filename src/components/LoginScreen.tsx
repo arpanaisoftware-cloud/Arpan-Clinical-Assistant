@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useContext } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Card,
   CardContent,
@@ -43,7 +44,9 @@ import {
   ContentCopy,
   OpenInNew,
   Brightness4,
-  Brightness7
+  Brightness7,
+  Visibility,
+  VisibilityOff
 } from '@mui/icons-material';
 import { StaffUser, UserRole, AuthUser } from '../types/clinical';
 import { toast } from 'react-toastify';
@@ -56,10 +59,12 @@ interface LoginScreenProps {
 }
 
 export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasscode }: LoginScreenProps) {
+  const router = useRouter();
   const { mode, toggleColorMode } = useContext(ColorModeContext);
   const [selectedRole, setSelectedRole] = useState<UserRole>('Doctor');
   const [selectedStaffId, setSelectedStaffId] = useState<string>('');
   const [passcode, setPasscode] = useState<string>('');
+  const [showPasscode, setShowPasscode] = useState<boolean>(false);
 
   // Forgot Password / Reset Link Ecosystem Modal States
   const [forgotModalOpen, setForgotModalOpen] = useState<boolean>(false);
@@ -80,31 +85,15 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasscod
 
     let userToLogin = staffList.find(u => u.staffId === selectedStaffId || u.id === selectedStaffId);
 
-    // Default fallback if no specific user selected from dropdown
+    // Validate required fields
+    if (!selectedStaffId) {
+      toast.error('Please select a registered account to sign in.');
+      return;
+    }
+
     if (!userToLogin) {
-      if (selectedRole === 'Doctor') {
-        userToLogin = {
-          id: 'ST-103',
-          name: 'Dr. Yashwant Dubey',
-          staffId: 'DOC-8849',
-          department: 'Chief Cardiology & Internal Medicine',
-          role: 'Doctor',
-          modulePermissions: 'Full Access',
-          active: true,
-          createdAt: '2026-01-01'
-        };
-      } else {
-        userToLogin = {
-          id: 'ST-101',
-          name: 'Nurse Alex Rivera',
-          staffId: 'STAFF-8921',
-          department: 'Diabetic & Chronic Care',
-          role: 'Staff',
-          modulePermissions: 'Counselling + Diets',
-          active: true,
-          createdAt: '2026-08-10'
-        };
-      }
+      toast.error('Invalid user selected. Please select a valid account.');
+      return;
     }
 
     const authenticatedUser: AuthUser = {
@@ -147,7 +136,8 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasscod
     setIsSending(true);
 
     const token = 'ec7d83c2082486ed808146848a9247e8e4414409cf24f4d04af6bb4ff710acd7';
-    const link = `https://arpanclinical.site/reset-password/${token}`;
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://arpanclinical.site';
+    const link = `${origin}/reset-password/${token}`;
 
     setTimeout(() => {
       setIsSending(false);
@@ -227,7 +217,7 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasscod
                     Arpan Clinical Assistant
                   </Typography>
                   <Chip
-                    label="CARE OS v3.0"
+                    label="CARE OS v7.0"
                     size="small"
                     sx={{
                       height: 20,
@@ -366,7 +356,7 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasscod
             <Stack direction="row" alignItems="center" justifyContent="center" spacing={1} mb={1.2}>
               <Chip
                 icon={<VerifiedUser sx={{ fontSize: '14px !important', color: `${primaryAccent} !important` }} />}
-                label="CARE OS v3.0"
+                label="CARE OS v7.0"
                 size="small"
                 sx={{
                   bgcolor: isDark ? 'rgba(0, 201, 167, 0.12)' : 'rgba(0, 201, 167, 0.08)',
@@ -491,6 +481,21 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasscod
                     size="medium"
                     value={selectedStaffId}
                     onChange={(e) => setSelectedStaffId(e.target.value)}
+                    required
+                    SelectProps={{
+                      displayEmpty: true,
+                      renderValue: (selected) => {
+                        if (!selected || selected === '') {
+                          return (
+                            <Typography sx={{ color: isDark ? '#64748B' : '#94A3B8', fontSize: '0.95rem' }}>
+                              Select registered {selectedRole} from roster ({availableUsers.length} active)
+                            </Typography>
+                          );
+                        }
+                        const found = availableUsers.find(u => u.staffId === selected || u.id === selected);
+                        return found ? `${found.name} (${found.staffId}) — ${found.department}` : (selected as string);
+                      }
+                    }}
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
@@ -506,8 +511,8 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasscod
                       }
                     }}
                   >
-                    <MenuItem value="">
-                      <em>Select from roster ({availableUsers.length} active)</em>
+                    <MenuItem value="" disabled sx={{ color: 'text.secondary' }}>
+                      <em>Select registered {selectedRole} from roster</em>
                     </MenuItem>
                     {availableUsers.map((u) => (
                       <MenuItem key={u.id} value={u.staffId}>
@@ -533,7 +538,7 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasscod
                   <TextField
                     fullWidth
                     size="medium"
-                    type="password"
+                    type={showPasscode ? 'text' : 'password'}
                     placeholder="Enter passcode (e.g. 1234 or doc123)"
                     value={passcode}
                     onChange={(e) => setPasscode(e.target.value)}
@@ -542,6 +547,18 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasscod
                       startAdornment: (
                         <InputAdornment position="start">
                           <Lock sx={{ color: primaryAccent, fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => setShowPasscode((prev) => !prev)}
+                            edge="end"
+                            size="small"
+                            sx={{ color: isDark ? '#94A3B8' : '#64748B' }}
+                          >
+                            {showPasscode ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                          </IconButton>
                         </InputAdornment>
                       ),
                       sx: {
@@ -557,7 +574,7 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasscod
                   {/* Forgot Passcode / Reset Link Button */}
                   <Box sx={{ display: 'flex', justifyContent: 'flex-end', pt: 3 }}>
                     <Box
-                      onClick={handleOpenForgotModal}
+                      onClick={() => router.push('/reset-password/ec7d83c2082486ed808146848a9247e8e4414409cf24f4d04af6bb4ff710acd7')}
                       sx={{
                         fontSize: '0.82rem',
                         fontWeight: 800,
@@ -698,6 +715,7 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasscod
                       select
                       size="medium"
                       value={resetTargetId}
+                      required
                       onChange={(e) => {
                         setResetTargetId(e.target.value);
                         const found = staffList.find(s => s.staffId === e.target.value || s.id === e.target.value);
@@ -827,6 +845,18 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasscod
                           sx={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'none', borderRadius: 1.5 }}
                         >
                           Copy Link
+                        </Button>
+                      </Tooltip>
+                      <Tooltip title="Navigate to Reset Password Page Route">
+                        <Button
+                          size="small"
+                          variant="contained"
+                          component="a"
+                          href={generatedResetLink}
+                          startIcon={<OpenInNew fontSize="small" />}
+                          sx={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'none', borderRadius: 1.5, bgcolor: primaryAccent, color: '#FFF', '&:hover': { bgcolor: '#00967D' } }}
+                        >
+                          Open Reset Page Route
                         </Button>
                       </Tooltip>
                     </Stack>
