@@ -122,7 +122,7 @@ export interface StaffUser {
   modulePermissions: ModulePermission;
   active: boolean;
   createdAt: string;
-  passcode?: string;
+  password?: string;
   email?: string;
 }
 

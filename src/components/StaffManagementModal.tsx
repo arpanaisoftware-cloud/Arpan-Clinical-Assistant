@@ -81,8 +81,8 @@ export default function StaffManagementModal({
 
   const [name, setName] = useState('');
   const [staffIdInput, setStaffIdInput] = useState('');
-  const [customPasscode, setCustomPasscode] = useState('');
-  const [showCustomPasscode, setShowCustomPasscode] = useState(false);
+  const [customPassword, setCustomPassword] = useState('');
+  const [showCustomPassword, setShowCustomPassword] = useState(false);
   const [department, setDepartment] = useState('');
   const [role, setRole] = useState<UserRole | ''>('');
   const [permission, setPermission] = useState<ModulePermission | ''>('');
@@ -120,7 +120,7 @@ export default function StaffManagementModal({
 
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const generatedId = staffIdInput.trim() || `STAFF-${randomSuffix}`;
-    const generatedPass = customPasscode.trim() || `staff${randomSuffix}`;
+    const generatedPass = customPassword.trim() || `staff${randomSuffix}`;
 
     const newMember: StaffUser = {
       id: `ST-${Date.now()}`,
@@ -131,7 +131,7 @@ export default function StaffManagementModal({
       modulePermissions: assignedPermissions,
       active: true,
       createdAt: new Date().toISOString().split('T')[0],
-      passcode: generatedPass
+      password: generatedPass
     };
 
     onAddStaff(newMember);
@@ -144,7 +144,7 @@ export default function StaffManagementModal({
     // Reset form
     setName('');
     setStaffIdInput('');
-    setCustomPasscode('');
+    setCustomPassword('');
     setDepartment('');
     setRole('');
     setPermission('');
@@ -152,7 +152,7 @@ export default function StaffManagementModal({
   };
 
   const handleCopyCredentials = (user: StaffUser) => {
-    const text = `Arpan Clinical Assistant Login Credentials:\nName: ${user.name}\nRole: ${user.role}\nDepartment: ${user.department}\nPermissions: ${user.modulePermissions}\nLogin ID: ${user.staffId}\nPassword: ${user.passcode || 'staff123'}`;
+    const text = `Arpan Clinical Assistant Login Credentials:\nName: ${user.name}\nRole: ${user.role}\nDepartment: ${user.department}\nPermissions: ${user.modulePermissions}\nLogin ID: ${user.staffId}\nPassword: ${user.password || 'staff123'}`;
     navigator.clipboard.writeText(text);
     toast.info('Credentials copied to clipboard!', { toastId: 'copy-credentials-modal' });
   };
@@ -205,7 +205,7 @@ export default function StaffManagementModal({
               <Grid item xs={6} sm={3}>
                 <Typography variant="caption" color="text.secondary" display="block">Assigned Password</Typography>
                 <Typography variant="subtitle1" sx={{ fontWeight: 900, color: '#FFB703' }}>
-                  {issuedUser.passcode}
+                  {issuedUser.password}
                 </Typography>
               </Grid>
 
@@ -282,16 +282,16 @@ export default function StaffManagementModal({
                 <TextField
                   fullWidth
                   size="small"
-                  type={showCustomPasscode ? 'text' : 'password'}
-                  label="Initial Password / Passcode (Optional)"
+                  type={showCustomPassword ? 'text' : 'password'}
+                  label="Initial Password / Password (Optional)"
                   placeholder="Auto-generated if blank (e.g. staff123)"
-                  value={customPasscode}
-                  onChange={(e) => setCustomPasscode(e.target.value)}
+                  value={customPassword}
+                  onChange={(e) => setCustomPassword(e.target.value)}
                   InputProps={{
                     endAdornment: (
                       <InputAdornment position="end">
-                        <IconButton onClick={() => setShowCustomPasscode(!showCustomPasscode)} edge="end" size="small">
-                          {showCustomPasscode ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                        <IconButton onClick={() => setShowCustomPassword(!showCustomPassword)} edge="end" size="small">
+                          {showCustomPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
                         </IconButton>
                       </InputAdornment>
                     )
@@ -405,7 +405,7 @@ export default function StaffManagementModal({
                 <TableRow key={user.id} hover>
                   <TableCell sx={{ fontWeight: 900, color: '#00C9A7' }}>{user.staffId}</TableCell>
                   <TableCell sx={{ fontWeight: 800, color: '#FFB703', fontFamily: 'monospace' }}>
-                    {user.passcode || 'staff123'}
+                    {user.password || 'staff123'}
                   </TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>{user.name}</TableCell>
                   <TableCell sx={{ fontSize: '0.85rem' }}>{user.department}</TableCell>

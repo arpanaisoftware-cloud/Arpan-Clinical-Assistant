@@ -49,6 +49,16 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { ColorModeContext } from '../theme/ThemeRegistry';
 import { toast } from 'react-toastify';
+import * as Yup from 'yup';
+
+const emailSchema = Yup.object({
+  resetEmail: Yup.string().email('Please enter a valid clinical email address.').required('Email is required.')
+});
+
+const resetSchema = Yup.object({
+  newPassword: Yup.string().required('Password is required.').min(8, 'New Password / PIN must be at least 8 characters long.'),
+  confirmPassword: Yup.string().oneOf([Yup.ref('newPassword')], 'Passwords do not match. Please re-enter.').required('Please confirm your password.')
+});
 
 interface ResetPasswordScreenProps {
   token?: string;
@@ -56,19 +66,20 @@ interface ResetPasswordScreenProps {
 
 export default function ResetPasswordScreen({ token }: ResetPasswordScreenProps) {
   const router = useRouter();
-  const { staffList, updateStaffPasscode } = useAuth();
+  const { staffList, updateStaffPassword } = useAuth();
   const { mode, toggleColorMode } = useContext(ColorModeContext);
 
   // Stepper state (1: Request, 2: Set New Password, 3: Success)
   const [resetStep, setResetStep] = useState<number>(token ? 2 : 1);
   const [resetTargetId, setResetTargetId] = useState<string>(staffList[0]?.staffId || 'DOC-8849');
   const [resetEmail, setResetEmail] = useState<string>('dr.yashwant@arpanclinical.org');
-  const [newPasscode, setNewPasscode] = useState<string>('');
-  const [confirmPasscode, setConfirmPasscode] = useState<string>('');
-  const [showNewPasscode, setShowNewPasscode] = useState<boolean>(false);
-  const [showConfirmPasscode, setShowConfirmPasscode] = useState<boolean>(false);
+  const [newPassword, setNewPassword] = useState<string>('');
+  const [confirmPassword, setConfirmPassword] = useState<string>('');
+  const [showNewPassword, setShowNewPassword] = useState<boolean>(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
   const [isSending, setIsSending] = useState<boolean>(false);
   const [resetErrorMsg, setResetErrorMsg] = useState<string>('');
+  const [formErrors, setFormErrors] = useState<{ resetEmail?: string, newPassword?: string, confirmPassword?: string }>({});
 
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
@@ -77,8 +88,8 @@ export default function ResetPasswordScreen({ token }: ResetPasswordScreenProps)
 
   const targetUserObj = staffList.find(s => s.staffId === resetTargetId || s.id === resetTargetId);
 
-  // Calculate passcode security strength (0 to 100)
-  const getPasscodeStrength = (pass: string) => {
+  // Calculate password security strength (0 to 100)
+  const getPasswordStrength = (pass: string) => {
     if (!pass) return { score: 0, label: 'Not Entered', color: '#94A3B8' };
     let score = 0;
     if (pass.length >= 4) score += 30;
@@ -92,14 +103,25 @@ export default function ResetPasswordScreen({ token }: ResetPasswordScreenProps)
     return { score, label: 'Strong', color: '#10B981' };
   };
 
-  const strengthInfo = getPasscodeStrength(newPasscode);
+  const strengthInfo = getPasswordStrength(newPassword);
 
-  const handleSendResetLink = (e: React.FormEvent) => {
+  const handleSendResetLink = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!resetEmail || !resetEmail.includes('@')) {
-      setResetErrorMsg('Please enter a valid clinical email address.');
-      return;
+    setFormErrors({});
+
+    try {
+      await emailSchema.validate({ resetEmail }, { abortEarly: false });
+    } catch (err) {
+      if (err instanceof Yup.ValidationError) {
+        const errors: any = {};
+        err.inner.forEach((error) => {
+          if (error.path) errors[error.path] = error.message;
+        });
+        setFormErrors(errors);
+        return;
+      }
     }
+
     setResetErrorMsg('');
     setIsSending(true);
 
@@ -110,25 +132,30 @@ export default function ResetPasswordScreen({ token }: ResetPasswordScreenProps)
     }, 800);
   };
 
-  const handleVerifyAndResetPasscode = (e: React.FormEvent) => {
+  const handleVerifyAndResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormErrors({});
+
+    try {
+      await resetSchema.validate({ newPassword, confirmPassword }, { abortEarly: false });
+    } catch (err) {
+      if (err instanceof Yup.ValidationError) {
+        const errors: any = {};
+        err.inner.forEach((error) => {
+          if (error.path) errors[error.path] = error.message;
+        });
+        setFormErrors(errors);
+        return;
+      }
+    }
+
     setResetErrorMsg('');
 
-    if (!newPasscode || newPasscode.length < 4) {
-      setResetErrorMsg('New Passcode / PIN must be at least 4 characters long.');
-      return;
-    }
-
-    if (newPasscode !== confirmPasscode) {
-      setResetErrorMsg('Passcodes do not match. Please re-enter.');
-      return;
-    }
-
-    // Update passcode in Auth Context
-    updateStaffPasscode(resetTargetId, newPasscode);
+    // Update password in Auth Context
+    updateStaffPassword(resetTargetId, newPassword);
 
     setResetStep(3);
-    toast.success('🔒 Passcode updated successfully!');
+    toast.success('🔒 Password updated successfully!');
   };
 
   return (
@@ -325,10 +352,10 @@ export default function ResetPasswordScreen({ token }: ResetPasswordScreenProps)
                 mb: 0.8
               }}
             >
-              Reset Clinical Passcode
+              {!token && resetStep === 1 ? 'Forgot Clinical Password' : 'Reset Clinical Password'}
             </Typography>
 
-            <Stack direction="row" alignItems="center" justifyContent="center" spacing={1} mb={1.2}>
+            {/* <Stack direction="row" alignItems="center" justifyContent="center" spacing={1} mb={1.2}>
               <Chip
                 icon={<VpnKey sx={{ fontSize: '14px !important', color: `${primaryAccent} !important` }} />}
                 label="ENCRYPTED AUTH PORTAL"
@@ -345,7 +372,7 @@ export default function ResetPasswordScreen({ token }: ResetPasswordScreenProps)
                   border: `1px solid ${primaryAccent}33`
                 }}
               />
-            </Stack>
+            </Stack> */}
 
             <Typography
               variant="caption"
@@ -358,104 +385,15 @@ export default function ResetPasswordScreen({ token }: ResetPasswordScreenProps)
                 px: 2
               }}
             >
-              Verify your security credentials and set up a new authorization passcode.
+              {!token && resetStep === 1 ? 'Enter your clinical email address to receive a secure password reset link.' : 'Verify your security credentials and set up a new authorization password.'}
             </Typography>
           </Box>
 
           <CardContent sx={{ p: 4, pt: 3.5 }}>
-            {/* STEPPER NAVIGATION */}
-            <Box sx={{ mb: 3.5 }}>
-              <Stepper
-                activeStep={resetStep - 1}
-                alternativeLabel
-                sx={{
-                  '& .MuiStepLabel-label': {
-                    fontWeight: 800,
-                    fontSize: '0.8rem',
-                    color: isDark ? '#64748B' : '#94A3B8',
-                    '&.Mui-active': {
-                      color: primaryAccent,
-                      fontWeight: 900
-                    },
-                    '&.Mui-completed': {
-                      color: secondaryAccent
-                    }
-                  },
-                  '& .MuiStepIcon-root': {
-                    fontSize: 26,
-                    color: isDark ? 'rgba(255,255,255,0.12)' : '#CBD5E1',
-                    '&.Mui-active': {
-                      color: primaryAccent
-                    },
-                    '&.Mui-completed': {
-                      color: secondaryAccent
-                    }
-                  }
-                }}
-              >
-                <Step>
-                  <StepLabel>Request Link</StepLabel>
-                </Step>
-                <Step>
-                  <StepLabel>Set Passcode</StepLabel>
-                </Step>
-                <Step>
-                  <StepLabel>Complete</StepLabel>
-                </Step>
-              </Stepper>
-            </Box>
-
-            {resetErrorMsg && (
-              <Alert severity="error" sx={{ mb: 3, borderRadius: 2.5, fontWeight: 600 }}>
-                {resetErrorMsg}
-              </Alert>
-            )}
-
             {/* STEP 1: REQUEST RESET LINK */}
-            {resetStep === 1 && (
+            {resetStep === 1 && !token && (
               <form onSubmit={handleSendResetLink}>
                 <Stack spacing={2.8}>
-                  <Box>
-                    <Typography variant="caption" sx={{ fontWeight: 800, mb: 0.8, display: 'block', color: isDark ? '#CBD5E1' : '#475569', letterSpacing: 0.3 }}>
-                      Select Registered Clinical Account:
-                    </Typography>
-                    <TextField
-                      fullWidth
-                      select
-                      size="medium"
-                      value={resetTargetId}
-                      required
-                      onChange={(e) => {
-                        setResetTargetId(e.target.value);
-                        const found = staffList.find(s => s.staffId === e.target.value || s.id === e.target.value);
-                        if (found) {
-                          setResetEmail(
-                            found.role === 'Doctor'
-                              ? `dr.${found.name.toLowerCase().replace(/[^a-z]/g, '')}@arpanclinical.org`
-                              : `${found.name.toLowerCase().replace(/[^a-z]/g, '')}@arpanclinical.org`
-                          );
-                        }
-                      }}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <Person sx={{ color: primaryAccent, fontSize: 22 }} />
-                          </InputAdornment>
-                        ),
-                        sx: {
-                          borderRadius: 2.5,
-                          bgcolor: isDark ? 'rgba(255, 255, 255, 0.03)' : '#FFFFFF',
-                          '&:hover fieldset': { borderColor: `${primaryAccent} !important` }
-                        }
-                      }}
-                    >
-                      {staffList.map((s) => (
-                        <MenuItem key={s.id} value={s.staffId}>
-                          {s.role === 'Doctor' ? '👨‍⚕️' : '🧑‍⚕️'} {s.name} ({s.staffId}) — {s.role}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  </Box>
 
                   <Box>
                     <Typography variant="caption" sx={{ fontWeight: 800, mb: 0.8, display: 'block', color: isDark ? '#CBD5E1' : '#475569', letterSpacing: 0.3 }}>
@@ -480,48 +418,105 @@ export default function ResetPasswordScreen({ token }: ResetPasswordScreenProps)
                           '&:hover fieldset': { borderColor: `${primaryAccent} !important` }
                         }
                       }}
+                      error={!!formErrors.resetEmail}
+                      helperText={formErrors.resetEmail}
                     />
-                    <Typography variant="caption" sx={{ display: 'block', mt: 0.8, color: isDark ? '#94A3B8' : '#64748B', fontWeight: 500 }}>
-                      An encrypted one-time security reset link will be dispatched to this address.
-                    </Typography>
+
+                  </Box>
+                  <Box sx={{
+                    pt: 1,
+                    pb: 2,
+
+                  }}>
+
+                    <Button
+                      fullWidth
+                      type="submit"
+                      variant="contained"
+                      size="large"
+                      disabled={isSending}
+                      startIcon={isSending ? <CircularProgress size={20} color="inherit" /> : <MarkEmailRead />}
+                      sx={{
+
+                        py: 1.6,
+                        borderRadius: 2.5,
+                        fontWeight: 900,
+                        fontSize: '0.98rem',
+                        letterSpacing: 0.3,
+                        bgcolor: primaryAccent,
+                        color: '#FFFFFF',
+                        boxShadow: '0 8px 24px rgba(0, 201, 167, 0.38)',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          bgcolor: '#00967D',
+                          boxShadow: '0 12px 28px rgba(0, 201, 167, 0.5)',
+                          transform: 'translateY(-1px)'
+                        }
+                      }}
+                    >
+                      {isSending ? 'Verifying Link Request...' : 'Dispatch Password Reset Link'}
+                    </Button>
                   </Box>
 
-                  <Button
-                    fullWidth
-                    type="submit"
-                    variant="contained"
-                    size="large"
-                    disabled={isSending}
-                    startIcon={isSending ? <CircularProgress size={20} color="inherit" /> : <MarkEmailRead />}
-                    sx={{
-                      py: 1.6,
-                      borderRadius: 2.5,
-                      fontWeight: 900,
-                      fontSize: '0.98rem',
-                      letterSpacing: 0.3,
-                      bgcolor: primaryAccent,
-                      color: '#FFFFFF',
-                      boxShadow: '0 8px 24px rgba(0, 201, 167, 0.38)',
-                      transition: 'all 0.3s ease',
-                      '&:hover': {
-                        bgcolor: '#00967D',
-                        boxShadow: '0 12px 28px rgba(0, 201, 167, 0.5)',
-                        transform: 'translateY(-1px)'
-                      }
-                    }}
-                  >
-                    {isSending ? 'Verifying Link Request...' : 'Dispatch Password Reset Link'}
-                  </Button>
                 </Stack>
               </form>
             )}
 
-            {/* STEP 2: SET NEW PASSCODE */}
-            {resetStep === 2 && (
-              <form onSubmit={handleVerifyAndResetPasscode}>
+            {/* STEP 2 (NO TOKEN): CHECK YOUR EMAIL */}
+            {resetStep === 2 && !token && (
+              <Box sx={{ textAlign: 'center', py: 3 }}>
+                <Box
+                  sx={{
+                    width: 76,
+                    height: 76,
+                    borderRadius: '50%',
+                    bgcolor: 'rgba(0, 201, 167, 0.15)',
+                    color: '#00C9A7',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 10px 30px rgba(0, 201, 167, 0.3)',
+                    mb: 2.5
+                  }}
+                >
+                  <MarkEmailRead sx={{ fontSize: 52 }} />
+                </Box>
+
+                <Typography variant="h5" sx={{ fontWeight: 900, mb: 1, letterSpacing: '-0.01em' }}>
+                  Check Your Email
+                </Typography>
+                <Typography variant="body2" sx={{ color: isDark ? '#CBD5E1' : '#475569', mb: 3.5, px: 2, lineHeight: 1.5 }}>
+                  If an account exists with <strong>{resetEmail}</strong>, we have sent a password reset link to it.
+                </Typography>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<ArrowBack />}
+                  onClick={() => router.push('/login')}
+                  sx={{
+                    borderRadius: 2.5,
+                    fontWeight: 700,
+                    fontSize: '0.82rem',
+                    textTransform: 'none',
+                    px: 2,
+                    py: 0.7,
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(15, 23, 42, 0.15)',
+                    color: isDark ? '#F8FAFC' : '#0F172A',
+                    mt: 4
+                  }}
+                >
+                  Return to Login
+                </Button>
+
+              </Box>
+            )}
+
+            {/* STEP 2 (TOKEN): SET NEW PASSWORD */}
+            {resetStep === 2 && token && (
+              <form onSubmit={handleVerifyAndResetPassword}>
                 <Stack spacing={2.8}>
                   {/* Account Summary Strip */}
-                  <Paper
+                  {/* <Paper
                     elevation={0}
                     sx={{
                       p: 2,
@@ -547,19 +542,19 @@ export default function ResetPasswordScreen({ token }: ResetPasswordScreenProps)
                       size="small"
                       sx={{ bgcolor: 'rgba(0, 201, 167, 0.15)', color: '#00C9A7', fontWeight: 800, fontSize: '0.68rem' }}
                     />
-                  </Paper>
+                  </Paper> */}
 
                   <Box>
                     <Typography variant="caption" sx={{ fontWeight: 800, mb: 0.8, display: 'block', color: isDark ? '#CBD5E1' : '#475569', letterSpacing: 0.3 }}>
-                      New Passcode / PIN:
+                      New Password / PIN:
                     </Typography>
                     <TextField
                       fullWidth
                       size="medium"
-                      type={showNewPasscode ? 'text' : 'password'}
-                      value={newPasscode}
-                      onChange={(e) => setNewPasscode(e.target.value)}
-                      placeholder="Set new passcode (min 4 characters)"
+                      type={showNewPassword ? 'text' : 'password'}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Set new password (min 8 characters)"
                       required
                       InputProps={{
                         startAdornment: (
@@ -569,8 +564,8 @@ export default function ResetPasswordScreen({ token }: ResetPasswordScreenProps)
                         ),
                         endAdornment: (
                           <InputAdornment position="end">
-                            <IconButton onClick={() => setShowNewPasscode(!showNewPasscode)} edge="end" size="small">
-                              {showNewPasscode ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                            <IconButton onClick={() => setShowNewPassword(!showNewPassword)} edge="end" size="small">
+                              {showNewPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
                             </IconButton>
                           </InputAdornment>
                         ),
@@ -580,14 +575,16 @@ export default function ResetPasswordScreen({ token }: ResetPasswordScreenProps)
                           '&:hover fieldset': { borderColor: `${primaryAccent} !important` }
                         }
                       }}
+                      error={!!formErrors.newPassword}
+                      helperText={formErrors.newPassword}
                     />
 
-                    {/* Passcode Security Indicator */}
-                    {newPasscode && (
+                    {/* Password Security Indicator */}
+                    {newPassword && (
                       <Box sx={{ mt: 1 }}>
                         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={0.5}>
                           <Typography variant="caption" sx={{ color: isDark ? '#94A3B8' : '#64748B', fontWeight: 600 }}>
-                            Passcode Strength:
+                            Password Strength:
                           </Typography>
                           <Typography variant="caption" sx={{ color: strengthInfo.color, fontWeight: 900 }}>
                             {strengthInfo.label}
@@ -612,15 +609,15 @@ export default function ResetPasswordScreen({ token }: ResetPasswordScreenProps)
 
                   <Box>
                     <Typography variant="caption" sx={{ fontWeight: 800, mb: 0.8, display: 'block', color: isDark ? '#CBD5E1' : '#475569', letterSpacing: 0.3 }}>
-                      Confirm New Passcode:
+                      Confirm New Password:
                     </Typography>
                     <TextField
                       fullWidth
                       size="medium"
-                      type={showConfirmPasscode ? 'text' : 'password'}
-                      value={confirmPasscode}
-                      onChange={(e) => setConfirmPasscode(e.target.value)}
-                      placeholder="Re-enter new passcode"
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Re-enter new password"
                       required
                       InputProps={{
                         startAdornment: (
@@ -630,8 +627,8 @@ export default function ResetPasswordScreen({ token }: ResetPasswordScreenProps)
                         ),
                         endAdornment: (
                           <InputAdornment position="end">
-                            <IconButton onClick={() => setShowConfirmPasscode(!showConfirmPasscode)} edge="end" size="small">
-                              {showConfirmPasscode ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                            <IconButton onClick={() => setShowConfirmPassword(!showConfirmPassword)} edge="end" size="small">
+                              {showConfirmPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
                             </IconButton>
                           </InputAdornment>
                         ),
@@ -641,6 +638,8 @@ export default function ResetPasswordScreen({ token }: ResetPasswordScreenProps)
                           '&:hover fieldset': { borderColor: `${primaryAccent} !important` }
                         }
                       }}
+                      error={!!formErrors.confirmPassword}
+                      helperText={formErrors.confirmPassword}
                     />
                   </Box>
 
@@ -648,7 +647,7 @@ export default function ResetPasswordScreen({ token }: ResetPasswordScreenProps)
                     <Button
                       fullWidth
                       variant="outlined"
-                      onClick={() => setResetStep(1)}
+                      onClick={() => router.push('/login')}
                       sx={{
                         py: 1.4,
                         borderRadius: 2.5,
@@ -681,7 +680,7 @@ export default function ResetPasswordScreen({ token }: ResetPasswordScreenProps)
                         }
                       }}
                     >
-                      Save Passcode
+                      Save Password
                     </Button>
                   </Stack>
                 </Stack>
@@ -709,10 +708,10 @@ export default function ResetPasswordScreen({ token }: ResetPasswordScreenProps)
                 </Box>
 
                 <Typography variant="h5" sx={{ fontWeight: 900, mb: 1, letterSpacing: '-0.01em' }}>
-                  Passcode Reset Successful!
+                  Password Reset Successful!
                 </Typography>
                 <Typography variant="body2" sx={{ color: isDark ? '#CBD5E1' : '#475569', mb: 3.5, px: 2, lineHeight: 1.5 }}>
-                  Passcode for <strong>{targetUserObj?.name || resetTargetId}</strong> has been updated in Arpan Clinical Assistant.
+                  Password for <strong>{targetUserObj?.name || resetTargetId}</strong> has been updated in Arpan Clinical Assistant.
                 </Typography>
 
                 <Button

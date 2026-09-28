@@ -9,7 +9,7 @@ import { toast } from 'react-toastify';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { currentUser, staffList, login, updateStaffPasscode } = useAuth();
+  const { currentUser, staffList, login, updateStaffPassword } = useAuth();
 
   useEffect(() => {
     if (currentUser) {
@@ -29,7 +29,7 @@ export default function LoginPage() {
     <LoginScreen
       staffList={staffList}
       onLoginSuccess={handleLoginSuccess}
-      onUpdatePasscode={updateStaffPasscode}
+      onUpdatePassword={updateStaffPassword}
     />
   );
 }

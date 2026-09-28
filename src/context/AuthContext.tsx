@@ -12,7 +12,7 @@ interface AuthContextType {
   addStaffUser: (user: StaffUser) => void;
   toggleStaffStatus: (id: string) => void;
   updateStaffPermissions: (id: string, modulePermissions: any) => void;
-  updateStaffPasscode: (id: string, newPasscode: string) => void;
+  updateStaffPassword: (id: string, newPassword: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -86,9 +86,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
-  const updateStaffPasscode = (id: string, newPasscode: string) => {
+  const updateStaffPassword = (id: string, newPassword: string) => {
     setStaffList((prev) =>
-      prev.map((s) => (s.id === id || s.staffId === id ? { ...s, passcode: newPasscode } : s))
+      prev.map((s) => (s.id === id || s.staffId === id ? { ...s, password: newPassword } : s))
     );
   };
 
@@ -102,7 +102,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         addStaffUser,
         toggleStaffStatus,
         updateStaffPermissions,
-        updateStaffPasscode
+        updateStaffPassword
       }}
     >
       {children}
