@@ -1,0 +1,323 @@
+{
+  "info": {
+    "name": "Arpan Clinical Assistant API",
+    "description": "API collection with sample data and responses",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\",\n  \"staffId\": \"STF001\",\n  \"department\": \"Cardiology\",\n  \"role\": \"Doctor\",\n  \"modulePermissions\": \"Full Access\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"message\": \"User created successfully\",\n  \"user\": {\n    \"id\": \"64b2c123abc4567890def123\",\n    \"name\": \"John Doe\",\n    \"email\": \"john@example.com\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"message\": \"Login successful\",\n  \"token\": \"eyJhbGciOiJIUzI1...\",\n  \"user\": {\n    \"id\": \"64b2c123abc4567890def123\",\n    \"name\": \"John Doe\",\n    \"email\": \"john@example.com\",\n    \"role\": \"Doctor\",\n    \"department\": \"Cardiology\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Staff",
+      "item": [
+        {
+          "name": "Get All Staff",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/staff",
+              "host": ["{{baseUrl}}"],
+              "path": ["staff"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"staff\": [\n    {\n      \"_id\": \"64b2c123abc4567890def123\",\n      \"name\": \"Jane Doe\",\n      \"email\": \"jane@example.com\",\n      \"staffId\": \"STF002\",\n      \"department\": \"Neurology\",\n      \"role\": \"Doctor\",\n      \"active\": true\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Staff (Same as Register)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jane Doe\",\n  \"email\": \"jane@example.com\",\n  \"password\": \"password123\",\n  \"staffId\": \"STF002\",\n  \"department\": \"Neurology\",\n  \"role\": \"Doctor\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/staff",
+              "host": ["{{baseUrl}}"],
+              "path": ["staff"]
+            }
+          }
+        },
+        {
+          "name": "Update Staff",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"department\": \"Pediatrics\",\n  \"active\": false,\n  \"role\": \"Admin\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/staff/64b2c123abc4567890def123",
+              "host": ["{{baseUrl}}"],
+              "path": ["staff", "64b2c123abc4567890def123"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"message\": \"Staff updated successfully\",\n  \"user\": {\n    \"_id\": \"64b2c123abc4567890def123\",\n    \"department\": \"Pediatrics\",\n    \"active\": false\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Drugs",
+      "item": [
+        {
+          "name": "Get All Drugs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/drugs",
+              "host": ["{{baseUrl}}"],
+              "path": ["drugs"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "[\n  {\n    \"_id\": \"64c3d234...\",\n    \"name\": \"Paracetamol\",\n    \"category\": \"Analgesic\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Create Drug",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cilamet XL 10/50\",\n  \"category\": \"Anti-Hypertensive\",\n  \"genericName\": \"Cilnidipine and Metoprolol Succinate\",\n  \"standardDosage\": \"1 Tablet Daily\",\n  \"alternatives\": [\n    {\n      \"name\": \"Cilacar M\",\n      \"type\": \"Generic\",\n      \"priceSavings\": \"₹50\",\n      \"efficacy\": \"Similar\",\n      \"manufacturer\": \"J.B. Chemicals\",\n      \"notes\": \"Cost-effective alternative\"\n    }\n  ],\n  \"contraindications\": [\"Severe Bradycardia\"],\n  \"interactions\": [\n    {\n      \"drug\": \"Verapamil\",\n      \"severity\": \"High\",\n      \"effect\": \"Increased risk of bradycardia and hypotension\"\n    }\n  ]\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/drugs",
+              "host": ["{{baseUrl}}"],
+              "path": ["drugs"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"message\": \"Drug created successfully\",\n  \"drug\": {\n    \"_id\": \"...\",\n    \"name\": \"Cilamet XL 10/50\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Diets",
+      "item": [
+        {
+          "name": "Create Diet",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customId\": \"DIET-001\",\n  \"name\": \"Diabetic Low-Carb Diet\",\n  \"diseaseCategory\": \"Diabetes Type 2\",\n  \"calories\": 1500,\n  \"bmiCategory\": \"Overweight\",\n  \"macroBreakdown\": {\n    \"carbs\": \"40%\",\n    \"protein\": \"30%\",\n    \"fats\": \"30%\",\n    \"fiber\": \"35g\"\n  },\n  \"electrolyteLimits\": {\n    \"sodium\": \"<2000mg\",\n    \"potassium\": \"Standard\",\n    \"phosphorus\": \"Standard\",\n    \"calcium\": \"1000mg\"\n  },\n  \"mealFrequency\": {\n    \"frequency\": \"6 Meals (3 Main, 3 Snacks)\",\n    \"schedule\": [\n      {\n        \"time\": \"8:00 AM\",\n        \"mealName\": \"Breakfast\",\n        \"portion\": \"Medium\",\n        \"focus\": \"High Protein, Low GI Carbs\"\n      }\n    ]\n  },\n  \"recommendedFoods\": [\"Oats\", \"Eggs\", \"Leafy Greens\"],\n  \"foodsToAvoid\": [\"Sugar\", \"Refined Flour\", \"Fruit Juices\"]\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/diets",
+              "host": ["{{baseUrl}}"],
+              "path": ["diets"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"message\": \"Diet created successfully\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Counselling",
+      "item": [
+        {
+          "name": "Create Counselling",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customId\": \"RISK-001\",\n  \"title\": \"Cardiovascular Risk\",\n  \"subtitle\": \"10-Year ASCVD Risk Score\",\n  \"riskLevel\": \"HIGH RISK\",\n  \"score\": 25,\n  \"color\": \"#FF4D6D\",\n  \"keyIndicators\": [\"Hypertension\", \"Elevated LDL\", \"Age > 60\"],\n  \"clinicalGuidance\": [\"Start Statin Therapy\", \"Intensive BP Control\"],\n  \"patientAdvice\": [\"Adopt DASH Diet\", \"30 mins daily walking\"],\n  \"screeningSchedule\": \"Re-evaluate in 3 months\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/counselling",
+              "host": ["{{baseUrl}}"],
+              "path": ["counselling"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"message\": \"Counselling protocol created successfully\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Analyze",
+      "item": [
+        {
+          "name": "Analyze Document (JSON)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientName\": \"John Doe\",\n  \"age\": \"45\",\n  \"gender\": \"Male\",\n  \"weight\": \"80kg\",\n  \"allergies\": \"None\",\n  \"disease\": \"Type 2 Diabetes, Hypertension\",\n  \"medications\": [\n    {\n      \"name\": \"Tab. Cilamet XL 10/50\",\n      \"dosage\": \"1-0-0\",\n      \"frequency\": \"After Breakfast\",\n      \"duration\": \"75 Days\"\n    }\n  ]\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/analyze",
+              "host": ["{{baseUrl}}"],
+              "path": ["analyze"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"patientInfo\": {\n    \"patientName\": \"John Doe\",\n    \"age\": 45,\n    \"gender\": \"Male\",\n    \"weight\": 80,\n    \"allergies\": \"None\",\n    \"disease\": \"Type 2 Diabetes, Hypertension\",\n    \"medications\": []\n  },\n  \"medications\": [\n    {\n      \"name\": \"Tab. Cilamet XL 10/50\",\n      \"dosage\": \"1-0-0\",\n      \"frequency\": \"After Breakfast\",\n      \"duration\": \"75 Days\"\n    }\n  ],\n  \"safetyScore\": 85,\n  \"riskCategory\": \"Safe\",\n  \"statusColor\": \"#00C9A7\",\n  \"flaggedAllergies\": [],\n  \"flaggedInteractions\": [],\n  \"alternativesList\": [],\n  \"dosageTimeline\": {\n    \"morning\": [{ \"name\": \"Tab. Cilamet XL 10/50\", \"dose\": \"1 Tablet\", \"timing\": \"After Breakfast\" }],\n    \"afternoon\": [],\n    \"evening\": [],\n    \"bedtime\": []\n  },\n  \"dietLifestyleDos\": [\"Low salt diet\"],\n  \"dietLifestyleDonts\": [\"Avoid high sugar\"],\n  \"aiClinicalOverview\": \"Medications are generally safe. Monitor blood pressure regularly.\",\n  \"estimatedMonthlySavings\": \"₹0\",\n  \"timestamp\": \"26 Sept 2026, 10:00 AM\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Analyze Document (Form-Data with Image)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "files",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "patientName",
+                  "value": "Jane Doe",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/analyze",
+              "host": ["{{baseUrl}}"],
+              "path": ["analyze"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
