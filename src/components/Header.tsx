@@ -54,13 +54,18 @@ export default function Header({
 
   return (
     <AppBar
-      position="sticky"
+      position="fixed"
       sx={{
-        background: mode === 'dark' ? 'rgba(10, 15, 29, 0.9)' : 'rgba(255, 255, 255, 0.9)',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 1300,
+        background: mode === 'dark' ? 'rgba(10, 15, 29, 0.95)' : 'rgba(255, 255, 255, 0.95)',
         backdropFilter: 'blur(16px)',
         borderBottom: mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(0, 0, 0, 0.08)',
-        boxShadow: 'none',
+        boxShadow: mode === 'dark' ? '0 4px 24px rgba(0,0,0,0.4)' : '0 2px 12px rgba(0,0,0,0.06)',
         color: mode === 'dark' ? '#F0F4FC' : '#1E293B',
+
       }}
     >
       <Container maxWidth="xl">
@@ -77,11 +82,12 @@ export default function Header({
                 alignItems: 'center',
                 justifyContent: 'center',
                 boxShadow: '0 4px 14px rgba(0, 201, 167, 0.4)',
+                flexShrink: 0
               }}
             >
               <LocalHospital sx={{ color: '#FFF', fontSize: 26 }} />
             </Box>
-            <Box>
+            <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
               <Stack direction="row" alignItems="center" spacing={1}>
                 <Typography variant="h6" sx={{ fontWeight: 800, background: 'linear-gradient(90deg, #00C9A7, #6C5CE7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                   Arpan Clinical Assistant
@@ -95,79 +101,90 @@ export default function Header({
                     fontWeight: 800,
                     bgcolor: 'rgba(0, 201, 167, 0.15)',
                     color: '#00C9A7',
-                    border: '1px solid rgba(0, 201, 167, 0.3)'
+                    border: '1px solid rgba(0, 201, 167, 0.3)',
+                    display: { xs: 'none', md: 'flex' }
                   }}
                 />
               </Stack>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: -0.5 }}>
-                Intelligent Prescription, Counselling & Dietary Care Platform
+              <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' }, mt: -0.5 }}>
+                Intelligent Prescription, Counselling &amp; Dietary Care Platform
               </Typography>
             </Box>
           </Stack>
 
           {/* User Role & Quick Actions */}
           {currentUser && (
-            <Stack direction="row" alignItems="center" spacing={1.5}>
-              {/* Doctor Manage Staff Button */}
+            <Stack direction="row" alignItems="center" spacing={{ xs: 0.8, sm: 1.5 }}>
+
+              {/* Doctor Manage Staff Button — icon-only on mobile, full button on sm+ */}
               {(userRole === 'Doctor' || currentUser.modulePermissions === 'Full Access') && (
                 <Tooltip title="Manage Staff Accounts & Module Access Permissions" arrow placement="bottom">
-                  <Button
-                    variant="outlined"
-                    color="primary"
-                    startIcon={<SupervisorAccount />}
-                    onClick={onOpenManageStaff}
-                    size="small"
-                    sx={{ borderRadius: 1, fontWeight: 700, display: { xs: 'none', sm: 'inline-flex' } }}
-                  >
-                    Manage Staff
-                  </Button>
-                </Tooltip>
-              )}
-
-              {userRole === 'Doctor' && activeModuleTab === 0 && (
-                <>
-                  <Tooltip title="Create a new blank patient prescription template" arrow placement="bottom">
+                  <>
+                    {/* Icon-only on xs */}
+                    <IconButton
+                      onClick={onOpenManageStaff}
+                      size="small"
+                      color="primary"
+                      sx={{
+                        display: { xs: 'inline-flex', sm: 'none' },
+                        border: '1px solid rgba(0, 201, 167, 0.4)',
+                        borderRadius: 1,
+                        p: 0.75
+                      }}
+                    >
+                      <SupervisorAccount fontSize="small" />
+                    </IconButton>
+                    {/* Full button on sm+ */}
                     <Button
                       variant="outlined"
                       color="primary"
+                      startIcon={<SupervisorAccount />}
+                      onClick={onOpenManageStaff}
                       size="small"
-                      startIcon={<AddCircleOutline />}
-                      onClick={onNewRx}
-                      sx={{ display: { xs: 'none', md: 'inline-flex' } }}
+                      sx={{ borderRadius: 1, fontWeight: 700, display: { xs: 'none', sm: 'inline-flex' } }}
                     >
-                      New Rx
+                      Manage Staff
                     </Button>
-                  </Tooltip>
-                  <Tooltip title="Upload paper prescription photo or PDF for AI extraction" arrow placement="bottom">
-                    <Button
-                      variant="outlined"
-                      color="secondary"
-                      size="small"
-                      startIcon={<CloudUpload />}
-                      onClick={onUploadClick}
-                      sx={{ display: { xs: 'none', lg: 'inline-flex' } }}
-                    >
-                      Scan Rx
-                    </Button>
-                  </Tooltip>
-                </>
+                  </>
+                </Tooltip>
               )}
 
-              <Tooltip title="Open AI Doctor Copilot Clinical Assistant Drawer" arrow placement="bottom">
-                <Button
-                  variant="contained"
-                  color="secondary"
-                  size="small"
-                  startIcon={<Psychology />}
-                  onClick={onOpenCopilot}
-                  sx={{
-                    boxShadow: '0 4px 15px rgba(108, 92, 231, 0.4)',
-                    background: 'linear-gradient(135deg, #6C5CE7 0%, #4834D4 100%)',
-                    fontWeight: 700
-                  }}
-                >
-                  Copilot
-                </Button>
+              {/* Ask AI — icon-only on mobile, full button on sm+ */}
+              <Tooltip title="Open AI Clinical Assistant" arrow placement="bottom">
+                <>
+                  {/* Icon-only on xs */}
+                  <IconButton
+                    onClick={onOpenCopilot}
+                    size="small"
+                    sx={{
+                      display: { xs: 'inline-flex', sm: 'none' },
+                      background: 'linear-gradient(135deg, #6C5CE7 0%, #4834D4 100%)',
+                      color: '#FFF',
+                      borderRadius: 1,
+                      p: 0.75,
+                      boxShadow: '0 4px 15px rgba(108, 92, 231, 0.4)',
+                      '&:hover': { background: 'linear-gradient(135deg, #5a4bd1 0%, #3b28b8 100%)' }
+                    }}
+                  >
+                    <Psychology fontSize="small" />
+                  </IconButton>
+                  {/* Full button on sm+ */}
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    size="small"
+                    startIcon={<Psychology />}
+                    onClick={onOpenCopilot}
+                    sx={{
+                      display: { xs: 'none', sm: 'inline-flex' },
+                      boxShadow: '0 4px 15px rgba(108, 92, 231, 0.4)',
+                      background: 'linear-gradient(135deg, #6C5CE7 0%, #4834D4 100%)',
+                      fontWeight: 700
+                    }}
+                  >
+                    Ask AI
+                  </Button>
+                </>
               </Tooltip>
 
               <Tooltip title={mode === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'} arrow placement="bottom">
@@ -176,9 +193,30 @@ export default function Header({
                 </IconButton>
               </Tooltip>
 
+              {/* User pill — icon-only logout on xs, full pill on sm+ */}
+              {/* xs: just a red logout icon button */}
+              <Tooltip title="Sign out of Arpan Clinical Assistant" arrow placement="bottom">
+                <IconButton
+                  onClick={onLogout}
+                  size="small"
+                  sx={{
+                    display: { xs: 'inline-flex', sm: 'none' },
+                    bgcolor: 'rgba(255, 77, 109, 0.15)',
+                    color: '#FF4D6D',
+                    borderRadius: 1,
+                    border: '1px solid rgba(255, 77, 109, 0.4)',
+                    p: 0.75,
+                    '&:hover': { bgcolor: 'rgba(255, 77, 109, 0.25)' }
+                  }}
+                >
+                  <Logout fontSize="small" />
+                </IconButton>
+              </Tooltip>
+
+              {/* sm+: full avatar + logout pill */}
               <Box
                 sx={{
-                  display: 'flex',
+                  display: { xs: 'none', sm: 'flex' },
                   alignItems: 'center',
                   bgcolor: userRole === 'Doctor' ? 'rgba(0, 201, 167, 0.12)' : 'rgba(108, 92, 231, 0.12)',
                   border: userRole === 'Doctor' ? '1px solid rgba(0, 201, 167, 0.4)' : '1px solid rgba(108, 92, 231, 0.4)',

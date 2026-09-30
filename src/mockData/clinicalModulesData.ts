@@ -34,7 +34,7 @@ export const INITIAL_STAFF_USERS: StaffUser[] = [
     modulePermissions: 'Full Access',
     active: true,
     createdAt: '2026-01-01',
-    password: 'doc123',
+    password: '00000000',
     email: 'dr.yashwant@arpanclinical.org'
   }
 ];

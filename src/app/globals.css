@@ -70,7 +70,8 @@ body {
   /* Show only the printable content area */
   #printable-prescription,
   #printable-counselling,
-  #printable-diets {
+  #printable-diets,
+  #printable-analysis {
     display: block !important;
     position: static !important;
     width: 100% !important;

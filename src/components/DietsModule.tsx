@@ -53,6 +53,32 @@ import { CLINICAL_DIET_PLANS } from '../mockData/clinicalModulesData';
 import { DietPlanItem } from '../types/clinical';
 import confetti from 'canvas-confetti';
 import { toast } from 'react-toastify';
+import * as Yup from 'yup';
+import { PlayArrow } from '@mui/icons-material';
+
+const dietsSchema = Yup.object({
+  currPatientName: Yup.string().trim().required('Patient name is required'),
+  currPatientAge: Yup.mixed()
+    .test('required', 'Age is required', (v) => v !== '' && v !== null && v !== undefined)
+    .test('positive', 'Enter a valid age', (v) => Number(v) > 0 && Number(v) < 130),
+  currPatientGender: Yup.string().required('Gender is required'),
+  currPatientDisease: Yup.string().trim().required('Diagnosis / condition is required'),
+  weightKg: Yup.mixed()
+    .test('required', 'Weight is required', (v) => v !== '' && v !== null && v !== undefined)
+    .test('positive', 'Enter a valid weight', (v) => Number(v) > 0),
+  heightCm: Yup.mixed()
+    .test('required', 'Height is required', (v) => v !== '' && v !== null && v !== undefined)
+    .test('positive', 'Enter a valid height', (v) => Number(v) > 0),
+});
+
+type FormErrors = {
+  currPatientName?: string;
+  currPatientAge?: string;
+  currPatientGender?: string;
+  currPatientDisease?: string;
+  weightKg?: string;
+  heightCm?: string;
+};
 
 interface DietsModuleProps {
   patientName?: string;
@@ -68,17 +94,20 @@ export default function DietsModule({
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
 
-  const [selectedDietId, setSelectedDietId] = useState<string>('DIET-01');
+  const [selectedDietId, setSelectedDietId] = useState<string>('');
 
   // Patient Profile Form State
-  const [currPatientName, setCurrPatientName] = useState<string>(patientName);
-  const [currPatientAge, setCurrPatientAge] = useState<number | string>(patientAge);
-  const [currPatientGender, setCurrPatientGender] = useState<string>('Male');
-  const [currPatientDisease, setCurrPatientDisease] = useState<string>(patientDisease);
+  const [currPatientName, setCurrPatientName] = useState<string>('');
+  const [currPatientAge, setCurrPatientAge] = useState<number | string>('');
+  const [currPatientGender, setCurrPatientGender] = useState<string>('');
+  const [currPatientDisease, setCurrPatientDisease] = useState<string>('');
 
   // Interactive BMI Calculator state
-  const [weightKg, setWeightKg] = useState<number>(82);
-  const [heightCm, setHeightCm] = useState<number>(172);
+  const [weightKg, setWeightKg] = useState<number | string>('');
+  const [heightCm, setHeightCm] = useState<number | string>('');
+
+  const [submitted, setSubmitted] = useState<boolean>(false);
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
 
   // Print modal state
   const [printOpen, setPrintOpen] = useState<boolean>(false);
@@ -97,8 +126,10 @@ export default function DietsModule({
   const [isCustomActive, setIsCustomActive] = useState<boolean>(false);
 
   // Calculate BMI
-  const heightMeters = heightCm / 100;
-  const bmi = heightMeters > 0 ? (weightKg / (heightMeters * heightMeters)).toFixed(1) : '27.7';
+  const parsedWeight = Number(weightKg) || 0;
+  const parsedHeight = Number(heightCm) || 0;
+  const heightMeters = parsedHeight / 100;
+  const bmi = heightMeters > 0 ? (parsedWeight / (heightMeters * heightMeters)).toFixed(1) : '0.0';
   const bmiVal = parseFloat(bmi);
 
   let bmiStatus = 'Normal Weight';
@@ -153,6 +184,47 @@ export default function DietsModule({
     setCustomRows(updated);
   };
 
+  const handleLoadDemo = () => {
+    setCurrPatientName('Robert Vance');
+    setCurrPatientAge(58);
+    setCurrPatientGender('Male');
+    setCurrPatientDisease('Essential Hypertension, Type 2 Diabetes');
+    setWeightKg(82);
+    setHeightCm(172);
+    setSelectedDietId('DIET-01');
+    setFormErrors({});
+  };
+
+  const handleSubmitForm = async () => {
+    setFormErrors({});
+    try {
+      await dietsSchema.validate(
+        { currPatientName, currPatientAge, currPatientGender, currPatientDisease, weightKg, heightCm },
+        { abortEarly: false }
+      );
+      if (!selectedDietId) {
+        toast.error('Please select a clinical diet preset.');
+        return;
+      }
+    } catch (err) {
+      if (err instanceof Yup.ValidationError) {
+        const errs: FormErrors = {};
+        err.inner.forEach((e) => { if (e.path) errs[e.path as keyof FormErrors] = e.message; });
+        setFormErrors(errs);
+        toast.error('Please fill in all required fields before generating the plan.', {
+          toastId: 'diets-form-validation',
+        });
+        return;
+      }
+    }
+    confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
+    setSubmitted(true);
+    setTimeout(() => {
+      const el = document.getElementById('diets-report-section');
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
+
   const handlePopulateFromPreset = () => {
     setCustomPlanTitle(`Custom Plan (${presetDiet.name})`);
     setCustomCalories(presetDiet.calories);
@@ -193,22 +265,22 @@ export default function DietsModule({
     >
       <CardContent sx={{ p: { xs: 2.5, md: 4 } }}>
         {/* Module Header Banner */}
-        <Grid container spacing={3} alignItems="center" mb={2}>
+        <Grid container spacing={2} alignItems="center" mb={2}>
           <Grid item xs={12} md={6}>
-            <Typography variant="h4" sx={{ fontWeight: 900, mb: 0.5 }}>
-              Clinical Diet Planner & Electrolyte Management
+            <Typography variant="h4" sx={{ fontWeight: 900, mb: 0.5, fontSize: { xs: '1.4rem', sm: '1.8rem', md: '2.125rem' } }}>
+              Clinical Diet Planner &amp; Electrolyte Management
             </Typography>
           </Grid>
 
-          <Grid item xs={12} md={6} textAlign={{ xs: 'left', md: 'right' }}>
-            <Stack direction="row" spacing={1.5} justifyContent={{ xs: 'flex-start', md: 'flex-end' }}>
+          <Grid item xs={12} md={6}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} justifyContent={{ xs: 'flex-start', md: 'flex-end' }}>
               <Button
                 variant="contained"
                 color="secondary"
                 size="large"
                 startIcon={<TableChart />}
                 onClick={() => setCustomModalOpen(true)}
-                sx={{ borderRadius: 1, px: 2.5, py: 1.2, fontWeight: 800 }}
+                sx={{ borderRadius: 1, px: 2.5, py: 1.2, fontWeight: 800, width: { xs: '100%', sm: 'auto' } }}
               >
                 Make Custom Nutrition Plan
               </Button>
@@ -219,7 +291,7 @@ export default function DietsModule({
                   size="large"
                   startIcon={<Print />}
                   onClick={handlePrint}
-                  sx={{ borderRadius: 1, px: 3, py: 1.2, fontWeight: 800 }}
+                  sx={{ borderRadius: 1, px: 3, py: 1.2, fontWeight: 800, width: { xs: '100%', sm: 'auto' } }}
                 >
                   Print Plan
                 </Button>
@@ -239,9 +311,20 @@ export default function DietsModule({
             borderColor: 'rgba(0, 201, 167, 0.3)'
           }}
         >
-          <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1.5, color: '#00C9A7', letterSpacing: 0.5 }}>
-            📋 PATIENT PROFILE & NUTRITION DIAGNOSIS FORM
-          </Typography>
+          <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} mb={2}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#00C9A7', letterSpacing: 0.5 }}>
+              📋 PATIENT PROFILE & NUTRITION DIAGNOSIS FORM
+            </Typography>
+            <Button
+              variant="outlined"
+              size="small"
+              color="primary"
+              onClick={handleLoadDemo}
+              sx={{ borderRadius: 2, fontWeight: 700, mt: { xs: 1, sm: 0 } }}
+            >
+              Load Demo Case
+            </Button>
+          </Stack>
           <Grid container spacing={2}>
             <Grid item xs={12} sm={4}>
               <TextField
@@ -250,6 +333,8 @@ export default function DietsModule({
                 label="Patient Full Name"
                 value={currPatientName}
                 onChange={(e) => setCurrPatientName(e.target.value)}
+                error={!!formErrors.currPatientName}
+                helperText={formErrors.currPatientName}
               />
             </Grid>
             <Grid item xs={6} sm={2}>
@@ -260,6 +345,8 @@ export default function DietsModule({
                 type="number"
                 value={currPatientAge}
                 onChange={(e) => setCurrPatientAge(e.target.value)}
+                error={!!formErrors.currPatientAge}
+                helperText={formErrors.currPatientAge}
               />
             </Grid>
             <Grid item xs={6} sm={2}>
@@ -270,6 +357,8 @@ export default function DietsModule({
                 label="Gender"
                 value={currPatientGender}
                 onChange={(e) => setCurrPatientGender(e.target.value)}
+                error={!!formErrors.currPatientGender}
+                helperText={formErrors.currPatientGender}
               >
                 <MenuItem value="Male">Male</MenuItem>
                 <MenuItem value="Female">Female</MenuItem>
@@ -283,6 +372,8 @@ export default function DietsModule({
                 label="Clinical Condition / Diagnosis"
                 value={currPatientDisease}
                 onChange={(e) => setCurrPatientDisease(e.target.value)}
+                error={!!formErrors.currPatientDisease}
+                helperText={formErrors.currPatientDisease}
               />
             </Grid>
           </Grid>
@@ -333,7 +424,9 @@ export default function DietsModule({
                     type="number"
                     label="Weight (kg)"
                     value={weightKg}
-                    onChange={(e) => setWeightKg(Number(e.target.value))}
+                    onChange={(e) => setWeightKg(e.target.value)}
+                    error={!!formErrors.weightKg}
+                    helperText={formErrors.weightKg}
                   />
                 </Grid>
                 <Grid item xs={6}>
@@ -343,7 +436,9 @@ export default function DietsModule({
                     type="number"
                     label="Height (cm)"
                     value={heightCm}
-                    onChange={(e) => setHeightCm(Number(e.target.value))}
+                    onChange={(e) => setHeightCm(e.target.value)}
+                    error={!!formErrors.heightCm}
+                    helperText={formErrors.heightCm}
                   />
                 </Grid>
               </Grid>
@@ -355,142 +450,174 @@ export default function DietsModule({
           </Grid>
         </Grid>
 
-        {/* 5 Core Dimensions Grid */}
-        <Grid container spacing={3}>
-          {/* Dimension 1: Nutritional Values & Macros */}
-          <Grid item xs={12} md={4}>
-            <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 1, bgcolor: isDark ? 'rgba(255, 255, 255, 0.02)' : '#F8FAFC', height: '100%' }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#00C9A7', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                📊 1. Nutritional & Macro Values
-              </Typography>
+        {/* Submit Form Button */}
+        {!submitted && (
+          <Box sx={{ textAlign: 'center', my: 4 }}>
+            <Button
+              variant="contained"
+              color="primary"
+              size="large"
+              onClick={handleSubmitForm}
+              startIcon={<PlayArrow />}
+              sx={{
+                borderRadius: '50px',
+                px: 5,
+                py: 1.5,
+                fontSize: '1.1rem',
+                fontWeight: 800,
+                boxShadow: isDark ? '0 8px 32px rgba(0, 201, 167, 0.4)' : '0 8px 24px rgba(0, 201, 167, 0.3)',
+                background: 'linear-gradient(135deg, #00C9A7 0%, #009988 100%)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #00B998 0%, #008877 100%)',
+                }
+              }}
+            >
+              Generate Diet Plan
+            </Button>
+          </Box>
+        )}
 
-              <Stack spacing={1.5}>
-                <Box sx={{ p: 1.5, borderRadius: 1, bgcolor: 'rgba(255, 255, 255, 0.03)' }}>
-                  <Typography variant="caption" color="text.secondary">Target Daily Calories</Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 800, color: '#00C9A7' }}>{activeDiet.calories} kcal</Typography>
-                </Box>
-                <Box sx={{ p: 1.5, borderRadius: 1, bgcolor: 'rgba(255, 255, 255, 0.03)' }}>
-                  <Typography variant="caption" color="text.secondary">Carbohydrates Focus</Typography>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{activeDiet.macroBreakdown.carbs}</Typography>
-                </Box>
-                <Box sx={{ p: 1.5, borderRadius: 1, bgcolor: 'rgba(255, 255, 255, 0.03)' }}>
-                  <Typography variant="caption" color="text.secondary">Protein Allocation</Typography>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{activeDiet.macroBreakdown.protein}</Typography>
-                </Box>
-                <Box sx={{ p: 1.5, borderRadius: 1, bgcolor: 'rgba(255, 255, 255, 0.03)' }}>
-                  <Typography variant="caption" color="text.secondary">Healthy Fats & Oils</Typography>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{activeDiet.macroBreakdown.fats}</Typography>
-                </Box>
-                <Box sx={{ p: 1.5, borderRadius: 1, bgcolor: 'rgba(255, 255, 255, 0.03)' }}>
-                  <Typography variant="caption" color="text.secondary">Dietary Fiber</Typography>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{activeDiet.macroBreakdown.fiber}</Typography>
-                </Box>
-              </Stack>
-            </Paper>
-          </Grid>
+        {submitted && (
+          <Box id="diets-report-section" sx={{ pt: 2 }}>
+            <Divider sx={{ mb: 4 }} />
+            {/* 5 Core Dimensions Grid */}
+            <Grid container spacing={3}>
+              {/* Dimension 1: Nutritional Values & Macros */}
+              <Grid item xs={12} md={4}>
+                <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 1, bgcolor: isDark ? 'rgba(255, 255, 255, 0.02)' : '#F8FAFC', height: '100%' }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#00C9A7', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    📊 1. Nutritional & Macro Values
+                  </Typography>
 
-          {/* Dimension 2 & 4: Electrolyte-Based Management */}
-          <Grid item xs={12} md={4}>
-            <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 1, bgcolor: isDark ? 'rgba(255, 255, 255, 0.02)' : '#F8FAFC', height: '100%' }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#FFB703', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                ⚡ 4. Electrolyte-Based Management
-              </Typography>
-
-              <Stack spacing={1.5} mb={2}>
-                <Box sx={{ p: 1.5, borderRadius: 1, bgcolor: 'rgba(255, 183, 3, 0.08)', borderLeft: '4px solid #FFB703' }}>
-                  <Typography variant="caption" color="text.secondary">Sodium (Na) Threshold</Typography>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#FFB703' }}>{activeDiet.electrolyteLimits.sodium}</Typography>
-                </Box>
-                <Box sx={{ p: 1.5, borderRadius: 1, bgcolor: 'rgba(0, 180, 216, 0.08)', borderLeft: '4px solid #00B4D8' }}>
-                  <Typography variant="caption" color="text.secondary">Potassium (K) Goal</Typography>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#00B4D8' }}>{activeDiet.electrolyteLimits.potassium}</Typography>
-                </Box>
-                <Box sx={{ p: 1.5, borderRadius: 1, bgcolor: 'rgba(108, 92, 231, 0.08)', borderLeft: '4px solid #6C5CE7' }}>
-                  <Typography variant="caption" color="text.secondary">Phosphorus (P) Limit</Typography>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#6C5CE7' }}>{activeDiet.electrolyteLimits.phosphorus}</Typography>
-                </Box>
-                <Box sx={{ p: 1.5, borderRadius: 1, bgcolor: 'rgba(0, 201, 167, 0.08)', borderLeft: '4px solid #00C9A7' }}>
-                  <Typography variant="caption" color="text.secondary">Calcium (Ca) Intake</Typography>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#00C9A7' }}>{activeDiet.electrolyteLimits.calcium}</Typography>
-                </Box>
-              </Stack>
-            </Paper>
-          </Grid>
-
-          {/* Recommended vs Avoided Foods */}
-          <Grid item xs={12} md={4}>
-            <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 1, bgcolor: isDark ? 'rgba(255, 255, 255, 0.02)' : '#F8FAFC', height: '100%' }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#00C9A7', mb: 1.5 }}>
-                ✅ Recommended Foods
-              </Typography>
-              <Stack spacing={0.8} mb={3}>
-                {activeDiet.recommendedFoods.map((rf, i) => (
-                  <Stack key={i} direction="row" alignItems="center" spacing={1}>
-                    <CheckCircle sx={{ color: '#00C9A7', fontSize: 16 }} />
-                    <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>{rf}</Typography>
+                  <Stack spacing={1.5}>
+                    <Box sx={{ p: 1.5, borderRadius: 1, bgcolor: 'rgba(255, 255, 255, 0.03)' }}>
+                      <Typography variant="caption" color="text.secondary">Target Daily Calories</Typography>
+                      <Typography variant="h6" sx={{ fontWeight: 800, color: '#00C9A7' }}>{activeDiet.calories} kcal</Typography>
+                    </Box>
+                    <Box sx={{ p: 1.5, borderRadius: 1, bgcolor: 'rgba(255, 255, 255, 0.03)' }}>
+                      <Typography variant="caption" color="text.secondary">Carbohydrates Focus</Typography>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{activeDiet.macroBreakdown.carbs}</Typography>
+                    </Box>
+                    <Box sx={{ p: 1.5, borderRadius: 1, bgcolor: 'rgba(255, 255, 255, 0.03)' }}>
+                      <Typography variant="caption" color="text.secondary">Protein Allocation</Typography>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{activeDiet.macroBreakdown.protein}</Typography>
+                    </Box>
+                    <Box sx={{ p: 1.5, borderRadius: 1, bgcolor: 'rgba(255, 255, 255, 0.03)' }}>
+                      <Typography variant="caption" color="text.secondary">Healthy Fats & Oils</Typography>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{activeDiet.macroBreakdown.fats}</Typography>
+                    </Box>
+                    <Box sx={{ p: 1.5, borderRadius: 1, bgcolor: 'rgba(255, 255, 255, 0.03)' }}>
+                      <Typography variant="caption" color="text.secondary">Dietary Fiber</Typography>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{activeDiet.macroBreakdown.fiber}</Typography>
+                    </Box>
                   </Stack>
-                ))}
-              </Stack>
+                </Paper>
+              </Grid>
 
-              <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#FF4D6D', mb: 1.5 }}>
-                🚫 Foods & Ingredients to Avoid
-              </Typography>
-              <Stack spacing={0.8}>
-                {activeDiet.foodsToAvoid.map((fa, i) => (
-                  <Stack key={i} direction="row" alignItems="center" spacing={1}>
-                    <Warning sx={{ color: '#FF4D6D', fontSize: 16 }} />
-                    <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>{fa}</Typography>
+              {/* Dimension 2 & 4: Electrolyte-Based Management */}
+              <Grid item xs={12} md={4}>
+                <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 1, bgcolor: isDark ? 'rgba(255, 255, 255, 0.02)' : '#F8FAFC', height: '100%' }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#FFB703', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    ⚡ 4. Electrolyte-Based Management
+                  </Typography>
+
+                  <Stack spacing={1.5} mb={2}>
+                    <Box sx={{ p: 1.5, borderRadius: 1, bgcolor: 'rgba(255, 183, 3, 0.08)', borderLeft: '4px solid #FFB703' }}>
+                      <Typography variant="caption" color="text.secondary">Sodium (Na) Threshold</Typography>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#FFB703' }}>{activeDiet.electrolyteLimits.sodium}</Typography>
+                    </Box>
+                    <Box sx={{ p: 1.5, borderRadius: 1, bgcolor: 'rgba(0, 180, 216, 0.08)', borderLeft: '4px solid #00B4D8' }}>
+                      <Typography variant="caption" color="text.secondary">Potassium (K) Goal</Typography>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#00B4D8' }}>{activeDiet.electrolyteLimits.potassium}</Typography>
+                    </Box>
+                    <Box sx={{ p: 1.5, borderRadius: 1, bgcolor: 'rgba(108, 92, 231, 0.08)', borderLeft: '4px solid #6C5CE7' }}>
+                      <Typography variant="caption" color="text.secondary">Phosphorus (P) Limit</Typography>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#6C5CE7' }}>{activeDiet.electrolyteLimits.phosphorus}</Typography>
+                    </Box>
+                    <Box sx={{ p: 1.5, borderRadius: 1, bgcolor: 'rgba(0, 201, 167, 0.08)', borderLeft: '4px solid #00C9A7' }}>
+                      <Typography variant="caption" color="text.secondary">Calcium (Ca) Intake</Typography>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#00C9A7' }}>{activeDiet.electrolyteLimits.calcium}</Typography>
+                    </Box>
                   </Stack>
-                ))}
-              </Stack>
-            </Paper>
-          </Grid>
+                </Paper>
+              </Grid>
 
-          {/* Dimension 5: Frequency of Meals & Timeline */}
-          <Grid item xs={12}>
-            <Paper variant="outlined" sx={{ p: 3, borderRadius: 1, bgcolor: isDark ? 'rgba(255, 255, 255, 0.02)' : '#F8FAFC', borderTop: '4px solid #6C5CE7' }}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap" gap={1}>
-                <Typography variant="h6" sx={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1, color: '#6C5CE7' }}>
-                  <Schedule /> 5. Frequency of Meals & Daily Schedule Matrix
-                </Typography>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <Chip label={activeDiet.mealFrequency.frequency} color={isCustomActive ? 'warning' : 'secondary'} sx={{ fontWeight: 800 }} />
-                  {isCustomActive && (
-                    <Button size="small" variant="outlined" color="warning" startIcon={<RestartAlt />} onClick={handleResetToPreset}>
-                      Reset to Preset
-                    </Button>
-                  )}
-                  <Button size="small" variant="contained" color="secondary" startIcon={<TableChart />} onClick={() => setCustomModalOpen(true)}>
-                    {isCustomActive ? 'Edit Custom Table' : 'Make Custom Nutrition Table'}
-                  </Button>
-                </Stack>
-              </Stack>
-
-              <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 1 }}>
-                <Table size="small">
-                  <TableHead sx={{ bgcolor: 'rgba(255, 255, 255, 0.04)' }}>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 800 }}>Timing</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Meal Name</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Portion Size</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Clinical Focus & Ingredients</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {activeDiet.mealFrequency.schedule.map((item, idx) => (
-                      <TableRow key={idx} hover>
-                        <TableCell sx={{ fontWeight: 800, color: '#00C9A7' }}>{item.time}</TableCell>
-                        <TableCell sx={{ fontWeight: 700 }}>{item.mealName}</TableCell>
-                        <TableCell>{item.portion}</TableCell>
-                        <TableCell sx={{ color: 'text.secondary' }}>{item.focus}</TableCell>
-                      </TableRow>
+              {/* Recommended vs Avoided Foods */}
+              <Grid item xs={12} md={4}>
+                <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 1, bgcolor: isDark ? 'rgba(255, 255, 255, 0.02)' : '#F8FAFC', height: '100%' }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#00C9A7', mb: 1.5 }}>
+                    ✅ Recommended Foods
+                  </Typography>
+                  <Stack spacing={0.8} mb={3}>
+                    {activeDiet.recommendedFoods.map((rf, i) => (
+                      <Stack key={i} direction="row" alignItems="center" spacing={1}>
+                        <CheckCircle sx={{ color: '#00C9A7', fontSize: 16 }} />
+                        <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>{rf}</Typography>
+                      </Stack>
                     ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Paper>
-          </Grid>
-        </Grid>
+                  </Stack>
+
+                  <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#FF4D6D', mb: 1.5 }}>
+                    🚫 Foods & Ingredients to Avoid
+                  </Typography>
+                  <Stack spacing={0.8}>
+                    {activeDiet.foodsToAvoid.map((fa, i) => (
+                      <Stack key={i} direction="row" alignItems="center" spacing={1}>
+                        <Warning sx={{ color: '#FF4D6D', fontSize: 16 }} />
+                        <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>{fa}</Typography>
+                      </Stack>
+                    ))}
+                  </Stack>
+                </Paper>
+              </Grid>
+
+              {/* Dimension 5: Frequency of Meals & Timeline */}
+              <Grid item xs={12}>
+                <Paper variant="outlined" sx={{ p: 3, borderRadius: 1, bgcolor: isDark ? 'rgba(255, 255, 255, 0.02)' : '#F8FAFC', borderTop: '4px solid #6C5CE7' }}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap" gap={1}>
+                    <Typography variant="h6" sx={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1, color: '#6C5CE7' }}>
+                      <Schedule /> 5. Frequency of Meals & Daily Schedule Matrix
+                    </Typography>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <Chip label={activeDiet.mealFrequency.frequency} color={isCustomActive ? 'warning' : 'secondary'} sx={{ fontWeight: 800 }} />
+                      {isCustomActive && (
+                        <Button size="small" variant="outlined" color="warning" startIcon={<RestartAlt />} onClick={handleResetToPreset}>
+                          Reset to Preset
+                        </Button>
+                      )}
+                      <Button size="small" variant="contained" color="secondary" startIcon={<TableChart />} onClick={() => setCustomModalOpen(true)}>
+                        {isCustomActive ? 'Edit Custom Table' : 'Make Custom Nutrition Table'}
+                      </Button>
+                    </Stack>
+                  </Stack>
+
+                  <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 1 }}>
+                    <Table size="small">
+                      <TableHead sx={{ bgcolor: 'rgba(255, 255, 255, 0.04)' }}>
+                        <TableRow>
+                          <TableCell sx={{ fontWeight: 800 }}>Timing</TableCell>
+                          <TableCell sx={{ fontWeight: 800 }}>Meal Name</TableCell>
+                          <TableCell sx={{ fontWeight: 800 }}>Portion Size</TableCell>
+                          <TableCell sx={{ fontWeight: 800 }}>Clinical Focus & Ingredients</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {activeDiet.mealFrequency.schedule.map((item, idx) => (
+                          <TableRow key={idx} hover>
+                            <TableCell sx={{ fontWeight: 800, color: '#00C9A7' }}>{item.time}</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>{item.mealName}</TableCell>
+                            <TableCell>{item.portion}</TableCell>
+                            <TableCell sx={{ color: 'text.secondary' }}>{item.focus}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Paper>
+              </Grid>
+            </Grid>
+          </Box>
+        )}
       </CardContent>
 
       {/* Printable Clinical Diet Guide Dialog */}
@@ -522,9 +649,7 @@ export default function DietsModule({
                 <Typography variant="caption" sx={{ color: '#64748B !important', display: 'block' }} suppressHydrationWarning>
                   Date: {new Date().toLocaleDateString('en-US', { dateStyle: 'medium' })}
                 </Typography>
-                <Typography variant="caption" sx={{ fontWeight: 700, color: '#00967D !important' }}>
-                  Plan: {activeDiet.id}
-                </Typography>
+
               </Grid>
             </Grid>
 
@@ -587,16 +712,23 @@ export default function DietsModule({
       </Dialog>
 
       {/* Custom Nutrition Table Builder Modal */}
-      <Dialog open={customModalOpen} onClose={() => setCustomModalOpen(false)} maxWidth="lg" fullWidth PaperProps={{ sx: { borderRadius: 1, bgcolor: isDarkMode ? '#1E293B !important' : '#FFFFFF !important', color: isDarkMode ? '#F8FAFC !important' : '#0F172A !important', opacity: 1, backgroundImage: 'none !important', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' } }}>
-        <DialogTitle sx={{ m: 0, p: 2.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: isDarkMode ? 'rgba(0, 201, 167, 0.15) !important' : 'rgba(0, 201, 167, 0.08) !important' }}>
+      <Dialog
+        open={customModalOpen}
+        onClose={() => setCustomModalOpen(false)}
+        maxWidth="lg"
+        fullWidth
+        fullScreen={typeof window !== 'undefined' && window.innerWidth < 600}
+        PaperProps={{ sx: { borderRadius: { xs: 0, sm: 1 }, bgcolor: isDarkMode ? '#1E293B !important' : '#FFFFFF !important', color: isDarkMode ? '#F8FAFC !important' : '#0F172A !important', opacity: 1, backgroundImage: 'none !important', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' } }}
+      >
+        <DialogTitle sx={{ m: 0, p: { xs: 2, sm: 2.5 }, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: isDarkMode ? 'rgba(0, 201, 167, 0.15) !important' : 'rgba(0, 201, 167, 0.08) !important' }}>
           <Stack direction="row" alignItems="center" spacing={1.5}>
-            <TableChart sx={{ color: '#00C9A7', fontSize: 28 }} />
+            <TableChart sx={{ color: '#00C9A7', fontSize: { xs: 22, sm: 28 }, flexShrink: 0 }} />
             <Box>
-              <Typography variant="h6" sx={{ fontWeight: 900, color: '#00967D' }}>
-                Create Custom Nutrition Table & Meal Protocol
+              <Typography variant="h6" sx={{ fontWeight: 900, color: '#00967D', fontSize: { xs: '0.95rem', sm: '1.25rem' } }}>
+                Create Custom Nutrition Table &amp; Meal Protocol
               </Typography>
-              <Typography variant="caption" color={isDarkMode ? 'grey.400' : 'text.secondary'}>
-                Customize Timing, Meal Name, Portion Size & Clinical Focus for staff & patient dietary prescriptions.
+              <Typography variant="caption" color={isDarkMode ? 'grey.400' : 'text.secondary'} sx={{ display: { xs: 'none', sm: 'block' } }}>
+                Customize Timing, Meal Name, Portion Size &amp; Clinical Focus for staff &amp; patient dietary prescriptions.
               </Typography>
             </Box>
           </Stack>
@@ -607,7 +739,7 @@ export default function DietsModule({
 
         <Divider sx={{ borderColor: isDarkMode ? '#334155' : '#E2E8F0' }} />
 
-        <DialogContent sx={{ p: 3, bgcolor: isDarkMode ? '#1E293B !important' : '#FFFFFF !important' }}>
+        <DialogContent sx={{ p: { xs: 2, sm: 3 }, bgcolor: isDarkMode ? '#1E293B !important' : '#FFFFFF !important' }}>
           {/* Metadata Controls */}
           <Grid container spacing={2} mb={3}>
             <Grid item xs={12} sm={8}>
@@ -632,30 +764,87 @@ export default function DietsModule({
           </Grid>
 
           {/* Quick Actions bar */}
-          <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems="center" spacing={1.5} mb={2}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }} spacing={1.5} mb={2}>
             <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#00C9A7' }}>
               Custom Daily Meal Schedule Table ({customRows.length} Meals)
             </Typography>
 
-            <Stack direction="row" spacing={1}>
-              <Button size="small" variant="outlined" startIcon={<RestartAlt />} onClick={handlePopulateFromPreset}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+              <Button size="small" variant="outlined" startIcon={<RestartAlt />} onClick={handlePopulateFromPreset} sx={{ width: { xs: '100%', sm: 'auto' } }}>
                 Copy From Preset ({presetDiet.name})
               </Button>
-              <Button size="small" variant="contained" color="secondary" startIcon={<Add />} onClick={handleAddCustomRow}>
+              <Button size="small" variant="contained" color="secondary" startIcon={<Add />} onClick={handleAddCustomRow} sx={{ width: { xs: '100%', sm: 'auto' } }}>
                 Add Meal Row
               </Button>
             </Stack>
           </Stack>
 
-          {/* Custom Meal Table */}
-          <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 1, bgcolor: isDarkMode ? '#0F172A !important' : '#FFFFFF !important', borderColor: isDarkMode ? '#334155 !important' : '#E2E8F0 !important' }}>
+          {/* Mobile: Card-based meal rows */}
+          <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 2 }}>
+            {customRows.map((row, idx) => (
+              <Paper
+                key={idx}
+                variant="outlined"
+                sx={{
+                  p: 2,
+                  borderRadius: 1,
+                  bgcolor: isDarkMode ? '#0F172A !important' : '#F8FAFC !important',
+                  borderColor: isDarkMode ? '#334155 !important' : '#E2E8F0 !important'
+                }}
+              >
+                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
+                  <Typography variant="caption" sx={{ fontWeight: 800, color: '#00C9A7', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    Meal #{idx + 1}
+                  </Typography>
+                  <IconButton size="small" color="error" onClick={() => handleRemoveCustomRow(idx)}>
+                    <Delete fontSize="small" />
+                  </IconButton>
+                </Stack>
+                <Stack spacing={1.5}>
+                  <TextField
+                    fullWidth size="small" label="Timing"
+                    placeholder="e.g. 07:30 AM"
+                    value={row.time}
+                    onChange={(e) => handleCustomRowChange(idx, 'time', e.target.value)}
+                  />
+                  <TextField
+                    fullWidth size="small" label="Meal Name"
+                    placeholder="e.g. Breakfast"
+                    value={row.mealName}
+                    onChange={(e) => handleCustomRowChange(idx, 'mealName', e.target.value)}
+                  />
+                  <TextField
+                    fullWidth size="small" label="Portion Size"
+                    placeholder="e.g. 1 Bowl (150g)"
+                    value={row.portion}
+                    onChange={(e) => handleCustomRowChange(idx, 'portion', e.target.value)}
+                  />
+                  <TextField
+                    fullWidth size="small" label="Clinical Focus & Ingredients"
+                    placeholder="e.g. Oats with flaxseeds"
+                    value={row.focus}
+                    onChange={(e) => handleCustomRowChange(idx, 'focus', e.target.value)}
+                    multiline rows={2}
+                  />
+                </Stack>
+              </Paper>
+            ))}
+            {customRows.length === 0 && (
+              <Typography variant="body2" color="text.secondary" textAlign="center" py={3}>
+                No meals added yet. Click "Add Meal Row" to get started.
+              </Typography>
+            )}
+          </Box>
+
+          {/* Desktop: Table layout */}
+          <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 1, display: { xs: 'none', md: 'block' }, bgcolor: isDarkMode ? '#0F172A !important' : '#FFFFFF !important', borderColor: isDarkMode ? '#334155 !important' : '#E2E8F0 !important' }}>
             <Table size="small">
               <TableHead sx={{ bgcolor: isDarkMode ? 'rgba(0, 201, 167, 0.15) !important' : 'rgba(0, 201, 167, 0.08) !important' }}>
                 <TableRow>
                   <TableCell sx={{ fontWeight: 800, width: '18%' }}>Timing</TableCell>
                   <TableCell sx={{ fontWeight: 800, width: '20%' }}>Meal Name</TableCell>
                   <TableCell sx={{ fontWeight: 800, width: '22%' }}>Portion Size</TableCell>
-                  <TableCell sx={{ fontWeight: 800, width: '33%' }}>Clinical Focus & Ingredients</TableCell>
+                  <TableCell sx={{ fontWeight: 800, width: '33%' }}>Clinical Focus &amp; Ingredients</TableCell>
                   <TableCell sx={{ fontWeight: 800, width: '7%', textAlign: 'center' }}>Action</TableCell>
                 </TableRow>
               </TableHead>
@@ -663,40 +852,16 @@ export default function DietsModule({
                 {customRows.map((row, idx) => (
                   <TableRow key={idx}>
                     <TableCell>
-                      <TextField
-                        fullWidth
-                        size="small"
-                        placeholder="e.g. 07:30 AM"
-                        value={row.time}
-                        onChange={(e) => handleCustomRowChange(idx, 'time', e.target.value)}
-                      />
+                      <TextField fullWidth size="small" placeholder="e.g. 07:30 AM" value={row.time} onChange={(e) => handleCustomRowChange(idx, 'time', e.target.value)} />
                     </TableCell>
                     <TableCell>
-                      <TextField
-                        fullWidth
-                        size="small"
-                        placeholder="e.g. Breakfast"
-                        value={row.mealName}
-                        onChange={(e) => handleCustomRowChange(idx, 'mealName', e.target.value)}
-                      />
+                      <TextField fullWidth size="small" placeholder="e.g. Breakfast" value={row.mealName} onChange={(e) => handleCustomRowChange(idx, 'mealName', e.target.value)} />
                     </TableCell>
                     <TableCell>
-                      <TextField
-                        fullWidth
-                        size="small"
-                        placeholder="e.g. 1 Bowl (150g)"
-                        value={row.portion}
-                        onChange={(e) => handleCustomRowChange(idx, 'portion', e.target.value)}
-                      />
+                      <TextField fullWidth size="small" placeholder="e.g. 1 Bowl (150g)" value={row.portion} onChange={(e) => handleCustomRowChange(idx, 'portion', e.target.value)} />
                     </TableCell>
                     <TableCell>
-                      <TextField
-                        fullWidth
-                        size="small"
-                        placeholder="e.g. Oats with flaxseeds"
-                        value={row.focus}
-                        onChange={(e) => handleCustomRowChange(idx, 'focus', e.target.value)}
-                      />
+                      <TextField fullWidth size="small" placeholder="e.g. Oats with flaxseeds" value={row.focus} onChange={(e) => handleCustomRowChange(idx, 'focus', e.target.value)} />
                     </TableCell>
                     <TableCell align="center">
                       <IconButton size="small" color="error" onClick={() => handleRemoveCustomRow(idx)}>
@@ -710,15 +875,16 @@ export default function DietsModule({
           </TableContainer>
         </DialogContent>
 
-        <DialogActions sx={{ p: 2.5, bgcolor: isDarkMode ? '#0F172A !important' : '#F8FAFC !important', borderTop: isDarkMode ? '1px solid #334155 !important' : '1px solid #E2E8F0 !important' }}>
-          <Button onClick={() => setCustomModalOpen(false)} variant="outlined">
+        <DialogActions sx={{ p: { xs: 2, sm: 2.5 }, bgcolor: isDarkMode ? '#0F172A !important' : '#F8FAFC !important', borderTop: isDarkMode ? '1px solid #334155 !important' : '1px solid #E2E8F0 !important', flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 1, sm: 0 } }}>
+          <Button onClick={() => setCustomModalOpen(false)} variant="outlined" sx={{ width: { xs: '100%', sm: 'auto' } }}>
             Cancel
           </Button>
-          <Button onClick={handleSaveCustomPlan} variant="contained" color="secondary" startIcon={<Save />} sx={{ px: 3, fontWeight: 800 }}>
-            Save & Apply Custom Nutrition Plan
+          <Button onClick={handleSaveCustomPlan} variant="contained" color="secondary" startIcon={<Save />} sx={{ px: 3, fontWeight: 800, width: { xs: '100%', sm: 'auto' } }}>
+            Save &amp; Apply Custom Nutrition Plan
           </Button>
         </DialogActions>
       </Dialog>
+
     </Card>
   );
 }

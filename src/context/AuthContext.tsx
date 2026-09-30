@@ -13,6 +13,8 @@ interface AuthContextType {
   toggleStaffStatus: (id: string) => void;
   updateStaffPermissions: (id: string, modulePermissions: any) => void;
   updateStaffPassword: (id: string, newPassword: string) => void;
+  updateStaffUser: (id: string, updatedData: Partial<StaffUser>) => void;
+  deleteStaffUser: (id: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -92,6 +94,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  const updateStaffUser = (id: string, updatedData: Partial<StaffUser>) => {
+    setStaffList((prev) =>
+      prev.map((s) => (s.id === id || s.staffId === id ? { ...s, ...updatedData } : s))
+    );
+  };
+
+  const deleteStaffUser = (id: string) => {
+    setStaffList((prev) => prev.filter((s) => s.id !== id && s.staffId !== id));
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -102,7 +114,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         addStaffUser,
         toggleStaffStatus,
         updateStaffPermissions,
-        updateStaffPassword
+        updateStaffPassword,
+        updateStaffUser,
+        deleteStaffUser
       }}
     >
       {children}

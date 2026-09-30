@@ -19,7 +19,7 @@ import {
   Send,
   Psychology
 } from '@mui/icons-material';
-import { PatientInput } from '../types/clinical';
+import { PatientInput, AuthUser } from '../types/clinical';
 
 interface Message {
   sender: 'user' | 'ai';
@@ -30,15 +30,26 @@ interface DoctorCopilotChatProps {
   open: boolean;
   onClose: () => void;
   currentPatientData?: PatientInput;
+  currentUser?: AuthUser | null;
 }
 
-export default function DoctorCopilotChat({ open, onClose, currentPatientData }: DoctorCopilotChatProps) {
+export default function DoctorCopilotChat({ open, onClose, currentPatientData, currentUser }: DoctorCopilotChatProps) {
+  const greeting = (() => {
+    if (!currentUser) return 'Hello! I am your AI Clinical Assistant.';
+    const title = currentUser.role === 'Doctor' ? 'Dr.' : '';
+    const firstName = currentUser.name.replace(/^(Dr\.|Nurse|Dietitian)\s*/i, '').split(' ')[0];
+    const salutation = title ? `${title} ${firstName}` : firstName;
+    return `Hello, ${salutation}! I am your AI Clinical Assistant.`;
+  })();
+
   const [messages, setMessages] = useState<Message[]>([
     {
       sender: 'ai',
-      text: `Hello Dr. Dubey! I am your AI Clinical Assistant. ${currentPatientData?.patientName
+      text: `${greeting} ${currentPatientData?.patientName
           ? `I've loaded ${currentPatientData.patientName}'s case details (${currentPatientData.disease}).`
-          : 'How can I assist you with drug interactions, dosage guidelines, or generic alternatives today?'
+          : currentUser?.role === 'Doctor'
+            ? 'How can I assist you with drug interactions, dosage guidelines, or generic alternatives today?'
+            : 'How can I assist you today?'
         }`
     }
   ]);
@@ -92,7 +103,7 @@ export default function DoctorCopilotChat({ open, onClose, currentPatientData }:
           </Avatar>
           <Box>
             <Typography variant="subtitle1" sx={{ fontWeight: 800, lineHeight: 1.1 }}>
-              Arpan Clinical AI Copilot
+              Arpan Clinical AI Assistant
             </Typography>
             <Typography variant="caption" sx={{ opacity: 0.9 }}>
               Clinical Decision Assistant
@@ -134,7 +145,7 @@ export default function DoctorCopilotChat({ open, onClose, currentPatientData }:
 
           {isTyping && (
             <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic', pl: 1 }}>
-              ⚡ AI Copilot is consulting medical literature...
+              ⚡ AI is consulting medical literature...
             </Typography>
           )}
         </Stack>
@@ -169,7 +180,7 @@ export default function DoctorCopilotChat({ open, onClose, currentPatientData }:
           <TextField
             fullWidth
             size="small"
-            placeholder="Ask AI Copilot about drugs, doses..."
+            placeholder="Ask AI about drugs, doses..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleSend()}

@@ -16,7 +16,11 @@ import {
   Divider,
   Alert,
   AlertTitle,
-  useTheme
+  useTheme,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  IconButton
 } from '@mui/material';
 import {
   Shield,
@@ -29,7 +33,9 @@ import {
   CheckCircle,
   Info,
   Psychology,
-  MonetizationOn
+  MonetizationOn,
+  Close,
+  LocalHospital
 } from '@mui/icons-material';
 import confetti from 'canvas-confetti';
 import { AnalysisResult } from '../types/clinical';
@@ -46,6 +52,7 @@ export default function AiAnalysisDashboard({
   onOpenCopilot
 }: AiAnalysisDashboardProps) {
   const [activeTab, setActiveTab] = useState<number>(0);
+  const [printOpen, setPrintOpen] = useState(false);
 
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
@@ -113,8 +120,8 @@ export default function AiAnalysisDashboard({
               </Typography>
             </Stack>
 
-            <Typography variant="h4" sx={{ fontWeight: 800, mb: 1 }}>
-              AI Clinical Analysis & Recommendations
+            <Typography variant="h4" sx={{ fontWeight: 800, mb: 1, fontSize: { xs: '1.4rem', sm: '1.8rem', md: '2.125rem' } }}>
+              AI Clinical Analysis &amp; Recommendations
             </Typography>
             <Typography variant="body1" color="text.secondary">
               Patient: <strong>{patientInfo.patientName || 'Patient'}</strong> ({patientInfo.age} y/o, {patientInfo.gender}) • Diagnosis: <strong>{patientInfo.disease}</strong>
@@ -147,7 +154,7 @@ export default function AiAnalysisDashboard({
                 </Typography>
               </Box>
 
-              <Stack direction="column" spacing={1} alignItems="flex-end">
+              <Stack direction={{ xs: 'row', sm: 'column' }} spacing={1} alignItems="flex-end" flexWrap="wrap" justifyContent={{ xs: 'flex-start', sm: 'flex-end' }} mt={{ xs: 1, sm: 0 }}>
                 <Button
                   variant="contained"
                   color="primary"
@@ -155,11 +162,11 @@ export default function AiAnalysisDashboard({
                   startIcon={<Print />}
                   onClick={() => {
                     triggerConfetti();
-                    onOpenPrintModal();
+                    setPrintOpen(true);
                   }}
-                  sx={{ borderRadius: 1 }}
+                  sx={{ borderRadius: 1, width: { xs: '100%', sm: 'auto' } }}
                 >
-                  Print Digital Rx
+                  Print Full Analysis
                 </Button>
                 <Button
                   variant="outlined"
@@ -168,7 +175,7 @@ export default function AiAnalysisDashboard({
                   startIcon={<Psychology />}
                   onClick={onOpenCopilot}
                 >
-                  Ask Copilot
+                  Ask AI
                 </Button>
               </Stack>
             </Paper>
@@ -496,6 +503,112 @@ export default function AiAnalysisDashboard({
           </Box>
         )}
       </CardContent>
+
+      {/* Printable Clinical Analysis Report Dialog */}
+      <Dialog open={printOpen} onClose={() => setPrintOpen(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 1, bgcolor: '#FFFFFF !important', color: '#0F172A !important', backgroundImage: 'none !important', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.3)' } }}>
+        <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: '#FFFFFF !important', color: '#0F172A !important', borderBottom: '1px solid #E2E8F0 !important' }}>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <LocalHospital sx={{ color: '#00C9A7' }} />
+            <Typography variant="h6" sx={{ fontWeight: 800, color: '#0F172A !important' }}>
+              Official Clinical Analysis & Recommendations Report
+            </Typography>
+          </Stack>
+          <IconButton onClick={() => setPrintOpen(false)} size="small" sx={{ color: '#475569 !important', '&:hover': { bgcolor: '#F1F5F9 !important' } }}>
+            <Close />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent id="printable-analysis" sx={{ p: 4, bgcolor: '#FFFFFF !important', color: '#1E293B !important' }}>
+          <Box sx={{ border: '2px solid #00C9A7', borderRadius: 1, p: 3, bgcolor: '#FFFFFF !important', color: '#1E293B !important' }}>
+            <Grid container spacing={2} sx={{ borderBottom: '2px solid #E2E8F0', pb: 2, mb: 3 }}>
+              <Grid item xs={8}>
+                <Typography variant="h5" sx={{ fontWeight: 900, color: '#00967D !important' }}>
+                  ARPAN CLINICAL ASSISTANT
+                </Typography>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#475569 !important' }}>
+                  AI-Powered Comprehensive Clinical Analysis Report
+                </Typography>
+              </Grid>
+              <Grid item xs={4} textAlign="right">
+                <Typography variant="caption" sx={{ color: '#64748B !important', display: 'block' }} suppressHydrationWarning>
+                  Date: {new Date().toLocaleDateString('en-US', { dateStyle: 'medium' })}
+                </Typography>
+                <Typography variant="caption" sx={{ fontWeight: 700, color: '#00967D !important' }}>
+                  Safety Score: {safetyScore}/100
+                </Typography>
+              </Grid>
+            </Grid>
+
+            {/* Patient Header */}
+            <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: '#F8FAFC !important', borderColor: '#E2E8F0 !important', borderRadius: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#0F172A !important' }}>
+                Patient: {patientInfo?.name} ({patientInfo?.age} Y, {patientInfo?.gender})
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#475569 !important' }}>
+                Overall Risk Assessment: <strong style={{ color: statusColor }}>{riskCategory}</strong>
+              </Typography>
+            </Paper>
+
+            <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#00967D !important', mb: 1 }}>
+              Clinical Assessment Overview:
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 3, color: '#1E293B !important' }}>
+              {aiClinicalOverview}
+            </Typography>
+
+            <Grid container spacing={3} mb={3}>
+              <Grid item xs={6}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#FFB703 !important', mb: 1 }}>
+                  Drug Interactions Flagged ({flaggedInteractions.length}):
+                </Typography>
+                {flaggedInteractions.length > 0 ? flaggedInteractions.map((int, i) => (
+                  <Typography key={i} variant="body2" sx={{ mb: 0.5, color: '#334155 !important' }}>• {Array.isArray(int.drugs) ? int.drugs.join(' + ') : int.drugs ?? 'Unknown'}: {int.severity}</Typography>
+                )) : <Typography variant="body2" sx={{ color: '#334155 !important' }}>None detected</Typography>}
+              </Grid>
+              <Grid item xs={6}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#FF4D6D !important', mb: 1 }}>
+                  Allergy Conflicts ({flaggedAllergies.length}):
+                </Typography>
+                {flaggedAllergies.length > 0 ? flaggedAllergies.map((alg, i) => (
+                  <Typography key={i} variant="body2" sx={{ mb: 0.5, color: '#334155 !important' }}>• {alg.drug} (Allergen: {alg.allergen})</Typography>
+                )) : <Typography variant="body2" sx={{ color: '#334155 !important' }}>None detected</Typography>}
+              </Grid>
+            </Grid>
+
+            <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#00967D !important', mb: 1 }}>
+              Dietary & Lifestyle Recommendations:
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <Typography variant="caption" sx={{ fontWeight: 700, color: '#00C9A7 !important', display: 'block', mb: 0.5 }}>Recommended (DOs)</Typography>
+                {dietLifestyleDos.map((doItem, i) => (
+                  <Typography key={i} variant="body2" sx={{ mb: 0.5, color: '#334155 !important' }}>• {doItem}</Typography>
+                ))}
+              </Grid>
+              <Grid item xs={6}>
+                <Typography variant="caption" sx={{ fontWeight: 700, color: '#FF4D6D !important', display: 'block', mb: 0.5 }}>Avoid (DON'Ts)</Typography>
+                {dietLifestyleDonts.map((dontItem, i) => (
+                  <Typography key={i} variant="body2" sx={{ mb: 0.5, color: '#334155 !important' }}>• {dontItem}</Typography>
+                ))}
+              </Grid>
+            </Grid>
+            
+            <Divider sx={{ my: 3, borderColor: '#E2E8F0 !important' }} />
+
+            <Box sx={{ textAlign: 'center' }}>
+              <Button
+                variant="contained"
+                onClick={() => {
+                  window.print();
+                }}
+                sx={{ bgcolor: '#0F172A !important', color: '#FFF !important', borderRadius: 5, px: 4, fontWeight: 800 }}
+              >
+                Confirm & Print Report
+              </Button>
+            </Box>
+          </Box>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

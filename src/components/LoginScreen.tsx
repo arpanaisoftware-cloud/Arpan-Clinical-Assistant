@@ -234,7 +234,7 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasswor
               >
                 <LocalHospital sx={{ color: '#FFF', fontSize: 24 }} />
               </Box>
-              <Box>
+              <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
                 <Stack direction="row" alignItems="center" spacing={1}>
                   <Typography variant="h6" sx={{ fontWeight: 800, background: 'linear-gradient(90deg, #00C9A7, #6C5CE7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontSize: '1.15rem' }}>
                     Arpan Clinical Assistant
@@ -248,11 +248,12 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasswor
                       fontWeight: 800,
                       bgcolor: 'rgba(0, 201, 167, 0.15)',
                       color: '#00C9A7',
-                      border: '1px solid rgba(0, 201, 167, 0.3)'
+                      border: '1px solid rgba(0, 201, 167, 0.3)',
+                      display: { xs: 'none', md: 'flex' }
                     }}
                   />
                 </Stack>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: -0.3, fontWeight: 500 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' }, mt: -0.3, fontWeight: 500 }}>
                   Intelligent Prescription, Counselling &amp; Dietary Care Platform
                 </Typography>
               </Box>

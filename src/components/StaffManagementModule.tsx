@@ -26,7 +26,12 @@ import {
   IconButton,
   Tooltip,
   useTheme,
-  InputAdornment
+  InputAdornment,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions
 } from '@mui/material';
 import {
   PersonAdd,
@@ -37,7 +42,9 @@ import {
   Shield,
   Key,
   Visibility,
-  VisibilityOff
+  VisibilityOff,
+  Edit,
+  Delete
 } from '@mui/icons-material';
 import { StaffUser, UserRole, ModulePermission } from '../types/clinical';
 import { toast } from 'react-toastify';
@@ -63,12 +70,16 @@ type FormErrors = { name?: string; email?: string; department?: string; role?: s
 interface StaffManagementModuleProps {
   staffList: StaffUser[];
   onAddStaff: (newStaff: StaffUser) => void;
+  onUpdateStaff?: (staffId: string, updatedData: Partial<StaffUser>) => void;
+  onDeleteStaff?: (staffId: string) => void;
   onToggleStatus: (staffId: string) => void;
 }
 
 export default function StaffManagementModule({
   staffList,
   onAddStaff,
+  onUpdateStaff,
+  onDeleteStaff,
   onToggleStatus
 }: StaffManagementModuleProps) {
   const [name, setName] = useState('');
@@ -79,6 +90,11 @@ export default function StaffManagementModule({
   const [role, setRole] = useState<UserRole | ''>('');
   const [permission, setPermission] = useState<ModulePermission | ''>('');
   const [errors, setErrors] = useState<FormErrors>({});
+  
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Recently created user credential slip state
   const [issuedUser, setIssuedUser] = useState<StaffUser | null>(null);
@@ -115,25 +131,39 @@ export default function StaffManagementModule({
     const generatedPass = customPassword.trim() || `staff${randomSuffix}`;
     const generatedEmail = email.trim();
 
-    const newMember: StaffUser = {
-      id: `ST-${Date.now()}`,
-      name: name.trim(),
-      staffId: generatedId,
-      email: generatedEmail,
-      department: assignedDept,
-      role: assignedRole,
-      modulePermissions: assignedPermissions,
-      active: true,
-      createdAt: new Date().toISOString().split('T')[0],
-      password: generatedPass
-    };
+    if (editingUserId && onUpdateStaff) {
+      onUpdateStaff(editingUserId, {
+        name: name.trim(),
+        email: generatedEmail,
+        department: assignedDept,
+        role: assignedRole,
+        modulePermissions: assignedPermissions,
+        ...(staffIdInput.trim() ? { staffId: staffIdInput.trim() } : {}),
+        ...(customPassword.trim() ? { password: customPassword.trim() } : {})
+      });
+      toast.success('Staff Account Updated!', { toastId: 'staff-updated' });
+      setEditingUserId(null);
+    } else {
+      const newMember: StaffUser = {
+        id: `ST-${Date.now()}`,
+        name: name.trim(),
+        staffId: generatedId,
+        email: generatedEmail,
+        department: assignedDept,
+        role: assignedRole,
+        modulePermissions: assignedPermissions,
+        active: true,
+        createdAt: new Date().toISOString().split('T')[0],
+        password: generatedPass
+      };
 
-    onAddStaff(newMember);
-    setIssuedUser(newMember);
-    toast.success(
-      `Staff Account Issued! Login ID: ${generatedId} | Password: ${generatedPass}`,
-      { toastId: `staff-created-${newMember.id}` }
-    );
+      onAddStaff(newMember);
+      setIssuedUser(newMember);
+      toast.success(
+        `Staff Account Issued! Login ID: ${generatedId} | Password: ${generatedPass}`,
+        { toastId: `staff-created-${newMember.id}` }
+      );
+    }
 
     // Reset form
     setName('');
@@ -144,6 +174,31 @@ export default function StaffManagementModule({
     setRole('');
     setPermission('');
     setErrors({});
+  };
+
+  const handleEditClick = (user: StaffUser) => {
+    setEditingUserId(user.id);
+    setName(user.name);
+    setEmail(user.email || '');
+    setStaffIdInput(user.staffId);
+    setDepartment(user.department);
+    setRole(user.role);
+    setPermission(user.modulePermissions);
+    setCustomPassword(user.password || '');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeleteClick = (id: string) => {
+    setUserToDelete(id);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (userToDelete && onDeleteStaff) {
+      onDeleteStaff(userToDelete);
+    }
+    setDeleteConfirmOpen(false);
+    setUserToDelete(null);
   };
 
   const handleCopyCredentials = (user: StaffUser) => {
@@ -171,8 +226,8 @@ export default function StaffManagementModule({
         {/* Module Header Banner */}
         <Grid container spacing={3} alignItems="center" mb={3}>
           <Grid item xs={12} md={8}>
-            <Typography variant="h4" sx={{ fontWeight: 900, mb: 1 }}>
-              Clinic Roster & Staff Credential Management
+            <Typography variant="h4" sx={{ fontWeight: 900, mb: 1, fontSize: { xs: '1.4rem', sm: '1.8rem', md: '2.125rem' } }}>
+              Clinic Roster &amp; Staff Credential Management
             </Typography>
             <Typography variant="body1" color="text.secondary">
               Manage clinical team access, issue secure credentials with registered email, and control granular module permissions.
@@ -299,11 +354,24 @@ export default function StaffManagementModule({
                 <TextField
                   fullWidth
                   size="small"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   label="Initial Password (Optional)"
                   placeholder="Auto-generated if blank (e.g. staff123)"
                   value={customPassword}
                   onChange={(e) => setCustomPassword(e.target.value)}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowPassword(!showPassword)}
+                          edge="end"
+                          size="small"
+                        >
+                          {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
                 />
               </Grid>
 
@@ -381,10 +449,10 @@ export default function StaffManagementModule({
                 </TextField>
               </Grid>
 
-              <Grid item xs={12} textAlign="right">
-                <Tooltip title="Create staff user profile and issue Login ID with Password and Email" arrow placement="top">
-                  <Button variant="contained" color="primary" type="submit" startIcon={<PersonAdd />} sx={{ borderRadius: 1, height: 42, px: 3, fontWeight: 800 }}>
-                    Issue Credentials &amp; Access Account
+              <Grid item xs={12}>
+                <Tooltip title={editingUserId ? "Update existing staff member profile" : "Create staff user profile and issue Login ID with Password and Email"} arrow placement="top">
+                  <Button variant="contained" color="primary" type="submit" startIcon={editingUserId ? <Edit /> : <PersonAdd />} sx={{ borderRadius: 1, height: 42, px: 3, fontWeight: 800, width: { xs: '100%', sm: 'auto' } }}>
+                    {editingUserId ? "Update Credentials & Profile" : "Issue Credentials & Access Account"}
                   </Button>
                 </Tooltip>
               </Grid>
@@ -397,83 +465,241 @@ export default function StaffManagementModule({
           <Badge color="primary" /> Clinic Roster & Account Directory ({staffList.length} Users)
         </Typography>
 
-        <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 1 }}>
-          <Table>
-            <TableHead sx={{ bgcolor: 'rgba(255, 255, 255, 0.04)' }}>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 800 }}>Login ID</TableCell>
-                <TableCell sx={{ fontWeight: 800 }}>Password</TableCell>
-                <TableCell sx={{ fontWeight: 800 }}>Name</TableCell>
-                <TableCell sx={{ fontWeight: 800 }}>Registered Email</TableCell>
-                <TableCell sx={{ fontWeight: 800 }}>Department</TableCell>
-                <TableCell sx={{ fontWeight: 800 }}>Role</TableCell>
-                <TableCell sx={{ fontWeight: 800 }}>Module Permissions</TableCell>
-                <TableCell sx={{ fontWeight: 800 }} align="center">Action / Status</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {staffList.map((user) => (
-                <TableRow key={user.id} hover>
-                  <TableCell sx={{ fontWeight: 900, color: '#00C9A7' }}>{user.staffId}</TableCell>
-                  <TableCell sx={{ fontWeight: 800, color: '#FFB703', fontFamily: 'monospace' }}>
-                    {user.password || 'staff123'}
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>{user.name}</TableCell>
-                  <TableCell sx={{ fontSize: '0.82rem', color: isDark ? '#94A3B8' : '#64748B' }}>
-                    {user.email || `${user.name.toLowerCase().replace(/[^a-z]/g, '')}@arpanclinical.org`}
-                  </TableCell>
-                  <TableCell sx={{ fontSize: '0.88rem' }}>{user.department}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={user.role}
-                      size="small"
-                      color={user.role === 'Doctor' ? 'primary' : 'secondary'}
-                      sx={{ fontWeight: 800 }}
-                    />
-                  </TableCell>
-                  <TableCell>
+        {/* DESKTOP TABLE VIEW (md and up) */}
+        <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+          <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 1 }}>
+            <Table>
+              <TableHead sx={{ bgcolor: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.03)' }}>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 800 }}>Login ID</TableCell>
+                  <TableCell sx={{ fontWeight: 800 }}>Password</TableCell>
+                  <TableCell sx={{ fontWeight: 800 }}>Name</TableCell>
+                  <TableCell sx={{ fontWeight: 800 }}>Registered Email</TableCell>
+                  <TableCell sx={{ fontWeight: 800 }}>Department</TableCell>
+                  <TableCell sx={{ fontWeight: 800 }}>Role</TableCell>
+                  <TableCell sx={{ fontWeight: 800 }}>Module Permissions</TableCell>
+                  <TableCell sx={{ fontWeight: 800 }} align="center">Action / Status</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {staffList.map((user) => (
+                  <TableRow key={user.id} hover>
+                    <TableCell sx={{ fontWeight: 900, color: '#00C9A7' }}>{user.staffId}</TableCell>
+                    <TableCell sx={{ fontWeight: 800, color: '#FFB703', fontFamily: 'monospace' }}>
+                      {user.password || 'staff123'}
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>{user.name}</TableCell>
+                    <TableCell sx={{ fontSize: '0.82rem', color: isDark ? '#94A3B8' : '#64748B' }}>
+                      {user.email || `${user.name.toLowerCase().replace(/[^a-z]/g, '')}@arpanclinical.org`}
+                    </TableCell>
+                    <TableCell sx={{ fontSize: '0.88rem' }}>{user.department}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={user.role}
+                        size="small"
+                        color={user.role === 'Doctor' ? 'primary' : 'secondary'}
+                        sx={{ fontWeight: 800 }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={user.modulePermissions || (user.role === 'Doctor' ? 'Full Access' : 'Counselling + Diets')}
+                        size="small"
+                        variant="outlined"
+                        color={user.modulePermissions === 'Full Access' ? 'primary' : 'secondary'}
+                        sx={{ fontWeight: 800 }}
+                      />
+                    </TableCell>
+                    <TableCell align="center">
+                      <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
+                        <Tooltip title="Copy staff Login ID, Email & Password to clipboard" arrow placement="top">
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={() => handleCopyCredentials(user)}
+                          >
+                            <ContentCopy fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+
+                        <Tooltip title="Edit this staff account" arrow placement="top">
+                          <IconButton
+                            size="small"
+                            color="info"
+                            onClick={() => handleEditClick(user)}
+                          >
+                            <Edit fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+
+                        <Tooltip title="Delete this staff account permanently" arrow placement="top">
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => handleDeleteClick(user.id)}
+                          >
+                            <Delete fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        
+                        <Tooltip title={user.active ? "Click to suspend account access" : "Click to enable active account access"} arrow placement="top">
+                          <FormControlLabel
+                            control={
+                              <Switch
+                                size="small"
+                                checked={user.active}
+                                onChange={() => onToggleStatus(user.id)}
+                                color="success"
+                              />
+                            }
+                            label={user.active ? 'Active' : 'Disabled'}
+                            sx={{ margin: 0, '& .MuiTypography-root': { fontSize: '0.78rem', fontWeight: 600 } }}
+                          />
+                        </Tooltip>
+                      </Stack>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+
+        {/* MOBILE CARD VIEW (xs / sm - No Horizontal Scroll!) */}
+        <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+          <Stack spacing={2}>
+            {staffList.map((user) => (
+              <Paper
+                key={user.id}
+                variant="outlined"
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  borderColor: isDark ? 'rgba(108, 92, 231, 0.25)' : 'rgba(0, 0, 0, 0.12)',
+                  bgcolor: isDark ? 'rgba(15, 23, 42, 0.6)' : '#FFFFFF',
+                  boxShadow: isDark ? '0 4px 14px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.04)'
+                }}
+              >
+                {/* Header: Name, Staff ID & Role Chip */}
+                <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={1}>
+                  <Box>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
+                      {user.name}
+                    </Typography>
+                    <Stack direction="row" spacing={1} alignItems="center" mt={0.5}>
+                      <Typography variant="caption" sx={{ color: '#00C9A7', fontWeight: 900, bgcolor: 'rgba(0, 201, 167, 0.1)', px: 1, py: 0.2, borderRadius: 1 }}>
+                        ID: {user.staffId}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#FFB703', fontWeight: 800, fontFamily: 'monospace', bgcolor: 'rgba(255, 183, 3, 0.1)', px: 1, py: 0.2, borderRadius: 1 }}>
+                        Pass: {user.password || 'staff123'}
+                      </Typography>
+                    </Stack>
+                  </Box>
+                  <Chip
+                    label={user.role}
+                    size="small"
+                    color={user.role === 'Doctor' ? 'primary' : 'secondary'}
+                    sx={{ fontWeight: 800, fontSize: '0.7rem' }}
+                  />
+                </Stack>
+
+                <Divider sx={{ my: 1.5, opacity: 0.6 }} />
+
+                {/* Info Fields */}
+                <Grid container spacing={1.5} sx={{ mb: 1.5 }}>
+                  <Grid item xs={12}>
+                    <Typography variant="caption" color="text.secondary" display="block" sx={{ fontWeight: 600 }}>
+                      Registered Email
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600, wordBreak: 'break-all', color: isDark ? '#94A3B8' : '#334155' }}>
+                      {user.email || `${user.name.toLowerCase().replace(/[^a-z]/g, '')}@arpanclinical.org`}
+                    </Typography>
+                  </Grid>
+
+                  <Grid item xs={6}>
+                    <Typography variant="caption" color="text.secondary" display="block" sx={{ fontWeight: 600 }}>
+                      Department
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.82rem' }}>
+                      {user.department}
+                    </Typography>
+                  </Grid>
+
+                  <Grid item xs={6}>
+                    <Typography variant="caption" color="text.secondary" display="block" sx={{ fontWeight: 600 }}>
+                      Permissions
+                    </Typography>
                     <Chip
                       label={user.modulePermissions || (user.role === 'Doctor' ? 'Full Access' : 'Counselling + Diets')}
                       size="small"
                       variant="outlined"
                       color={user.modulePermissions === 'Full Access' ? 'primary' : 'secondary'}
-                      sx={{ fontWeight: 800 }}
+                      sx={{ fontWeight: 800, height: 22, fontSize: '0.68rem', mt: 0.3 }}
                     />
-                  </TableCell>
-                  <TableCell align="center">
-                    <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
-                      <Tooltip title="Copy staff Login ID, Email & Password to clipboard" arrow placement="top">
-                        <IconButton
-                          size="small"
-                          color="primary"
-                          onClick={() => handleCopyCredentials(user)}
-                        >
-                          <ContentCopy fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                  </Grid>
+                </Grid>
 
-                      <Tooltip title={user.active ? "Click to suspend account access" : "Click to enable active account access"} arrow placement="top">
-                        <FormControlLabel
-                          control={
-                            <Switch
-                              size="small"
-                              checked={user.active}
-                              onChange={() => onToggleStatus(user.id)}
-                              color="success"
-                            />
-                          }
-                          label={user.active ? 'Active' : 'Disabled'}
-                          sx={{ margin: 0, '& .MuiTypography-root': { fontSize: '0.78rem', fontWeight: 600 } }}
-                        />
-                      </Tooltip>
-                    </Stack>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                <Divider sx={{ my: 1, opacity: 0.6 }} />
+
+                {/* Footer Action Bar & Status */}
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={user.active}
+                        onChange={() => onToggleStatus(user.id)}
+                        color="success"
+                      />
+                    }
+                    label={user.active ? 'Active' : 'Disabled'}
+                    sx={{ margin: 0, '& .MuiTypography-root': { fontSize: '0.78rem', fontWeight: 700 } }}
+                  />
+
+                  <Stack direction="row" spacing={0.5}>
+                    <IconButton
+                      size="small"
+                      color="primary"
+                      onClick={() => handleCopyCredentials(user)}
+                    >
+                      <ContentCopy fontSize="small" />
+                    </IconButton>
+
+                    <IconButton
+                      size="small"
+                      color="info"
+                      onClick={() => handleEditClick(user)}
+                    >
+                      <Edit fontSize="small" />
+                    </IconButton>
+
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={() => handleDeleteClick(user.id)}
+                    >
+                      <Delete fontSize="small" />
+                    </IconButton>
+                  </Stack>
+                </Stack>
+              </Paper>
+            ))}
+          </Stack>
+        </Box>
       </CardContent>
+
+      <Dialog open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)}>
+        <DialogTitle sx={{ fontWeight: 800 }}>Confirm Deletion</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to permanently delete this staff account? This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 0 }}>
+          <Button onClick={() => setDeleteConfirmOpen(false)} color="primary" sx={{ fontWeight: 700 }}>Cancel</Button>
+          <Button onClick={confirmDelete} color="error" variant="contained" sx={{ fontWeight: 700 }}>Delete</Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   );
 }

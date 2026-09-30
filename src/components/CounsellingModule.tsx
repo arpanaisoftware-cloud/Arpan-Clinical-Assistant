@@ -180,10 +180,10 @@ export default function CounsellingModule({
     >
       <CardContent sx={{ p: { xs: 2.5, md: 4 } }}>
         {/* Module Header Banner */}
-        <Grid container spacing={3} alignItems="center" mb={2}>
+        <Grid container spacing={2} alignItems="center" mb={2}>
           <Grid item xs={12} md={8}>
-            <Typography variant="h4" sx={{ fontWeight: 900, mb: 0.5 }}>
-              Patient Chronic Risk Counselling & Education Center
+            <Typography variant="h4" sx={{ fontWeight: 900, mb: 0.5, fontSize: { xs: '1.4rem', sm: '1.8rem', md: '2.125rem' } }}>
+              Patient Chronic Risk Counselling &amp; Education Center
             </Typography>
           </Grid>
 
@@ -195,7 +195,7 @@ export default function CounsellingModule({
                 size="large"
                 startIcon={<Print />}
                 onClick={handlePrint}
-                sx={{ borderRadius: 1, px: 3, py: 1.2, fontWeight: 800 }}
+                sx={{ borderRadius: 1, px: 3, py: 1.2, fontWeight: 800, width: { xs: '100%', md: 'auto' } }}
               >
                 Print Patient Care Sheet
               </Button>
@@ -218,7 +218,7 @@ export default function CounsellingModule({
           }}
         >
           {/* Header Badge & Title */}
-          <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2.5}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between" mb={2.5} gap={1.5}>
             <Stack direction="row" alignItems="center" spacing={1.5}>
               <Box
                 sx={{
@@ -230,17 +230,18 @@ export default function CounsellingModule({
                   alignItems: 'center',
                   justifyContent: 'center',
                   color: '#FFF',
-                  boxShadow: '0 4px 14px rgba(108, 92, 231, 0.35)'
+                  boxShadow: '0 4px 14px rgba(108, 92, 231, 0.35)',
+                  flexShrink: 0
                 }}
               >
                 <MedicalServices sx={{ fontSize: 24 }} />
               </Box>
               <Box>
-                <Typography variant="h6" sx={{ fontWeight: 900, color: 'text.primary', letterSpacing: '-0.01em' }}>
-                  Patient Intake & Clinical Vitals Risk Calculator
+                <Typography variant="h6" sx={{ fontWeight: 900, color: 'text.primary', letterSpacing: '-0.01em', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                  Patient Intake &amp; Clinical Vitals Risk Calculator
                 </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-                  Integrated Demographics, Diagnosis & Diagnostic Vitals Calculator
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, display: { xs: 'none', sm: 'block' } }}>
+                  Integrated Demographics, Diagnosis &amp; Diagnostic Vitals Calculator
                 </Typography>
               </Box>
             </Stack>

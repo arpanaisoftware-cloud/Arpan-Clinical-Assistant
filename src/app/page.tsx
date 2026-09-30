@@ -55,7 +55,9 @@ export default function Home() {
     logout,
     addStaffUser,
     toggleStaffStatus,
-    updateStaffPermissions
+    updateStaffPermissions,
+    updateStaffUser,
+    deleteStaffUser
   } = useAuth();
 
   // Active Module Tab: 0 = Prescription, 1 = Counselling, 2 = Diets, 3 = Staff Management
@@ -152,6 +154,15 @@ export default function Home() {
     toast.info('Staff status updated.');
   };
 
+  const handleUpdateStaff = (staffId: string, updatedData: Partial<StaffUser>) => {
+    updateStaffUser(staffId, updatedData);
+  };
+
+  const handleDeleteStaff = (staffId: string) => {
+    deleteStaffUser(staffId);
+    toast.info('Staff member deleted successfully.');
+  };
+
   const userRole = currentUser?.role || 'Doctor';
   const userPerm = currentUser?.modulePermissions || 'Full Access';
 
@@ -224,7 +235,7 @@ export default function Home() {
         />
       )}
 
-      <Container maxWidth="xl" sx={{ mt: 4 }}>
+      <Container maxWidth="xl" sx={{ pt: { xs: '84px', sm: '96px' }, px: { xs: 2, sm: 3 } }}>
         {/* LOGGED IN STATE: Render Modules & Dashboards */}
         <>
           {/* Top Hero Banner */}
@@ -249,12 +260,12 @@ export default function Home() {
                   <Stack direction="row" alignItems="center" spacing={2}>
 
                     <Box>
-                      <Typography variant="h4" sx={{ fontWeight: 900, letterSpacing: '-0.02em', color: 'text.primary' }}>
+                      <Typography variant="h4" sx={{ fontWeight: 900, letterSpacing: '-0.02em', color: 'text.primary', fontSize: { xs: '1.5rem', sm: '1.9rem', md: '2.125rem' } }}>
                         Welcome to Arpan Clinical Assistant
                       </Typography>
                       <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 0.8, mt: 0.3 }}>
-                        <Box component="span" sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#00C9A7', display: 'inline-block' }} />
-                        Patient Care & Clinical Management OS
+                        <Box component="span" sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#00C9A7', display: 'inline-block', flexShrink: 0 }} />
+                        Patient Care &amp; Clinical Management OS
                       </Typography>
                     </Box>
                   </Stack>
@@ -302,12 +313,12 @@ export default function Home() {
                           />
                         </Stack>
 
-                        <Stack direction="row" alignItems="center" spacing={1} mb={1}>
+                        <Stack direction="row" alignItems="center" spacing={{ xs: 0.5, sm: 1 }} mb={1} flexWrap="wrap">
                           <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
                             ID: <strong>{currentUser.staffId}</strong>
                           </Typography>
-                          <Typography variant="caption" sx={{ color: 'text.disabled' }}>•</Typography>
-                          <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                          <Typography variant="caption" sx={{ color: 'text.disabled', display: { xs: 'none', sm: 'inline' } }}>•</Typography>
+                          <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: { xs: 'none', sm: 'inline' } }}>
                             {currentUser.department}
                           </Typography>
                         </Stack>
@@ -529,6 +540,8 @@ export default function Home() {
                     staffList={staffList}
                     onAddStaff={handleAddStaff}
                     onToggleStatus={handleToggleStaffStatus}
+                    onUpdateStaff={handleUpdateStaff}
+                    onDeleteStaff={handleDeleteStaff}
                   />
                 ) : (
                   <Paper variant="outlined" sx={{ p: 5, borderRadius: 1, textAlign: 'center', bgcolor: 'rgba(255, 77, 109, 0.04)', borderColor: 'rgba(255, 77, 109, 0.3)', my: 4 }}>
@@ -558,6 +571,7 @@ export default function Home() {
         open={copilotOpen}
         onClose={() => setCopilotOpen(false)}
         currentPatientData={analysisResult?.patientInfo}
+        currentUser={currentUser}
       />
     </Box>
   );

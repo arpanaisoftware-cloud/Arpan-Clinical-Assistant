@@ -166,7 +166,7 @@ export default function ResetPasswordScreen({ token }: ResetPasswordScreenProps)
         elevation={0}
         sx={{
           background: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-          backdropFilter: 'blur(20px)',
+          backdropFilter: 'blur(16px)',
           borderBottom: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(226, 232, 240, 0.8)',
           color: isDark ? '#F8FAFC' : '#0F172A',
         }}
@@ -176,21 +176,21 @@ export default function ResetPasswordScreen({ token }: ResetPasswordScreenProps)
             <Stack direction="row" alignItems="center" spacing={1.5} sx={{ cursor: 'pointer' }} onClick={() => router.push('/login')}>
               <Box
                 sx={{
-                  width: 42,
-                  height: 42,
-                  borderRadius: '14px',
+                  width: 40,
+                  height: 40,
+                  borderRadius: '12px',
                   background: 'linear-gradient(135deg, #00C9A7 0%, #6C5CE7 100%)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: '0 4px 16px rgba(0, 201, 167, 0.4)',
+                  boxShadow: '0 4px 14px rgba(0, 201, 167, 0.35)',
                 }}
               >
                 <LocalHospital sx={{ color: '#FFF', fontSize: 24 }} />
               </Box>
-              <Box>
+              <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
                 <Stack direction="row" alignItems="center" spacing={1}>
-                  <Typography variant="h6" sx={{ fontWeight: 900, background: 'linear-gradient(90deg, #00C9A7, #6C5CE7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontSize: '1.2rem', letterSpacing: '-0.01em' }}>
+                  <Typography variant="h6" sx={{ fontWeight: 800, background: 'linear-gradient(90deg, #00C9A7, #6C5CE7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontSize: '1.15rem' }}>
                     Arpan Clinical Assistant
                   </Typography>
                   <Chip
@@ -202,43 +202,53 @@ export default function ResetPasswordScreen({ token }: ResetPasswordScreenProps)
                       fontWeight: 800,
                       bgcolor: 'rgba(0, 201, 167, 0.15)',
                       color: '#00C9A7',
-                      border: '1px solid rgba(0, 201, 167, 0.3)'
+                      border: '1px solid rgba(0, 201, 167, 0.3)',
+                      display: { xs: 'none', md: 'flex' }
                     }}
                   />
                 </Stack>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: -0.3, fontWeight: 600 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' }, mt: -0.3, fontWeight: 500 }}>
                   Intelligent Prescription, Counselling &amp; Dietary Care Platform
                 </Typography>
               </Box>
             </Stack>
 
-            <Stack direction="row" spacing={1.5} alignItems="center">
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<ArrowBack />}
-                onClick={() => router.push('/login')}
-                sx={{
-                  borderRadius: 2.5,
-                  fontWeight: 700,
-                  fontSize: '0.82rem',
-                  textTransform: 'none',
-                  px: 2,
-                  py: 0.7,
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(15, 23, 42, 0.15)',
-                  color: isDark ? '#F8FAFC' : '#0F172A',
-                  '&:hover': {
-                    borderColor: '#00C9A7',
-                    bgcolor: 'rgba(0, 201, 167, 0.08)',
-                    color: '#00C9A7'
-                  }
-                }}
-              >
-                Return to Login
-              </Button>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Tooltip title="Return to Login" arrow placement="bottom">
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<ArrowBack />}
+                  onClick={() => router.push('/login')}
+                  sx={{
+                    borderRadius: 2,
+                    fontWeight: 700,
+                    fontSize: '0.82rem',
+                    textTransform: 'none',
+                    px: { xs: 1, sm: 2 },
+                    py: 0.5,
+                    minWidth: { xs: '36px', sm: 'auto' },
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(15, 23, 42, 0.15)',
+                    color: isDark ? '#F8FAFC' : '#0F172A',
+                    '& .MuiButton-startIcon': {
+                      mr: { xs: 0, sm: 1 },
+                      ml: { xs: 0, sm: -0.5 }
+                    },
+                    '&:hover': {
+                      borderColor: '#00C9A7',
+                      bgcolor: 'rgba(0, 201, 167, 0.08)',
+                      color: '#00C9A7'
+                    }
+                  }}
+                >
+                  <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                    Return to Login
+                  </Box>
+                </Button>
+              </Tooltip>
 
               <Tooltip title={mode === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'} arrow placement="bottom">
-                <IconButton onClick={toggleColorMode} color="inherit" size="small" sx={{ border: isDark ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid #CBD5E1', borderRadius: '12px', p: 1 }}>
+                <IconButton onClick={toggleColorMode} color="inherit" size="small" sx={{ border: isDark ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid #CBD5E1' }}>
                   {mode === 'dark' ? <Brightness7 sx={{ color: '#FFB703' }} /> : <Brightness4 />}
                 </IconButton>
               </Tooltip>

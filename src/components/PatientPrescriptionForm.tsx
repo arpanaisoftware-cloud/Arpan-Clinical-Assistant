@@ -97,16 +97,16 @@ export default function PatientPrescriptionForm({ onAnalyze, isAnalyzing }: Pati
   return (
     <Card sx={{ borderRadius: 1, height: '100%' }}>
       <CardContent sx={{ p: { xs: 2.5, md: 3.5 } }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} mb={2} gap={1.5}>
           <Box>
             <Stack direction="row" alignItems="center" spacing={1}>
               <Person sx={{ color: '#00C9A7', fontSize: 28 }} />
-              <Typography variant="h5" sx={{ fontWeight: 800 }}>
-                Patient Details & Prescription Form
+              <Typography variant="h5" sx={{ fontWeight: 800, fontSize: { xs: '1.1rem', sm: '1.5rem' } }}>
+                Patient Details &amp; Prescription Form
               </Typography>
             </Stack>
-            <Typography variant="body2" color="text.secondary">
-              Enter clinical information below. Formik & Yup validation active.
+            <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>
+              Enter clinical information below. Formik &amp; Yup validation active.
             </Typography>
           </Box>
 
@@ -116,7 +116,7 @@ export default function PatientPrescriptionForm({ onAnalyze, isAnalyzing }: Pati
             color="secondary"
             startIcon={<Biotech />}
             onClick={handleLoadSample}
-            sx={{ borderStyle: 'dashed' }}
+            sx={{ borderStyle: 'dashed', flexShrink: 0 }}
           >
             Load Demo Case
           </Button>
@@ -387,7 +387,7 @@ export default function PatientPrescriptionForm({ onAnalyze, isAnalyzing }: Pati
                   boxShadow: '0 6px 20px rgba(0, 201, 167, 0.4)',
                 }}
               >
-                {isAnalyzing ? 'Analyzing AI Engine...' : 'Analyze Prescription & Generate Recommendations'}
+                {isAnalyzing ? 'Analyzing AI Engine...' : 'Analyze'}
               </Button>
             </Stack>
           </form>

@@ -59,7 +59,7 @@ export default function StaffManagementPage() {
         onOpenManageStaff={() => {}}
       />
 
-      <Container maxWidth="xl" sx={{ mt: 4 }}>
+      <Container maxWidth="xl" sx={{ pt: { xs: '84px', sm: '96px' }, px: { xs: 2, sm: 3 } }}>
         {/* Navigation Breadcrumb / Top Bar */}
         <Paper
           variant="outlined"
