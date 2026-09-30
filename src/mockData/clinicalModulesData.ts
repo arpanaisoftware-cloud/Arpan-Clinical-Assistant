@@ -10,7 +10,7 @@ export const INITIAL_STAFF_USERS: StaffUser[] = [
     modulePermissions: 'Counselling + Diets',
     active: true,
     createdAt: '2026-08-10',
-    passcode: 'staff123',
+    password: 'staff123',
     email: 'alex.rivera@arpanclinical.org'
   },
   {
@@ -22,7 +22,7 @@ export const INITIAL_STAFF_USERS: StaffUser[] = [
     modulePermissions: 'Diets Only',
     active: true,
     createdAt: '2026-08-15',
-    passcode: 'staff123',
+    password: 'staff123',
     email: 'priya.sharma@arpanclinical.org'
   },
   {
@@ -34,7 +34,7 @@ export const INITIAL_STAFF_USERS: StaffUser[] = [
     modulePermissions: 'Full Access',
     active: true,
     createdAt: '2026-01-01',
-    passcode: 'doc123',
+    password: 'doc123',
     email: 'dr.yashwant@arpanclinical.org'
   }
 ];

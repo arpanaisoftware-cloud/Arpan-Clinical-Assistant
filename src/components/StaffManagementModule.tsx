@@ -74,7 +74,7 @@ export default function StaffManagementModule({
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [staffIdInput, setStaffIdInput] = useState('');
-  const [customPasscode, setCustomPasscode] = useState('');
+  const [customPassword, setCustomPassword] = useState('');
   const [department, setDepartment] = useState('');
   const [role, setRole] = useState<UserRole | ''>('');
   const [permission, setPermission] = useState<ModulePermission | ''>('');
@@ -112,7 +112,7 @@ export default function StaffManagementModule({
 
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const generatedId = staffIdInput.trim() || `STAFF-${randomSuffix}`;
-    const generatedPass = customPasscode.trim() || `staff${randomSuffix}`;
+    const generatedPass = customPassword.trim() || `staff${randomSuffix}`;
     const generatedEmail = email.trim();
 
     const newMember: StaffUser = {
@@ -125,7 +125,7 @@ export default function StaffManagementModule({
       modulePermissions: assignedPermissions,
       active: true,
       createdAt: new Date().toISOString().split('T')[0],
-      passcode: generatedPass
+      password: generatedPass
     };
 
     onAddStaff(newMember);
@@ -139,7 +139,7 @@ export default function StaffManagementModule({
     setName('');
     setEmail('');
     setStaffIdInput('');
-    setCustomPasscode('');
+    setCustomPassword('');
     setDepartment('');
     setRole('');
     setPermission('');
@@ -147,7 +147,7 @@ export default function StaffManagementModule({
   };
 
   const handleCopyCredentials = (user: StaffUser) => {
-    const text = `Arpan Clinical Assistant Login Credentials:\nName: ${user.name}\nEmail: ${user.email || 'N/A'}\nRole: ${user.role}\nDepartment: ${user.department}\nPermissions: ${user.modulePermissions}\nLogin ID: ${user.staffId}\nPassword: ${user.passcode || 'staff123'}`;
+    const text = `Arpan Clinical Assistant Login Credentials:\nName: ${user.name}\nEmail: ${user.email || 'N/A'}\nRole: ${user.role}\nDepartment: ${user.department}\nPermissions: ${user.modulePermissions}\nLogin ID: ${user.staffId}\nPassword: ${user.password || 'staff123'}`;
     navigator.clipboard.writeText(text);
     toast.info('Credentials copied to clipboard!', { toastId: 'copy-credentials' });
   };
@@ -208,7 +208,7 @@ export default function StaffManagementModule({
               <Grid item xs={6} sm={3}>
                 <Typography variant="caption" color="text.secondary" display="block">Assigned Password</Typography>
                 <Typography variant="subtitle1" sx={{ fontWeight: 900, color: '#FFB703' }}>
-                  {issuedUser.passcode}
+                  {issuedUser.password}
                 </Typography>
               </Grid>
 
@@ -302,8 +302,8 @@ export default function StaffManagementModule({
                   type="password"
                   label="Initial Password (Optional)"
                   placeholder="Auto-generated if blank (e.g. staff123)"
-                  value={customPasscode}
-                  onChange={(e) => setCustomPasscode(e.target.value)}
+                  value={customPassword}
+                  onChange={(e) => setCustomPassword(e.target.value)}
                 />
               </Grid>
 
@@ -382,7 +382,7 @@ export default function StaffManagementModule({
               </Grid>
 
               <Grid item xs={12} textAlign="right">
-                <Tooltip title="Create staff user profile and issue Login ID with Passcode and Email" arrow placement="top">
+                <Tooltip title="Create staff user profile and issue Login ID with Password and Email" arrow placement="top">
                   <Button variant="contained" color="primary" type="submit" startIcon={<PersonAdd />} sx={{ borderRadius: 1, height: 42, px: 3, fontWeight: 800 }}>
                     Issue Credentials &amp; Access Account
                   </Button>
@@ -416,7 +416,7 @@ export default function StaffManagementModule({
                 <TableRow key={user.id} hover>
                   <TableCell sx={{ fontWeight: 900, color: '#00C9A7' }}>{user.staffId}</TableCell>
                   <TableCell sx={{ fontWeight: 800, color: '#FFB703', fontFamily: 'monospace' }}>
-                    {user.passcode || 'staff123'}
+                    {user.password || 'staff123'}
                   </TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>{user.name}</TableCell>
                   <TableCell sx={{ fontSize: '0.82rem', color: isDark ? '#94A3B8' : '#64748B' }}>
@@ -442,7 +442,7 @@ export default function StaffManagementModule({
                   </TableCell>
                   <TableCell align="center">
                     <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
-                      <Tooltip title="Copy staff Login ID, Email & Passcode to clipboard" arrow placement="top">
+                      <Tooltip title="Copy staff Login ID, Email & Password to clipboard" arrow placement="top">
                         <IconButton
                           size="small"
                           color="primary"

@@ -51,20 +51,27 @@ import {
 import { StaffUser, UserRole, AuthUser } from '../types/clinical';
 import { toast } from 'react-toastify';
 import { ColorModeContext } from '../theme/ThemeRegistry';
+import * as Yup from 'yup';
+
+const loginSchema = Yup.object({
+  selectedStaffId: Yup.string().required('Please select a registered account to sign in.'),
+  password: Yup.string().required('Password is required.').min(8, 'Password must be at least 8 characters.')
+});
 
 interface LoginScreenProps {
   staffList: StaffUser[];
   onLoginSuccess: (user: AuthUser) => void;
-  onUpdatePasscode?: (staffId: string, newPasscode: string) => void;
+  onUpdatePassword?: (staffId: string, newPassword: string) => void;
 }
 
-export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasscode }: LoginScreenProps) {
+export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePassword }: LoginScreenProps) {
   const router = useRouter();
   const { mode, toggleColorMode } = useContext(ColorModeContext);
   const [selectedRole, setSelectedRole] = useState<UserRole>('Doctor');
   const [selectedStaffId, setSelectedStaffId] = useState<string>('');
-  const [passcode, setPasscode] = useState<string>('');
-  const [showPasscode, setShowPasscode] = useState<boolean>(false);
+  const [password, setPassword] = useState<string>('');
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [formErrors, setFormErrors] = useState<{ selectedStaffId?: string, password?: string }>({});
 
   // Forgot Password / Reset Link Ecosystem Modal States
   const [forgotModalOpen, setForgotModalOpen] = useState<boolean>(false);
@@ -72,27 +79,43 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasscod
   const [resetTargetId, setResetTargetId] = useState<string>('');
   const [resetEmail, setResetEmail] = useState<string>('');
   const [generatedResetLink, setGeneratedResetLink] = useState<string>('');
-  const [newPasscode, setNewPasscode] = useState<string>('');
-  const [confirmPasscode, setConfirmPasscode] = useState<string>('');
+  const [newPassword, setNewPassword] = useState<string>('');
+  const [confirmPassword, setConfirmPassword] = useState<string>('');
   const [isSending, setIsSending] = useState<boolean>(false);
   const [resetErrorMsg, setResetErrorMsg] = useState<string>('');
 
   // Filter staff by selected role
   const availableUsers = staffList.filter(u => u.role === selectedRole && u.active);
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormErrors({});
+
+    try {
+      await loginSchema.validate({ selectedStaffId, password }, { abortEarly: false });
+    } catch (err) {
+      if (err instanceof Yup.ValidationError) {
+        const errors: any = {};
+        err.inner.forEach((error) => {
+          if (error.path) errors[error.path] = error.message;
+        });
+        setFormErrors(errors);
+        toast.error('Please correct the highlighted fields.');
+        return;
+      }
+    }
 
     let userToLogin = staffList.find(u => u.staffId === selectedStaffId || u.id === selectedStaffId);
 
-    // Validate required fields
-    if (!selectedStaffId) {
-      toast.error('Please select a registered account to sign in.');
+    if (!userToLogin) {
+      toast.error('Invalid user selected. Please select a valid account.');
       return;
     }
 
-    if (!userToLogin) {
-      toast.error('Invalid user selected. Please select a valid account.');
+    // For prototype: only check password if it was explicitly set via reset link
+    if ((userToLogin as any).password && (userToLogin as any).password !== password) {
+      setFormErrors({ password: 'Incorrect password entered.' });
+      toast.error('Incorrect password entered.');
       return;
     }
 
@@ -119,8 +142,8 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasscod
     setResetTargetId(initialId);
     setResetEmail(initialEmail);
     setGeneratedResetLink('');
-    setNewPasscode('');
-    setConfirmPasscode('');
+    setNewPassword('');
+    setConfirmPassword('');
     setResetErrorMsg('');
     setResetStep(1);
     setForgotModalOpen(true);
@@ -147,31 +170,31 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasscod
     }, 800);
   };
 
-  const handleVerifyAndResetPasscode = (e: React.FormEvent) => {
+  const handleVerifyAndResetPassword = (e: React.FormEvent) => {
     e.preventDefault();
     setResetErrorMsg('');
 
-    if (!newPasscode || newPasscode.length < 4) {
-      setResetErrorMsg('New Passcode / PIN must be at least 4 characters long.');
+    if (!newPassword || newPassword.length < 8) {
+      setResetErrorMsg('New Password / PIN must be at least 8 characters long.');
       return;
     }
 
-    if (newPasscode !== confirmPasscode) {
-      setResetErrorMsg('Passcodes do not match. Please re-enter.');
+    if (newPassword !== confirmPassword) {
+      setResetErrorMsg('Passwords do not match. Please re-enter.');
       return;
     }
 
-    // Passcode updated successfully
-    if (onUpdatePasscode) {
-      onUpdatePasscode(resetTargetId, newPasscode);
+    // Password updated successfully
+    if (onUpdatePassword) {
+      onUpdatePassword(resetTargetId, newPassword);
     }
 
-    // Auto update selected user and passcode in login screen
+    // Auto update selected user and password in login screen
     setSelectedStaffId(resetTargetId);
-    setPasscode(newPasscode);
+    setPassword(newPassword);
 
     setResetStep(3);
-    toast.success('🔒 Passcode updated successfully via Reset Link!');
+    toast.success('🔒 Password updated successfully via Reset Link!');
   };
 
   const theme = useTheme();
@@ -510,6 +533,8 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasscod
                         }
                       }
                     }}
+                    error={!!formErrors.selectedStaffId}
+                    helperText={formErrors.selectedStaffId}
                   >
                     <MenuItem value="" disabled sx={{ color: 'text.secondary' }}>
                       <em>Select registered {selectedRole} from roster</em>
@@ -533,16 +558,18 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasscod
                       letterSpacing: 0.3
                     }}
                   >
-                    Passcode / PIN:
+                    Password / PIN:
                   </Typography>
                   <TextField
                     fullWidth
                     size="medium"
-                    type={showPasscode ? 'text' : 'password'}
-                    placeholder="Enter passcode (e.g. 1234 or doc123)"
-                    value={passcode}
-                    onChange={(e) => setPasscode(e.target.value)}
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Enter your 8-digit secure password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     required
+                    error={!!formErrors.password}
+                    helperText={formErrors.password}
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
@@ -552,12 +579,12 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasscod
                       endAdornment: (
                         <InputAdornment position="end">
                           <IconButton
-                            onClick={() => setShowPasscode((prev) => !prev)}
+                            onClick={() => setShowPassword((prev) => !prev)}
                             edge="end"
                             size="small"
                             sx={{ color: isDark ? '#94A3B8' : '#64748B' }}
                           >
-                            {showPasscode ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                            {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
                           </IconButton>
                         </InputAdornment>
                       ),
@@ -571,10 +598,10 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasscod
                     }}
                   />
 
-                  {/* Forgot Passcode / Reset Link Button */}
+                  {/* Forgot Password / Reset Link Button */}
                   <Box sx={{ display: 'flex', justifyContent: 'flex-end', pt: 3 }}>
                     <Box
-                      onClick={() => router.push('/reset-password/ec7d83c2082486ed808146848a9247e8e4414409cf24f4d04af6bb4ff710acd7')}
+                      onClick={() => router.push('/forgot-password')}
                       sx={{
                         fontSize: '0.82rem',
                         fontWeight: 800,
@@ -589,7 +616,7 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasscod
                         }
                       }}
                     >
-                      Forgot Passcode?
+                      Forgot Password?
                     </Box>
                   </Box>
                 </Box>
@@ -634,7 +661,7 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasscod
           </CardContent>
         </Card>
 
-        {/* Forgot Passcode / Reset Link Ecosystem Modal */}
+        {/* Forgot Password / Reset Link Ecosystem Modal */}
         <Dialog
           open={forgotModalOpen}
           onClose={() => setForgotModalOpen(false)}
@@ -669,7 +696,7 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasscod
               </Box>
               <Box>
                 <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
-                  Passcode Reset Link Ecosystem
+                  Password Reset Link Ecosystem
                 </Typography>
                 <Typography variant="caption" sx={{ color: isDark ? '#94A3B8' : '#64748B' }}>
                   Secure Email Password Reset Link Service
@@ -788,16 +815,16 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasscod
               </form>
             )}
 
-            {/* STEP 2: SIMULATED EMAIL DISPATCH & SET NEW PASSCODE */}
+            {/* STEP 2: SIMULATED EMAIL DISPATCH & SET NEW PASSWORD */}
             {resetStep === 2 && (
-              <form onSubmit={handleVerifyAndResetPasscode}>
+              <form onSubmit={handleVerifyAndResetPassword}>
                 <Stack spacing={2.5}>
                   <Alert severity="info" icon={<MarkEmailRead />} sx={{ borderRadius: 2 }}>
                     <Typography variant="body2" sx={{ fontWeight: 700 }}>
                       Password Reset Link Sent to {resetEmail}!
                     </Typography>
                     <Typography variant="caption" sx={{ display: 'block', mt: 0.5 }}>
-                      Click the generated link below or set your new passcode directly to update credentials.
+                      Click the generated link below or set your new password directly to update credentials.
                     </Typography>
                   </Alert>
 
@@ -864,14 +891,14 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasscod
 
                   <Box>
                     <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 0.8 }}>
-                      New Passcode / PIN:
+                      New Password / PIN:
                     </Typography>
                     <TextField
                       fullWidth
                       type="password"
-                      value={newPasscode}
-                      onChange={(e) => setNewPasscode(e.target.value)}
-                      placeholder="Set new passcode (min 4 characters)"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Set new password (min 8 characters)"
                       required
                       InputProps={{
                         startAdornment: (
@@ -885,14 +912,14 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasscod
 
                   <Box>
                     <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 0.8 }}>
-                      Confirm New Passcode:
+                      Confirm New Password:
                     </Typography>
                     <TextField
                       fullWidth
                       type="password"
-                      value={confirmPasscode}
-                      onChange={(e) => setConfirmPasscode(e.target.value)}
-                      placeholder="Re-enter new passcode"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Re-enter new password"
                       required
                       InputProps={{
                         startAdornment: (
@@ -926,7 +953,7 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasscod
                         '&:hover': { bgcolor: isDoctor ? '#00967D' : '#4C1D95' }
                       }}
                     >
-                      Save &amp; Update Passcode
+                      Save &amp; Update Password
                     </Button>
                   </Stack>
                 </Stack>
@@ -953,10 +980,10 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasscod
                 </Box>
 
                 <Typography variant="h5" sx={{ fontWeight: 900, mb: 1 }}>
-                  Passcode Reset Successful!
+                  Password Reset Successful!
                 </Typography>
                 <Typography variant="body2" sx={{ color: isDark ? '#CBD5E1' : '#475569', mb: 3 }}>
-                  Passcode for <strong>{targetUserObj?.name || resetTargetId}</strong> has been updated via the email reset link service and auto-populated into your login form.
+                  Password for <strong>{targetUserObj?.name || resetTargetId}</strong> has been updated via the email reset link service and auto-populated into your login form.
                 </Typography>
 
                 <Button
