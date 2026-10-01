@@ -14,6 +14,39 @@ export interface PatientInput {
   allergies?: string;
   disease: string;
   medications: MedicationInput[];
+
+  // Vitals
+  bpSystolic?: number | string;
+  bpDiastolic?: number | string;
+  pulse?: number | string;
+  bmi?: number | string;
+
+  // Lab Values — Glycemic
+  hba1c?: number | string;
+  fastingGlucose?: number | string;
+
+  // Lab Values — Renal & Electrolytes
+  creatinine?: number | string;
+  egfr?: number | string;
+  sodiumNa?: number | string;
+  potassiumK?: number | string;
+
+  // Lab Values — Hepatic & Lipids
+  sgptAlt?: number | string;
+  totalCholesterol?: number | string;
+  ldl?: number | string;
+
+  // Diabetes Complications (checkboxes)
+  hasRetinopathy?: boolean;
+  hasNephropathy?: boolean;
+  hasNeuropathy?: boolean;
+  hasFootRisk?: boolean;
+
+  // Clinical Complaints (multi-select)
+  clinicalComplaints?: string[];
+
+  // Comorbidities
+  comorbidities?: string;
 }
 
 export interface DrugAlternativeOption {
@@ -75,6 +108,41 @@ export interface DosageTimeline {
   bedtime: DosageItem[];
 }
 
+// Drug → Indication + Patient Suitability (Section A — AI output)
+export interface DrugIndicationItem {
+  drugName: string;
+  dosage: string;
+  // Drug → Indication
+  indication: string;                    // Why prescribed
+  indicationStatus: 'Appropriate' | 'Questionable' | 'Inappropriate';
+  // Drug → Patient Suitability
+  renalSuitability: string;
+  hepaticSuitability: string;
+  ageConsideration: string;
+  cardiovascularConsideration: string;
+  overallSuitability: 'Safe' | 'Caution' | 'Avoid';
+}
+
+// Dose & Frequency analysis per drug
+export interface DoseFrequencyAnalysisItem {
+  drugName: string;
+  prescribedDose: string;
+  standardDose: string;
+  frequency: string;
+  foodTiming: string;
+  renalDoseNote: string;
+  isCorrect: boolean;
+  notes: string;
+}
+
+// Drug-induced Adverse Effect Analysis (Section B)
+export interface AdverseEffectAnalysisItem {
+  complaint: string;
+  aiReview: string;
+  implicatedDrugs: string[];
+  severity: 'High' | 'Moderate' | 'Low';
+}
+
 export interface AnalysisResult {
   patientInfo: PatientInput;
   medications: MedicationInput[];
@@ -90,6 +158,10 @@ export interface AnalysisResult {
   aiClinicalOverview: string;
   estimatedMonthlySavings: string;
   timestamp: string;
+  // New SOP-mandated outputs
+  drugIndicationAnalysis?: DrugIndicationItem[];
+  doseFrequencyAnalysis?: DoseFrequencyAnalysisItem[];
+  adverseEffectAnalysis?: AdverseEffectAnalysisItem[];
 }
 
 export interface HistoryRecord {

@@ -381,6 +381,122 @@ export function analyzePrescription(patientData: PatientInput, medications: Medi
       : "Regimen demonstrates strong safety profile with zero direct high-severity drug conflicts detected."
   }`;
 
+  // Generate Drug → Indication + Patient Suitability per drug
+  const drugIndicationAnalysis = medications.map(med => {
+    const name = (med.name || '').trim();
+    const nameLow = name.toLowerCase();
+    let indication = 'General therapeutic use as directed by physician.';
+    let indicationStatus: 'Appropriate' | 'Questionable' | 'Inappropriate' = 'Appropriate';
+    let renalSuitability = 'Generally safe; monitor renal function.';
+    let hepaticSuitability = 'No significant hepatic contraindications known.';
+    let ageConsideration = 'Suitable for adult use.';
+    let cardiovascularConsideration = 'No direct cardiovascular contraindications.';
+    let overallSuitability: 'Safe' | 'Caution' | 'Avoid' = 'Safe';
+
+    if (nameLow.includes('metformin')) {
+      indication = 'First-line oral antidiabetic — lowers hepatic glucose production and improves insulin sensitivity.';
+      renalSuitability = 'Contraindicated if eGFR < 30. Reduce dose if eGFR 30–45. Monitor creatinine regularly.';
+      hepaticSuitability = 'Avoid in severe hepatic impairment due to lactic acidosis risk.';
+      ageConsideration = 'Use with caution in elderly (>75 yrs); increase monitoring frequency.';
+      cardiovascularConsideration = 'Beneficial — associated with reduced CV events in T2DM.';
+      overallSuitability = 'Safe';
+    } else if (nameLow.includes('lisinopril') || nameLow.includes('ramipril') || nameLow.includes('ace')) {
+      indication = 'ACE inhibitor — first-line antihypertensive; also reduces diabetic nephropathy progression.';
+      renalSuitability = 'Monitor K+ and creatinine. Avoid if bilateral renal artery stenosis or eGFR < 30.';
+      hepaticSuitability = 'No dose adjustment needed in mild-moderate hepatic impairment.';
+      ageConsideration = 'Preferred in elderly hypertensives with diabetes or CKD.';
+      cardiovascularConsideration = 'Cardioprotective — reduces cardiac remodelling post-MI.';
+      overallSuitability = 'Safe';
+    } else if (nameLow.includes('ibuprofen') || nameLow.includes('nsaid') || nameLow.includes('diclofenac')) {
+      indication = 'NSAID — anti-inflammatory and analgesic for musculoskeletal pain management.';
+      indicationStatus = 'Questionable';
+      renalSuitability = 'CAUTION: NSAIDs reduce renal prostaglandins, worsening CKD. Avoid if eGFR < 60.';
+      hepaticSuitability = 'Hepatotoxic risk with prolonged use; monitor LFTs.';
+      ageConsideration = 'HIGH RISK in elderly — increased GI bleeding, renal impairment, CV events.';
+      cardiovascularConsideration = 'Increases CV risk (MI, stroke) especially in patients with existing hypertension.';
+      overallSuitability = 'Caution';
+    } else if (nameLow.includes('atorvastatin') || nameLow.includes('statin') || nameLow.includes('rosuvastatin')) {
+      indication = 'HMG-CoA reductase inhibitor — lowers LDL cholesterol; reduces CV event risk.';
+      renalSuitability = 'Safe in CKD; no dose adjustment required for most statins.';
+      hepaticSuitability = 'CONTRAINDICATED in active liver disease or unexplained elevated transaminases (>3x ULN).';
+      ageConsideration = 'Beneficial in older adults with established CVD or high CV risk.';
+      cardiovascularConsideration = 'Primary & secondary CV prevention — reduces MI and stroke mortality.';
+      overallSuitability = 'Safe';
+    } else if (nameLow.includes('insulin') || nameLow.includes('glipizide') || nameLow.includes('glimepiride') || nameLow.includes('sulfonylurea')) {
+      indication = 'Insulin secretagogue / exogenous insulin — lowers blood glucose in T2DM.';
+      renalSuitability = 'Dose reduction required if eGFR < 60 due to hypoglycemia risk from accumulation.';
+      hepaticSuitability = 'Use with caution in hepatic impairment — altered glucose metabolism.';
+      ageConsideration = 'Hypoglycemia risk significantly higher in elderly; prefer lower doses.';
+      cardiovascularConsideration = 'Hypoglycemia episodes can trigger arrhythmias; monitor carefully.';
+      overallSuitability = 'Caution';
+    }
+
+    if (patientData.egfr && Number(patientData.egfr) < 45 && (nameLow.includes('metformin') || nameLow.includes('nsaid') || nameLow.includes('ibuprofen'))) {
+      overallSuitability = 'Avoid';
+      indicationStatus = 'Inappropriate';
+    }
+
+    return { drugName: name, dosage: med.dosage || '', indication, indicationStatus, renalSuitability, hepaticSuitability, ageConsideration, cardiovascularConsideration, overallSuitability };
+  });
+
+  // Generate Dose & Frequency analysis
+  const doseFrequencyAnalysis = medications.map(med => {
+    const name = (med.name || '').trim();
+    const nameLow = name.toLowerCase();
+    let standardDose = 'Per standard clinical guidelines';
+    let renalDoseNote = 'No renal dose adjustment required.';
+    let foodTiming = med.timing || 'As directed by physician';
+    let isCorrect = true;
+    let notes = 'Dose and frequency appear clinically appropriate.';
+
+    if (nameLow.includes('metformin')) {
+      standardDose = '500mg–1000mg, Twice or Thrice Daily';
+      renalDoseNote = 'Reduce to 500mg BD if eGFR 30–45. Discontinue if eGFR < 30.';
+      foodTiming = 'With or immediately after meals to reduce GI side effects.';
+    } else if (nameLow.includes('lisinopril')) {
+      standardDose = '5mg–40mg, Once Daily';
+      renalDoseNote = 'Start at 2.5–5mg if eGFR < 30; monitor K+ weekly.';
+      foodTiming = 'Morning; can be taken with or without food.';
+    } else if (nameLow.includes('ibuprofen')) {
+      standardDose = '200mg–600mg, 3–4 times daily (max 2400mg/day)';
+      renalDoseNote = 'Avoid in eGFR < 60 mL/min. Short-course use only.';
+      foodTiming = 'Always with food, milk, or antacid to protect gastric mucosa.';
+      notes = 'Limit to shortest effective duration. Review at 5–7 days.';
+    } else if (nameLow.includes('atorvastatin')) {
+      standardDose = '10mg–80mg, Once Daily';
+      renalDoseNote = 'No renal dose adjustment needed.';
+      foodTiming = 'Preferably at bedtime (peak hepatic cholesterol synthesis is nocturnal).';
+    }
+
+    return { drugName: name, prescribedDose: med.dosage || '', standardDose, frequency: med.frequency || '', foodTiming, renalDoseNote, isCorrect, notes };
+  });
+
+  // Generate Adverse Effect Analysis from clinical complaints
+  const adverseEffectMap: Record<string, { aiReview: string; severity: 'High' | 'Moderate' | 'Low'; keywords: string[] }> = {
+    'Loss of appetite': { aiReview: 'Identify possible causative medicines — Metformin, Digoxin, SSRIs, and antibiotics are common culprits. Also consider disease progression as a contributing factor.', severity: 'Moderate', keywords: ['metformin', 'digoxin', 'antibiotic'] },
+    'Lower-limb edema': { aiReview: 'Review medicines known to cause edema — Amlodipine (calcium channel blockers), NSAIDs (fluid retention), insulin, steroids, and glitazones. Rule out cardiac or renal causes.', severity: 'Moderate', keywords: ['amlodipine', 'ibuprofen', 'nsaid', 'insulin'] },
+    'Dizziness': { aiReview: 'Review antihypertensives (ACE inhibitors, beta-blockers, diuretics) and sedating medicines. Check for postural hypotension, dehydration, or hypoglycemia as contributing causes.', severity: 'Moderate', keywords: ['lisinopril', 'amlodipine', 'diuretic', 'metoprolol'] },
+    'Weakness': { aiReview: 'Review for hypoglycemia (insulin/sulfonylureas), electrolyte imbalances (Na+/K+), BP medications causing orthostasis, or anemia. Check HbA1c, glucose, and electrolytes.', severity: 'High', keywords: ['insulin', 'glipizide', 'glimepiride', 'sulfonylurea'] },
+    'Gastric discomfort': { aiReview: 'Review medicines with significant GI adverse effects — NSAIDs (most common), Metformin, iron supplements, erythromycin. Consider H2 blocker or PPI co-prescription if clinically indicated.', severity: 'Moderate', keywords: ['ibuprofen', 'nsaid', 'metformin', 'aspirin'] },
+    'Hypoglycemia': { aiReview: 'Critically review insulin regimen, sulfonylureas (Glipizide, Glimepiride, Gliclazide), and other glucose-lowering agents. Assess meal timing, renal function, and activity level.', severity: 'High', keywords: ['insulin', 'glipizide', 'glimepiride', 'sulfonylurea', 'metformin'] },
+    'Constipation': { aiReview: 'Review potentially constipating medicines — calcium channel blockers, iron supplements, opioids, antacids (aluminium-based), anticholinergics, and ondansetron. Recommend dietary fibre and hydration.', severity: 'Low', keywords: ['amlodipine', 'calcium', 'iron', 'ondansetron'] },
+    'Postural hypotension': { aiReview: 'Review BP-lowering medicines (ACE inhibitors, ARBs, alpha-blockers, diuretics) and sedating medications. Check for dehydration, autonomic neuropathy (diabetic patients), and recent dose changes.', severity: 'Moderate', keywords: ['lisinopril', 'amlodipine', 'furosemide', 'diuretic'] },
+    'Nausea/Vomiting': { aiReview: 'Common with Metformin (especially at initiation), antibiotics, iron, NSAIDs, and digoxin. If persistent, consider dose reduction or extended-release formulation switch.', severity: 'Moderate', keywords: ['metformin', 'antibiotic', 'ibuprofen'] },
+    'Palpitations': { aiReview: 'Review stimulants, bronchodilators (salbutamol), thyroid medications, and sympathomimetics. Hypoglycemia and electrolyte imbalance (K+) are also important causes in diabetic patients.', severity: 'Moderate', keywords: ['salbutamol', 'thyroid', 'insulin'] },
+    'Dyspnea': { aiReview: 'Review beta-blockers (can worsen airflow obstruction), NSAIDs (aspirin-sensitive asthma), and ACE inhibitors (persistent dry cough in 10–15% of patients).', severity: 'High', keywords: ['ibuprofen', 'lisinopril', 'aspirin', 'atenolol'] },
+    'Excessive thirst': { aiReview: 'Evaluate glycaemic control — persistent hyperglycemia is the primary cause. Review for osmotic diuresis indicators. Also consider lithium (nephrogenic DI) if applicable.', severity: 'Moderate', keywords: ['insulin', 'glipizide'] },
+    'Frequent urination': { aiReview: 'Assess for uncontrolled diabetes (osmotic diuresis), SGLT2 inhibitors (expected effect), or UTI. Diuretics will also increase urinary frequency.', severity: 'Low', keywords: ['furosemide', 'canagliflozin', 'dapagliflozin'] },
+    'Blurred vision': { aiReview: 'Consider hypoglycemia-induced visual changes, acute glucose fluctuations, or medication-induced myopia (topiramate, sulfonamides). Rule out diabetic retinopathy progression.', severity: 'High', keywords: ['insulin', 'topiramate'] },
+  };
+
+  const complaints = patientData.clinicalComplaints || [];
+  const adverseEffectAnalysis = complaints.map(complaint => {
+    const entry = adverseEffectMap[complaint];
+    if (!entry) return { complaint, aiReview: 'Clinical review required. Assess for drug-induced causation.', implicatedDrugs: [], severity: 'Moderate' as const };
+    const implicatedDrugs = medications.filter(m => entry.keywords.some(k => (m.name || '').toLowerCase().includes(k))).map(m => m.name);
+    return { complaint, aiReview: entry.aiReview, implicatedDrugs, severity: entry.severity };
+  });
+
   return {
     patientInfo: patientData,
     medications,
@@ -395,7 +511,10 @@ export function analyzePrescription(patientData: PatientInput, medications: Medi
     dietLifestyleDonts: Array.from(new Set(dietLifestyleDonts)),
     aiClinicalOverview,
     estimatedMonthlySavings: "$45.00 - $120.00 (via Generic Equivalents)",
-    timestamp: customTimestamp || new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
+    timestamp: customTimestamp || new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
+    drugIndicationAnalysis,
+    doseFrequencyAnalysis,
+    adverseEffectAnalysis,
   };
 }
 
@@ -406,6 +525,13 @@ export const SAMPLE_CLINICAL_CASE: PatientInput = {
   weight: 82,
   allergies: "Penicillin, Sulfa",
   disease: "Essential Hypertension, Type 2 Diabetes Mellitus, Mild Hyperlipidemia",
+  comorbidities: "Obesity, Mild CKD Stage 3",
+  bpSystolic: 148, bpDiastolic: 92, pulse: 82, bmi: 29.4,
+  hba1c: 8.6, fastingGlucose: 178,
+  creatinine: 1.4, egfr: 54, sodiumNa: 138, potassiumK: 4.3,
+  sgptAlt: 48, totalCholesterol: 218, ldl: 145,
+  hasRetinopathy: false, hasNephropathy: true, hasNeuropathy: true, hasFootRisk: false,
+  clinicalComplaints: ['Gastric discomfort', 'Dizziness', 'Weakness'],
   medications: [
     { name: "Metformin", dosage: "1000mg", frequency: "Twice Daily", duration: "30 Days", timing: "With meals" },
     { name: "Lisinopril", dosage: "10mg", frequency: "Once Daily", duration: "30 Days", timing: "Morning" },
@@ -413,3 +539,4 @@ export const SAMPLE_CLINICAL_CASE: PatientInput = {
     { name: "Atorvastatin", dosage: "20mg", frequency: "Once Daily", duration: "30 Days", timing: "At bedtime" }
   ]
 };
+

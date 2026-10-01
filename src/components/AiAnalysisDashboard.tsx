@@ -20,7 +20,14 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  IconButton
+  IconButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  LinearProgress
 } from '@mui/material';
 import {
   Shield,
@@ -35,7 +42,11 @@ import {
   Psychology,
   MonetizationOn,
   Close,
-  LocalHospital
+  LocalHospital,
+  Medication,
+  BugReport,
+  VerifiedUser,
+  AccessTime
 } from '@mui/icons-material';
 import confetti from 'canvas-confetti';
 import { AnalysisResult } from '../types/clinical';
@@ -73,7 +84,10 @@ export default function AiAnalysisDashboard({
     dietLifestyleDonts,
     aiClinicalOverview,
     estimatedMonthlySavings,
-    timestamp
+    timestamp,
+    drugIndicationAnalysis,
+    doseFrequencyAnalysis,
+    adverseEffectAnalysis,
   } = analysisResult;
 
   const triggerConfetti = () => {
@@ -184,8 +198,7 @@ export default function AiAnalysisDashboard({
 
         <Divider sx={{ mb: 3 }} />
 
-        {/* Dynamic Navigation Tabs */}
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3, mx: { xs: -2.5, md: -4 } }}>
           <Tabs
             value={activeTab}
             onChange={handleTabChange}
@@ -193,14 +206,32 @@ export default function AiAnalysisDashboard({
             indicatorColor="primary"
             variant="scrollable"
             scrollButtons="auto"
+            sx={{
+              px: { xs: 2.5, md: 4 },
+              '& .MuiTabs-scrollButtons': {
+                width: 32,
+                transition: 'width 0.2s, opacity 0.2s',
+                '&.Mui-disabled': {
+                  width: 0,
+                  opacity: 0,
+                  overflow: 'hidden'
+                }
+              }
+            }}
           >
             <Tab icon={<Info />} iconPosition="start" label="Overview & Insights" />
-            <Tab icon={<CompareArrows />} iconPosition="start" label={`Alternatives & Generics (${alternativesList.length})`} />
+            <Tab icon={<Medication />} iconPosition="start" label="Prescription Suitability" />
+            <Tab
+              icon={<BugReport sx={{ color: adverseEffectAnalysis && adverseEffectAnalysis.length > 0 ? '#FF4D6D' : undefined }} />}
+              iconPosition="start"
+              label={`Adverse Effects (${adverseEffectAnalysis?.length ?? 0})`}
+            />
             <Tab
               icon={<Warning sx={{ color: flaggedInteractions.length > 0 || flaggedAllergies.length > 0 ? '#FF4D6D' : undefined }} />}
               iconPosition="start"
               label={`Interactions & Risks (${flaggedInteractions.length + flaggedAllergies.length})`}
             />
+            <Tab icon={<CompareArrows />} iconPosition="start" label={`Alternatives & Generics (${alternativesList.length})`} />
             <Tab icon={<Schedule />} iconPosition="start" label="Dosage Schedule" />
             <Tab icon={<Restaurant />} iconPosition="start" label="Diet & Lifestyle" />
           </Tabs>
@@ -214,42 +245,260 @@ export default function AiAnalysisDashboard({
               {aiClinicalOverview}
             </Alert>
 
-            <Grid container spacing={2.5}>
-              <Grid item xs={12} sm={4} md={4}>
+            {/* Summary Stat Cards */}
+            <Grid container spacing={2} mb={3}>
+              <Grid item xs={4}>
                 <Paper variant="outlined" sx={{ p: 2, borderRadius: 1, textAlign: 'center' }}>
-                  <LocalPharmacy sx={{ color: '#6C5CE7', fontSize: 36, mb: 0.5 }} />
+                  <LocalPharmacy sx={{ color: '#6C5CE7', fontSize: 32, mb: 0.5 }} />
                   <Typography variant="subtitle2" color="text.secondary">Prescribed Agents</Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 800 }}>
-                    {medications.length} Drugs
-                  </Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 800 }}>{medications.length} Drugs</Typography>
                 </Paper>
               </Grid>
-
-              <Grid item xs={12} sm={4} md={4}>
+              <Grid item xs={4}>
                 <Paper variant="outlined" sx={{ p: 2, borderRadius: 1, textAlign: 'center' }}>
-                  <Warning sx={{ color: flaggedInteractions.length > 0 ? '#FFB703' : '#00C9A7', fontSize: 36, mb: 0.5 }} />
+                  <Warning sx={{ color: flaggedInteractions.length > 0 ? '#FFB703' : '#00C9A7', fontSize: 32, mb: 0.5 }} />
                   <Typography variant="subtitle2" color="text.secondary">Drug Conflicts</Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 800, color: flaggedInteractions.length > 0 ? '#FFB703' : '#00C9A7' }}>
-                    {flaggedInteractions.length} Flagged
-                  </Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 800, color: flaggedInteractions.length > 0 ? '#FFB703' : '#00C9A7' }}>{flaggedInteractions.length} Flagged</Typography>
                 </Paper>
               </Grid>
-
-              <Grid item xs={12} sm={4} md={4}>
+              <Grid item xs={4}>
                 <Paper variant="outlined" sx={{ p: 2, borderRadius: 1, textAlign: 'center' }}>
-                  <Shield sx={{ color: flaggedAllergies.length > 0 ? '#FF4D6D' : '#00C9A7', fontSize: 36, mb: 0.5 }} />
+                  <Shield sx={{ color: flaggedAllergies.length > 0 ? '#FF4D6D' : '#00C9A7', fontSize: 32, mb: 0.5 }} />
                   <Typography variant="subtitle2" color="text.secondary">Allergy Conflicts</Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 800, color: flaggedAllergies.length > 0 ? '#FF4D6D' : '#00C9A7' }}>
-                    {flaggedAllergies.length} Critical
-                  </Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 800, color: flaggedAllergies.length > 0 ? '#FF4D6D' : '#00C9A7' }}>{flaggedAllergies.length} Critical</Typography>
                 </Paper>
               </Grid>
             </Grid>
+
+            {/* Vitals Panel */}
+            {(patientInfo.bpSystolic || patientInfo.pulse || patientInfo.bmi) && (
+              <Paper variant="outlined" sx={{ p: 2.5, mb: 2.5, borderRadius: 1.5, borderColor: 'rgba(108,92,231,0.3)', bgcolor: isDark ? 'rgba(108,92,231,0.05)' : 'rgba(108,92,231,0.03)' }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1.5, color: '#6C5CE7', textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.78rem' }}>
+                  Vitals
+                </Typography>
+                <Grid container spacing={2}>
+                  {patientInfo.bpSystolic && patientInfo.bpDiastolic && (
+                    <Grid item xs={6} sm={3}>
+                      <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>Blood Pressure</Typography>
+                      <Typography variant="subtitle1" fontWeight={800}>{patientInfo.bpSystolic}/{patientInfo.bpDiastolic} <Typography component="span" variant="caption">mmHg</Typography></Typography>
+                    </Grid>
+                  )}
+                  {patientInfo.pulse && (
+                    <Grid item xs={6} sm={3}>
+                      <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>Pulse</Typography>
+                      <Typography variant="subtitle1" fontWeight={800}>{patientInfo.pulse} <Typography component="span" variant="caption">bpm</Typography></Typography>
+                    </Grid>
+                  )}
+                  {patientInfo.weight && (
+                    <Grid item xs={6} sm={3}>
+                      <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>Weight</Typography>
+                      <Typography variant="subtitle1" fontWeight={800}>{patientInfo.weight} <Typography component="span" variant="caption">kg</Typography></Typography>
+                    </Grid>
+                  )}
+                  {patientInfo.bmi && (
+                    <Grid item xs={6} sm={3}>
+                      <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>BMI</Typography>
+                      <Typography variant="subtitle1" fontWeight={800}>{patientInfo.bmi} <Typography component="span" variant="caption">kg/m²</Typography></Typography>
+                    </Grid>
+                  )}
+                </Grid>
+              </Paper>
+            )}
+
+            {/* Lab Values Panel */}
+            {(patientInfo.hba1c || patientInfo.creatinine || patientInfo.egfr || patientInfo.sodiumNa || patientInfo.sgptAlt || patientInfo.totalCholesterol) && (
+              <Paper variant="outlined" sx={{ p: 2.5, mb: 2.5, borderRadius: 1.5, borderColor: 'rgba(255,183,3,0.3)', bgcolor: isDark ? 'rgba(255,183,3,0.04)' : 'rgba(255,183,3,0.02)' }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1.5, color: '#FFB703', textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.78rem' }}>
+                  Lab Values
+                </Typography>
+                <Grid container spacing={2}>
+                  {patientInfo.hba1c && (
+                    <Grid item xs={6} sm={3} md={2}>
+                      <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>HbA1c</Typography>
+                      <Typography variant="subtitle1" fontWeight={800}>{patientInfo.hba1c}<Typography component="span" variant="caption">%</Typography></Typography>
+                    </Grid>
+                  )}
+                  {patientInfo.fastingGlucose && (
+                    <Grid item xs={6} sm={3} md={2}>
+                      <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>Fasting Glucose</Typography>
+                      <Typography variant="subtitle1" fontWeight={800}>{patientInfo.fastingGlucose}<Typography component="span" variant="caption"> mg/dL</Typography></Typography>
+                    </Grid>
+                  )}
+                  {patientInfo.creatinine && (
+                    <Grid item xs={6} sm={3} md={2}>
+                      <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>Creatinine</Typography>
+                      <Typography variant="subtitle1" fontWeight={800}>{patientInfo.creatinine}<Typography component="span" variant="caption"> mg/dL</Typography></Typography>
+                    </Grid>
+                  )}
+                  {patientInfo.egfr && (
+                    <Grid item xs={6} sm={3} md={2}>
+                      <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>eGFR</Typography>
+                      <Typography variant="subtitle1" fontWeight={800}>{patientInfo.egfr}<Typography component="span" variant="caption"> mL/min</Typography></Typography>
+                    </Grid>
+                  )}
+                  {patientInfo.sodiumNa && (
+                    <Grid item xs={6} sm={3} md={2}>
+                      <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>Na⁺</Typography>
+                      <Typography variant="subtitle1" fontWeight={800}>{patientInfo.sodiumNa}<Typography component="span" variant="caption"> mEq/L</Typography></Typography>
+                    </Grid>
+                  )}
+                  {patientInfo.potassiumK && (
+                    <Grid item xs={6} sm={3} md={2}>
+                      <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>K⁺</Typography>
+                      <Typography variant="subtitle1" fontWeight={800}>{patientInfo.potassiumK}<Typography component="span" variant="caption"> mEq/L</Typography></Typography>
+                    </Grid>
+                  )}
+                  {patientInfo.sgptAlt && (
+                    <Grid item xs={6} sm={3} md={2}>
+                      <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>SGPT/ALT</Typography>
+                      <Typography variant="subtitle1" fontWeight={800}>{patientInfo.sgptAlt}<Typography component="span" variant="caption"> U/L</Typography></Typography>
+                    </Grid>
+                  )}
+                  {patientInfo.totalCholesterol && (
+                    <Grid item xs={6} sm={3} md={2}>
+                      <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>Cholesterol</Typography>
+                      <Typography variant="subtitle1" fontWeight={800}>{patientInfo.totalCholesterol}<Typography component="span" variant="caption"> mg/dL</Typography></Typography>
+                    </Grid>
+                  )}
+                  {patientInfo.ldl && (
+                    <Grid item xs={6} sm={3} md={2}>
+                      <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>LDL</Typography>
+                      <Typography variant="subtitle1" fontWeight={800}>{patientInfo.ldl}<Typography component="span" variant="caption"> mg/dL</Typography></Typography>
+                    </Grid>
+                  )}
+                </Grid>
+              </Paper>
+            )}
+
+            {/* Complications + Clinical Complaints */}
+            {((patientInfo.hasRetinopathy || patientInfo.hasNephropathy || patientInfo.hasNeuropathy || patientInfo.hasFootRisk) || (patientInfo.clinicalComplaints && patientInfo.clinicalComplaints.length > 0)) && (
+              <Paper variant="outlined" sx={{ p: 2.5, mb: 2.5, borderRadius: 1.5, borderColor: 'rgba(255,77,109,0.3)', bgcolor: isDark ? 'rgba(255,77,109,0.04)' : 'rgba(255,77,109,0.02)' }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1.5, color: '#FF4D6D', textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.78rem' }}>
+                  Complications & Clinical Complaints
+                </Typography>
+                <Grid container spacing={2}>
+                  {(patientInfo.hasRetinopathy || patientInfo.hasNephropathy || patientInfo.hasNeuropathy || patientInfo.hasFootRisk) && (
+                    <Grid item xs={12} sm={5}>
+                      <Typography variant="caption" color="text.secondary" display="block" fontWeight={700} mb={0.8}>Diabetes Complications:</Typography>
+                      <Stack direction="row" flexWrap="wrap" gap={0.8}>
+                        {patientInfo.hasRetinopathy && <Chip label="Retinopathy" size="small" color="error" variant="outlined" sx={{ fontWeight: 700 }} />}
+                        {patientInfo.hasNephropathy && <Chip label="Nephropathy" size="small" color="error" variant="outlined" sx={{ fontWeight: 700 }} />}
+                        {patientInfo.hasNeuropathy && <Chip label="Neuropathy" size="small" color="error" variant="outlined" sx={{ fontWeight: 700 }} />}
+                        {patientInfo.hasFootRisk && <Chip label="Foot Risk" size="small" color="error" variant="outlined" sx={{ fontWeight: 700 }} />}
+                      </Stack>
+                    </Grid>
+                  )}
+                  {patientInfo.clinicalComplaints && patientInfo.clinicalComplaints.length > 0 && (
+                    <Grid item xs={12} sm={7}>
+                      <Typography variant="caption" color="text.secondary" display="block" fontWeight={700} mb={0.8}>Reported Clinical Complaints:</Typography>
+                      <Stack direction="row" flexWrap="wrap" gap={0.8}>
+                        {patientInfo.clinicalComplaints.map(c => (
+                          <Chip key={c} label={c} size="small" color="warning" sx={{ fontWeight: 700, fontSize: '0.72rem' }} />
+                        ))}
+                      </Stack>
+                    </Grid>
+                  )}
+                </Grid>
+              </Paper>
+            )}
           </Box>
         )}
 
-        {/* TAB 1: Alternatives & Generic Suggestions */}
+        {/* TAB 1: Prescription Suitability — Drug→Indication + Suitability + Dose */}
         {activeTab === 1 && (
+          <Box>
+            <Stack direction="row" alignItems="center" spacing={1} mb={0.5}>
+              <Medication sx={{ color: '#00C9A7' }} />
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>Prescription Suitability Analysis</Typography>
+            </Stack>
+            <Typography variant="body2" color="text.secondary" mb={3}>
+              Per-drug AI review: indication appropriateness, patient-specific suitability (renal, hepatic, age, CV) and dose/frequency checks.
+            </Typography>
+
+            {/* A. Drug→Indication + Patient Suitability Cards */}
+            <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#00C9A7', textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.76rem', mb: 1.5 }}>
+              A. Drug → Indication & Patient Suitability
+            </Typography>
+            <Stack spacing={2.5} mb={4}>
+              {(drugIndicationAnalysis || []).map((drug, idx) => {
+                const suitColor = drug.overallSuitability === 'Safe' ? '#00C9A7' : drug.overallSuitability === 'Caution' ? '#FFB703' : '#FF4D6D';
+                const statusColor2 = drug.indicationStatus === 'Appropriate' ? '#00C9A7' : drug.indicationStatus === 'Questionable' ? '#FFB703' : '#FF4D6D';
+                return (
+                  <Paper key={idx} variant="outlined" sx={{ p: 2.5, borderRadius: 1.5, borderLeft: `5px solid ${suitColor}`, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)' }}>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} mb={1.5} gap={1}>
+                      <Box>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>{drug.drugName} <Typography component="span" variant="body2" color="text.secondary">({drug.dosage})</Typography></Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.3 }}><strong>Indication:</strong> {drug.indication}</Typography>
+                      </Box>
+                      <Stack direction="row" spacing={1} flexShrink={0}>
+                        <Chip label={drug.indicationStatus} size="small" sx={{ fontWeight: 800, bgcolor: statusColor2 + '22', color: statusColor2, border: `1px solid ${statusColor2}` }} />
+                        <Chip icon={<VerifiedUser sx={{ color: `${suitColor} !important`, fontSize: 14 }} />} label={drug.overallSuitability} size="small" sx={{ fontWeight: 800, bgcolor: suitColor + '22', color: suitColor, border: `1px solid ${suitColor}` }} />
+                      </Stack>
+                    </Stack>
+                    <Grid container spacing={1.5}>
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 1, height: '100%' }}>
+                          <Typography variant="caption" sx={{ fontWeight: 800, color: '#6C5CE7', textTransform: 'uppercase', fontSize: '0.68rem', display: 'block', mb: 0.5 }}>Renal</Typography>
+                          <Typography variant="body2" sx={{ fontSize: '0.82rem' }}>{drug.renalSuitability}</Typography>
+                        </Paper>
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 1, height: '100%' }}>
+                          <Typography variant="caption" sx={{ fontWeight: 800, color: '#FFB703', textTransform: 'uppercase', fontSize: '0.68rem', display: 'block', mb: 0.5 }}>Hepatic</Typography>
+                          <Typography variant="body2" sx={{ fontSize: '0.82rem' }}>{drug.hepaticSuitability}</Typography>
+                        </Paper>
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 1, height: '100%' }}>
+                          <Typography variant="caption" sx={{ fontWeight: 800, color: '#00B4D8', textTransform: 'uppercase', fontSize: '0.68rem', display: 'block', mb: 0.5 }}>Age</Typography>
+                          <Typography variant="body2" sx={{ fontSize: '0.82rem' }}>{drug.ageConsideration}</Typography>
+                        </Paper>
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 1, height: '100%' }}>
+                          <Typography variant="caption" sx={{ fontWeight: 800, color: '#FF4D6D', textTransform: 'uppercase', fontSize: '0.68rem', display: 'block', mb: 0.5 }}>Cardiovascular</Typography>
+                          <Typography variant="body2" sx={{ fontSize: '0.82rem' }}>{drug.cardiovascularConsideration}</Typography>
+                        </Paper>
+                      </Grid>
+                    </Grid>
+                  </Paper>
+                );
+              })}
+            </Stack>
+
+            {/* B. Dose & Frequency Analysis */}
+            <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#6C5CE7', textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.76rem', mb: 1.5 }}>
+              B. Dose & Frequency Verification
+            </Typography>
+            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 1.5 }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ bgcolor: isDark ? 'rgba(108,92,231,0.15)' : 'rgba(108,92,231,0.07)' }}>
+                    <TableCell sx={{ fontWeight: 800, fontSize: '0.8rem' }}>Drug</TableCell>
+                    <TableCell sx={{ fontWeight: 800, fontSize: '0.8rem' }}>Prescribed Dose</TableCell>
+                    <TableCell sx={{ fontWeight: 800, fontSize: '0.8rem' }}>Standard Dose Range</TableCell>
+                    <TableCell sx={{ fontWeight: 800, fontSize: '0.8rem' }}>Food Timing</TableCell>
+                    <TableCell sx={{ fontWeight: 800, fontSize: '0.8rem' }}>Renal Dose Note</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {(doseFrequencyAnalysis || []).map((item, idx) => (
+                    <TableRow key={idx} sx={{ '&:last-child td': { border: 0 }, bgcolor: idx % 2 === 0 ? 'transparent' : isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)' }}>
+                      <TableCell><Typography variant="body2" fontWeight={700}>{item.drugName}</Typography><Typography variant="caption" color="text.secondary">{item.frequency}</Typography></TableCell>
+                      <TableCell><Chip label={item.prescribedDose} size="small" color="primary" variant="outlined" sx={{ fontWeight: 700 }} /></TableCell>
+                      <TableCell><Typography variant="caption">{item.standardDose}</Typography></TableCell>
+                      <TableCell><Typography variant="caption">{item.foodTiming}</Typography></TableCell>
+                      <TableCell><Typography variant="caption" sx={{ color: item.renalDoseNote.includes('Avoid') || item.renalDoseNote.includes('Contraindicated') ? '#FF4D6D' : item.renalDoseNote.includes('Reduce') || item.renalDoseNote.includes('Monitor') ? '#FFB703' : '#00C9A7' }}>{item.renalDoseNote}</Typography></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
+        )}
+
+        {/* TAB 4: Alternatives & Generic Suggestions */}
+        {activeTab === 4 && (
           <Box>
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
               Recommended Alternative & Generic Substitutions
@@ -313,8 +562,8 @@ export default function AiAnalysisDashboard({
           </Box>
         )}
 
-        {/* TAB 2: Drug Interaction & Risk Scanner */}
-        {activeTab === 2 && (
+        {/* TAB 3: Drug Interaction & Risk Scanner */}
+        {activeTab === 3 && (
           <Box>
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
               Drug Interaction & Allergy Safety Checks
@@ -363,8 +612,8 @@ export default function AiAnalysisDashboard({
           </Box>
         )}
 
-        {/* TAB 3: Visual Dosage Schedule */}
-        {activeTab === 3 && (
+        {/* TAB 5: Visual Dosage Schedule */}
+        {activeTab === 5 && (
           <Box>
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
               Visual Daily Dosage Matrix & Schedule
@@ -453,8 +702,8 @@ export default function AiAnalysisDashboard({
           </Box>
         )}
 
-        {/* TAB 4: Diet & Lifestyle Recommendations */}
-        {activeTab === 4 && (
+        {/* TAB 6: Diet & Lifestyle Recommendations */}
+        {activeTab === 6 && (
           <Box>
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
               Dietary Guidelines & Lifestyle Restrictions
@@ -502,7 +751,58 @@ export default function AiAnalysisDashboard({
             </Grid>
           </Box>
         )}
+
+        {/* TAB 2: Drug-Induced Adverse Effect Analysis */}
+        {activeTab === 2 && (
+          <Box>
+            <Stack direction="row" alignItems="center" spacing={1} mb={0.5}>
+              <BugReport sx={{ color: '#FF4D6D' }} />
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>Drug-Induced Adverse Effect Analysis</Typography>
+            </Stack>
+            <Typography variant="body2" color="text.secondary" mb={3}>
+              AI review of the patient&apos;s reported clinical complaints mapped to potential causative medicines in the current prescription.
+            </Typography>
+
+            {(!adverseEffectAnalysis || adverseEffectAnalysis.length === 0) ? (
+              <Alert severity="success" icon={<CheckCircle fontSize="inherit" />} sx={{ borderRadius: 1 }}>
+                <AlertTitle sx={{ fontWeight: 800 }}>No Clinical Complaints Reported</AlertTitle>
+                The patient has not reported any clinical complaints. Re-submit the form with complaints selected for AI adverse effect analysis.
+              </Alert>
+            ) : (
+              <Stack spacing={2.5}>
+                {adverseEffectAnalysis.map((item, idx) => {
+                  const sevColor = item.severity === 'High' ? '#FF4D6D' : item.severity === 'Moderate' ? '#FFB703' : '#00C9A7';
+                  return (
+                    <Paper key={idx} variant="outlined" sx={{ p: 2.5, borderRadius: 1.5, borderLeft: `5px solid ${sevColor}`, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)' }}>
+                      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} mb={1.5} gap={1}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>{item.complaint}</Typography>
+                        <Chip label={`${item.severity} Priority`} size="small" sx={{ fontWeight: 800, bgcolor: sevColor + '22', color: sevColor, border: `1px solid ${sevColor}`, flexShrink: 0 }} />
+                      </Stack>
+                      <Alert severity={item.severity === 'High' ? 'error' : item.severity === 'Moderate' ? 'warning' : 'info'} sx={{ borderRadius: 1, mb: item.implicatedDrugs.length > 0 ? 1.5 : 0 }}>
+                        <Typography variant="body2">{item.aiReview}</Typography>
+                      </Alert>
+                      {item.implicatedDrugs.length > 0 && (
+                        <Box mt={1.5}>
+                          <Typography variant="caption" color="text.secondary" fontWeight={700} display="block" mb={0.8}>
+                            Potentially Implicated Drug(s) in Current Prescription:
+                          </Typography>
+                          <Stack direction="row" flexWrap="wrap" gap={0.8}>
+                            {item.implicatedDrugs.map((drug, di) => (
+                              <Chip key={di} label={drug} size="small" color="error" variant="outlined" sx={{ fontWeight: 700 }} />
+                            ))}
+                          </Stack>
+                        </Box>
+                      )}
+                    </Paper>
+                  );
+                })}
+              </Stack>
+            )}
+          </Box>
+        )}
+
       </CardContent>
+
 
       {/* Printable Clinical Analysis Report Dialog */}
       <Dialog open={printOpen} onClose={() => setPrintOpen(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 1, bgcolor: '#FFFFFF !important', color: '#0F172A !important', backgroundImage: 'none !important', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.3)' } }}>
@@ -542,7 +842,7 @@ export default function AiAnalysisDashboard({
             {/* Patient Header */}
             <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: '#F8FAFC !important', borderColor: '#E2E8F0 !important', borderRadius: 1 }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#0F172A !important' }}>
-                Patient: {patientInfo?.name} ({patientInfo?.age} Y, {patientInfo?.gender})
+                Patient: {patientInfo?.patientName} ({patientInfo?.age} Y, {patientInfo?.gender})
               </Typography>
               <Typography variant="caption" sx={{ color: '#475569 !important' }}>
                 Overall Risk Assessment: <strong style={{ color: statusColor }}>{riskCategory}</strong>
@@ -562,7 +862,7 @@ export default function AiAnalysisDashboard({
                   Drug Interactions Flagged ({flaggedInteractions.length}):
                 </Typography>
                 {flaggedInteractions.length > 0 ? flaggedInteractions.map((int, i) => (
-                  <Typography key={i} variant="body2" sx={{ mb: 0.5, color: '#334155 !important' }}>• {Array.isArray(int.drugs) ? int.drugs.join(' + ') : int.drugs ?? 'Unknown'}: {int.severity}</Typography>
+                  <Typography key={i} variant="body2" sx={{ mb: 0.5, color: '#334155 !important' }}>• {int.drugA} + {int.drugB}: {int.severity}</Typography>
                 )) : <Typography variant="body2" sx={{ color: '#334155 !important' }}>None detected</Typography>}
               </Grid>
               <Grid item xs={6}>
@@ -570,7 +870,7 @@ export default function AiAnalysisDashboard({
                   Allergy Conflicts ({flaggedAllergies.length}):
                 </Typography>
                 {flaggedAllergies.length > 0 ? flaggedAllergies.map((alg, i) => (
-                  <Typography key={i} variant="body2" sx={{ mb: 0.5, color: '#334155 !important' }}>• {alg.drug} (Allergen: {alg.allergen})</Typography>
+                  <Typography key={i} variant="body2" sx={{ mb: 0.5, color: '#334155 !important' }}>• {alg.medication} (Allergen: {alg.allergyMatch})</Typography>
                 )) : <Typography variant="body2" sx={{ color: '#334155 !important' }}>None detected</Typography>}
               </Grid>
             </Grid>
@@ -592,7 +892,7 @@ export default function AiAnalysisDashboard({
                 ))}
               </Grid>
             </Grid>
-            
+
             <Divider sx={{ my: 3, borderColor: '#E2E8F0 !important' }} />
 
             <Box sx={{ textAlign: 'center' }}>

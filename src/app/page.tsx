@@ -124,6 +124,10 @@ export default function Home() {
     handleAnalyze(extractedData);
   };
 
+  const handleResetAnalysis = () => {
+    setAnalysisResult(null);
+  };
+
   const handleNewRx = () => {
     setAnalysisResult(null);
     toast.info('New prescription template loaded.');
@@ -409,11 +413,19 @@ export default function Home() {
                     {/* Prescription Form + Scanner */}
                     <Grid container spacing={3.5} mb={4}>
                       <Grid item xs={12} lg={8}>
-                        <PatientPrescriptionForm onAnalyze={handleAnalyze} isAnalyzing={isAnalyzing} />
+                        <PatientPrescriptionForm
+                          onAnalyze={handleAnalyze}
+                          onReset={handleResetAnalysis}
+                          isAnalyzing={isAnalyzing}
+                        />
                       </Grid>
 
                       <Grid item xs={12} lg={4} id="uploader-section">
-                        <PrescriptionUploader onAutoExtract={handleAutoExtract} />
+                        <PrescriptionUploader
+                          onAutoExtract={handleAutoExtract}
+                          onReset={handleResetAnalysis}
+                          isAnalyzing={isAnalyzing}
+                        />
                       </Grid>
                     </Grid>
 
