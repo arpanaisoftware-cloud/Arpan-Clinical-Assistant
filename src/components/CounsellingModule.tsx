@@ -60,6 +60,9 @@ const counsellingSchema = Yup.object({
   sbp: Yup.mixed()
     .test('required', 'Systolic BP is required', (v) => v !== '' && v !== null && v !== undefined)
     .test('range', 'Enter a valid BP (60–300 mmHg)', (v) => Number(v) >= 60 && Number(v) <= 300),
+  dbp: Yup.mixed()
+    .test('required', 'Diastolic BP is required', (v) => v !== '' && v !== null && v !== undefined)
+    .test('range', 'Enter a valid BP (40–180 mmHg)', (v) => Number(v) >= 40 && Number(v) <= 180),
   hba1c: Yup.mixed()
     .test('required', 'HbA1c is required', (v) => v !== '' && v !== null && v !== undefined)
     .test('range', 'Enter a valid HbA1c (3–20%)', (v) => Number(v) >= 3 && Number(v) <= 20),
@@ -74,6 +77,7 @@ type FormErrors = {
   currPatientGender?: string;
   currPatientDisease?: string;
   sbp?: string;
+  dbp?: string;
   hba1c?: string;
   egfr?: string;
 };
@@ -97,6 +101,7 @@ export default function CounsellingModule({
 
   // Custom patient parameters state — start empty
   const [sbp, setSbp] = useState<number | string>('');
+  const [dbp, setDbp] = useState<number | string>('');
   const [hba1c, setHba1c] = useState<number | string>('');
   const [egfr, setEgfr] = useState<number | string>('');
   const [sensationLoss, setSensationLoss] = useState<string>('');
@@ -116,7 +121,7 @@ export default function CounsellingModule({
     setFormErrors({});
     try {
       await counsellingSchema.validate(
-        { currPatientName, currPatientAge, currPatientGender, currPatientDisease, sbp, hba1c, egfr },
+        { currPatientName, currPatientAge, currPatientGender, currPatientDisease, sbp, dbp, hba1c, egfr },
         { abortEarly: false }
       );
     } catch (err) {
@@ -145,6 +150,7 @@ export default function CounsellingModule({
     setCurrPatientGender('Male');
     setCurrPatientDisease('Essential Hypertension, Type 2 Diabetes, Dyslipidaemia');
     setSbp(152);
+    setDbp(92);
     setHba1c(8.4);
     setEgfr(61);
     setSensationLoss('Mild Loss');
@@ -363,7 +369,7 @@ export default function CounsellingModule({
             </Typography>
 
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={4} md={2.4}>
+              <Grid item xs={6} sm={4} md={2}>
                 <TextField
                   fullWidth
                   size="small"
@@ -377,7 +383,21 @@ export default function CounsellingModule({
                   sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
                 />
               </Grid>
-              <Grid item xs={12} sm={4} md={2.4}>
+              <Grid item xs={6} sm={4} md={2}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  type="number"
+                  label="Diastolic BP (mmHg) *"
+                  placeholder="e.g. 92"
+                  value={dbp}
+                  onChange={(e) => setDbp(e.target.value)}
+                  error={!!formErrors.dbp}
+                  helperText={formErrors.dbp}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
+                />
+              </Grid>
+              <Grid item xs={6} sm={4} md={2}>
                 <TextField
                   fullWidth
                   size="small"
@@ -392,7 +412,7 @@ export default function CounsellingModule({
                   sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
                 />
               </Grid>
-              <Grid item xs={12} sm={4} md={2.4}>
+              <Grid item xs={6} sm={4} md={2}>
                 <TextField
                   fullWidth
                   size="small"
@@ -406,7 +426,7 @@ export default function CounsellingModule({
                   sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
                 />
               </Grid>
-              <Grid item xs={12} sm={6} md={2.4}>
+              <Grid item xs={12} sm={6} md={2}>
                 <TextField
                   fullWidth
                   select
@@ -424,7 +444,7 @@ export default function CounsellingModule({
                   <MenuItem value="Severe Loss">Severe Numbness (&lt;6 points)</MenuItem>
                 </TextField>
               </Grid>
-              <Grid item xs={12} sm={6} md={2.4}>
+              <Grid item xs={12} sm={6} md={2}>
                 <TextField
                   fullWidth
                   select
@@ -617,6 +637,7 @@ export default function CounsellingModule({
                   setCurrPatientGender('');
                   setCurrPatientDisease('');
                   setSbp('');
+                  setDbp('');
                   setHba1c('');
                   setEgfr('');
                   setSensationLoss('');
@@ -670,7 +691,7 @@ export default function CounsellingModule({
             {/* Patient Header */}
             <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: '#F8FAFC !important', borderColor: '#E2E8F0 !important', borderRadius: 1 }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#0F172A !important' }}>
-                Patient: {currPatientName} ({currPatientAge} Y, {currPatientGender}) • Diagnosis: {currPatientDisease}
+                Patient: {currPatientName} ({currPatientAge} Y, {currPatientGender}) • Diagnosis: {currPatientDisease}{sbp && dbp ? ` • BP: ${sbp}/${dbp} mmHg` : ''}
               </Typography>
               <Typography variant="caption" sx={{ color: '#475569 !important' }}>
                 Comprehensive 5-Point Diabetic & Hypertensive Risk Evaluation

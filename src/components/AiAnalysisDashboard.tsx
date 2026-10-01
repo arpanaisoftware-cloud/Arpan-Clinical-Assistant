@@ -46,7 +46,12 @@ import {
   Medication,
   BugReport,
   VerifiedUser,
-  AccessTime
+  AccessTime,
+  AutoAwesome,
+  TrendingUp,
+  MonitorHeart,
+  Science,
+  AssignmentTurnedIn
 } from '@mui/icons-material';
 import confetti from 'canvas-confetti';
 import { AnalysisResult } from '../types/clinical';
@@ -237,170 +242,530 @@ export default function AiAnalysisDashboard({
           </Tabs>
         </Box>
 
-        {/* TAB 0: Clinical Overview */}
+        {/* TAB 0: Executive Clinical Overview & Insights */}
         {activeTab === 0 && (
           <Box>
-            <Alert severity={flaggedAllergies.length > 0 ? "error" : flaggedInteractions.length > 0 ? "warning" : "success"} sx={{ mb: 3, borderRadius: 1 }}>
-              <AlertTitle sx={{ fontWeight: 800 }}>Clinical Assessment Overview</AlertTitle>
-              {aiClinicalOverview}
-            </Alert>
+            {/* Hero AI Executive Clinical Assessment Card */}
+            <Paper
+              elevation={0}
+              sx={{
+                p: { xs: 2.5, md: 3 },
+                mb: 3,
+                borderRadius: 2,
+                background: isDark
+                  ? 'linear-gradient(135deg, rgba(108, 92, 231, 0.18) 0%, rgba(0, 201, 167, 0.12) 100%)'
+                  : 'linear-gradient(135deg, rgba(108, 92, 231, 0.06) 0%, rgba(0, 201, 167, 0.05) 100%)',
+                border: isDark ? '1px solid rgba(108, 92, 231, 0.4)' : '1px solid rgba(108, 92, 231, 0.25)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}
+            >
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: -20,
+                  right: -20,
+                  width: 140,
+                  height: 140,
+                  borderRadius: '50%',
+                  background: 'radial-gradient(circle, rgba(108, 92, 231, 0.15) 0%, transparent 70%)',
+                  pointerEvents: 'none'
+                }}
+              />
 
-            {/* Summary Stat Cards */}
+              <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} mb={2} gap={1.5}>
+                <Stack direction="row" alignItems="center" spacing={1.5}>
+                  <Box
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 1.5,
+                      bgcolor: 'primary.main',
+                      color: '#FFF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 4px 14px rgba(108, 92, 231, 0.4)'
+                    }}
+                  >
+                    <AutoAwesome sx={{ fontSize: 22 }} />
+                  </Box>
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
+                      Executive Clinical Assessment
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      AI-Assisted Multi-Parameter Diagnostic &amp; Pharmacotherapeutic Review
+                    </Typography>
+                  </Box>
+                </Stack>
+
+                <Chip
+                  icon={<Shield sx={{ color: '#FFF !important', fontSize: 16 }} />}
+                  label={`Risk Tier: ${riskCategory}`}
+                  sx={{
+                    bgcolor: statusColor,
+                    color: '#FFF',
+                    fontWeight: 800,
+                    fontSize: '0.8rem',
+                    px: 1,
+                    py: 0.5,
+                    boxShadow: `0 2px 10px ${statusColor}44`
+                  }}
+                />
+              </Stack>
+
+              <Typography variant="body1" sx={{ color: isDark ? '#E2E8F0' : '#1E293B', lineHeight: 1.7, fontWeight: 500, mb: 2.5 }}>
+                {aiClinicalOverview}
+              </Typography>
+
+
+
+            </Paper>
+
+            {/* 4 KPI Summary Cards */}
             <Grid container spacing={2} mb={3}>
-              <Grid item xs={4}>
-                <Paper variant="outlined" sx={{ p: 2, borderRadius: 1, textAlign: 'center' }}>
-                  <LocalPharmacy sx={{ color: '#6C5CE7', fontSize: 32, mb: 0.5 }} />
-                  <Typography variant="subtitle2" color="text.secondary">Prescribed Agents</Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 800 }}>{medications.length} Drugs</Typography>
+              <Grid item xs={12} sm={6} md={3}>
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 2,
+                    borderRadius: 1.5,
+                    borderLeft: '4px solid #6C5CE7',
+                    bgcolor: isDark ? 'rgba(108,92,231,0.04)' : '#FFFFFF',
+                    transition: 'transform 0.2s',
+                    '&:hover': { transform: 'translateY(-2px)' }
+                  }}
+                >
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      Prescribed Regimen
+                    </Typography>
+                    <Box sx={{ width: 32, height: 32, borderRadius: 1, bgcolor: 'rgba(108,92,231,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <LocalPharmacy sx={{ color: '#6C5CE7', fontSize: 18 }} />
+                    </Box>
+                  </Stack>
+                  <Typography variant="h4" sx={{ fontWeight: 900, mb: 0.5 }}>
+                    {medications.length} <Typography component="span" variant="body2" color="text.secondary">Agents</Typography>
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 600 }}>
+                    {(dosageTimeline.morning?.length || 0) + (dosageTimeline.afternoon?.length || 0) + (dosageTimeline.evening?.length || 0) + (dosageTimeline.bedtime?.length || 0)} Daily Scheduled Doses
+                  </Typography>
                 </Paper>
               </Grid>
-              <Grid item xs={4}>
-                <Paper variant="outlined" sx={{ p: 2, borderRadius: 1, textAlign: 'center' }}>
-                  <Warning sx={{ color: flaggedInteractions.length > 0 ? '#FFB703' : '#00C9A7', fontSize: 32, mb: 0.5 }} />
-                  <Typography variant="subtitle2" color="text.secondary">Drug Conflicts</Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 800, color: flaggedInteractions.length > 0 ? '#FFB703' : '#00C9A7' }}>{flaggedInteractions.length} Flagged</Typography>
+
+              <Grid item xs={12} sm={6} md={3}>
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 2,
+                    borderRadius: 1.5,
+                    borderLeft: `4px solid ${flaggedInteractions.length + flaggedAllergies.length > 0 ? '#FF4D6D' : '#00C9A7'}`,
+                    bgcolor: isDark ? 'rgba(255,255,255,0.02)' : '#FFFFFF',
+                    transition: 'transform 0.2s',
+                    '&:hover': { transform: 'translateY(-2px)' }
+                  }}
+                >
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      Safety Conflicts
+                    </Typography>
+                    <Box sx={{ width: 32, height: 32, borderRadius: 1, bgcolor: flaggedInteractions.length + flaggedAllergies.length > 0 ? 'rgba(255,77,109,0.1)' : 'rgba(0,201,167,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Warning sx={{ color: flaggedInteractions.length + flaggedAllergies.length > 0 ? '#FF4D6D' : '#00C9A7', fontSize: 18 }} />
+                    </Box>
+                  </Stack>
+                  <Typography variant="h4" sx={{ fontWeight: 900, mb: 0.5, color: flaggedInteractions.length + flaggedAllergies.length > 0 ? '#FF4D6D' : '#00C9A7' }}>
+                    {flaggedInteractions.length + flaggedAllergies.length} <Typography component="span" variant="body2" color="text.secondary">Flagged</Typography>
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 600 }}>
+                    {flaggedAllergies.length} Allergy • {flaggedInteractions.length} Interactions
+                  </Typography>
                 </Paper>
               </Grid>
-              <Grid item xs={4}>
-                <Paper variant="outlined" sx={{ p: 2, borderRadius: 1, textAlign: 'center' }}>
-                  <Shield sx={{ color: flaggedAllergies.length > 0 ? '#FF4D6D' : '#00C9A7', fontSize: 32, mb: 0.5 }} />
-                  <Typography variant="subtitle2" color="text.secondary">Allergy Conflicts</Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 800, color: flaggedAllergies.length > 0 ? '#FF4D6D' : '#00C9A7' }}>{flaggedAllergies.length} Critical</Typography>
+
+              <Grid item xs={12} sm={6} md={3}>
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 2,
+                    borderRadius: 1.5,
+                    borderLeft: '4px solid #00C9A7',
+                    bgcolor: isDark ? 'rgba(0,201,167,0.04)' : '#FFFFFF',
+                    transition: 'transform 0.2s',
+                    '&:hover': { transform: 'translateY(-2px)' }
+                  }}
+                >
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      Drug Suitability
+                    </Typography>
+                    <Box sx={{ width: 32, height: 32, borderRadius: 1, bgcolor: 'rgba(0,201,167,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <VerifiedUser sx={{ color: '#00C9A7', fontSize: 18 }} />
+                    </Box>
+                  </Stack>
+                  <Typography variant="h4" sx={{ fontWeight: 900, mb: 0.5 }}>
+                    {drugIndicationAnalysis?.filter(d => d.overallSuitability === 'Safe').length ?? medications.length}/{medications.length}
+                    <Typography component="span" variant="body2" color="text.secondary"> Optimal</Typography>
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 600 }}>
+                    Indication &amp; Organ Match
+                  </Typography>
                 </Paper>
               </Grid>
+
+              {/* <Grid item xs={12} sm={6} md={3}>
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 2,
+                    borderRadius: 1.5,
+                    borderLeft: '4px solid #FFB703',
+                    bgcolor: isDark ? 'rgba(255,183,3,0.04)' : '#FFFFFF',
+                    transition: 'transform 0.2s',
+                    '&:hover': { transform: 'translateY(-2px)' }
+                  }}
+                >
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      Generic Savings
+                    </Typography>
+                    <Box sx={{ width: 32, height: 32, borderRadius: 1, bgcolor: 'rgba(255,183,3,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <MonetizationOn sx={{ color: '#FFB703', fontSize: 18 }} />
+                    </Box>
+                  </Stack>
+                  <Typography variant="h4" sx={{ fontWeight: 900, mb: 0.5, color: '#FFB703' }}>
+                    ₹{estimatedMonthlySavings} <Typography component="span" variant="body2" color="text.secondary">/mo</Typography>
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 600 }}>
+                    {alternativesList.length} Cheaper Equivalents Available
+                  </Typography>
+                </Paper>
+              </Grid> */}
             </Grid>
 
-            {/* Vitals Panel */}
-            {(patientInfo.bpSystolic || patientInfo.pulse || patientInfo.bmi) && (
-              <Paper variant="outlined" sx={{ p: 2.5, mb: 2.5, borderRadius: 1.5, borderColor: 'rgba(108,92,231,0.3)', bgcolor: isDark ? 'rgba(108,92,231,0.05)' : 'rgba(108,92,231,0.03)' }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1.5, color: '#6C5CE7', textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.78rem' }}>
-                  Vitals
-                </Typography>
-                <Grid container spacing={2}>
-                  {patientInfo.bpSystolic && patientInfo.bpDiastolic && (
-                    <Grid item xs={6} sm={3}>
-                      <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>Blood Pressure</Typography>
-                      <Typography variant="subtitle1" fontWeight={800}>{patientInfo.bpSystolic}/{patientInfo.bpDiastolic} <Typography component="span" variant="caption">mmHg</Typography></Typography>
-                    </Grid>
-                  )}
-                  {patientInfo.pulse && (
-                    <Grid item xs={6} sm={3}>
-                      <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>Pulse</Typography>
-                      <Typography variant="subtitle1" fontWeight={800}>{patientInfo.pulse} <Typography component="span" variant="caption">bpm</Typography></Typography>
-                    </Grid>
-                  )}
-                  {patientInfo.weight && (
-                    <Grid item xs={6} sm={3}>
-                      <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>Weight</Typography>
-                      <Typography variant="subtitle1" fontWeight={800}>{patientInfo.weight} <Typography component="span" variant="caption">kg</Typography></Typography>
-                    </Grid>
-                  )}
-                  {patientInfo.bmi && (
-                    <Grid item xs={6} sm={3}>
-                      <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>BMI</Typography>
-                      <Typography variant="subtitle1" fontWeight={800}>{patientInfo.bmi} <Typography component="span" variant="caption">kg/m²</Typography></Typography>
-                    </Grid>
-                  )}
-                </Grid>
-              </Paper>
-            )}
-
-            {/* Lab Values Panel */}
-            {(patientInfo.hba1c || patientInfo.creatinine || patientInfo.egfr || patientInfo.sodiumNa || patientInfo.sgptAlt || patientInfo.totalCholesterol) && (
-              <Paper variant="outlined" sx={{ p: 2.5, mb: 2.5, borderRadius: 1.5, borderColor: 'rgba(255,183,3,0.3)', bgcolor: isDark ? 'rgba(255,183,3,0.04)' : 'rgba(255,183,3,0.02)' }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1.5, color: '#FFB703', textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.78rem' }}>
-                  Lab Values
-                </Typography>
-                <Grid container spacing={2}>
-                  {patientInfo.hba1c && (
-                    <Grid item xs={6} sm={3} md={2}>
-                      <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>HbA1c</Typography>
-                      <Typography variant="subtitle1" fontWeight={800}>{patientInfo.hba1c}<Typography component="span" variant="caption">%</Typography></Typography>
-                    </Grid>
-                  )}
-                  {patientInfo.fastingGlucose && (
-                    <Grid item xs={6} sm={3} md={2}>
-                      <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>Fasting Glucose</Typography>
-                      <Typography variant="subtitle1" fontWeight={800}>{patientInfo.fastingGlucose}<Typography component="span" variant="caption"> mg/dL</Typography></Typography>
-                    </Grid>
-                  )}
-                  {patientInfo.creatinine && (
-                    <Grid item xs={6} sm={3} md={2}>
-                      <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>Creatinine</Typography>
-                      <Typography variant="subtitle1" fontWeight={800}>{patientInfo.creatinine}<Typography component="span" variant="caption"> mg/dL</Typography></Typography>
-                    </Grid>
-                  )}
-                  {patientInfo.egfr && (
-                    <Grid item xs={6} sm={3} md={2}>
-                      <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>eGFR</Typography>
-                      <Typography variant="subtitle1" fontWeight={800}>{patientInfo.egfr}<Typography component="span" variant="caption"> mL/min</Typography></Typography>
-                    </Grid>
-                  )}
-                  {patientInfo.sodiumNa && (
-                    <Grid item xs={6} sm={3} md={2}>
-                      <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>Na⁺</Typography>
-                      <Typography variant="subtitle1" fontWeight={800}>{patientInfo.sodiumNa}<Typography component="span" variant="caption"> mEq/L</Typography></Typography>
-                    </Grid>
-                  )}
-                  {patientInfo.potassiumK && (
-                    <Grid item xs={6} sm={3} md={2}>
-                      <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>K⁺</Typography>
-                      <Typography variant="subtitle1" fontWeight={800}>{patientInfo.potassiumK}<Typography component="span" variant="caption"> mEq/L</Typography></Typography>
-                    </Grid>
-                  )}
-                  {patientInfo.sgptAlt && (
-                    <Grid item xs={6} sm={3} md={2}>
-                      <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>SGPT/ALT</Typography>
-                      <Typography variant="subtitle1" fontWeight={800}>{patientInfo.sgptAlt}<Typography component="span" variant="caption"> U/L</Typography></Typography>
-                    </Grid>
-                  )}
-                  {patientInfo.totalCholesterol && (
-                    <Grid item xs={6} sm={3} md={2}>
-                      <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>Cholesterol</Typography>
-                      <Typography variant="subtitle1" fontWeight={800}>{patientInfo.totalCholesterol}<Typography component="span" variant="caption"> mg/dL</Typography></Typography>
-                    </Grid>
-                  )}
-                  {patientInfo.ldl && (
-                    <Grid item xs={6} sm={3} md={2}>
-                      <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>LDL</Typography>
-                      <Typography variant="subtitle1" fontWeight={800}>{patientInfo.ldl}<Typography component="span" variant="caption"> mg/dL</Typography></Typography>
-                    </Grid>
-                  )}
-                </Grid>
-              </Paper>
-            )}
-
-            {/* Complications + Clinical Complaints */}
-            {((patientInfo.hasRetinopathy || patientInfo.hasNephropathy || patientInfo.hasNeuropathy || patientInfo.hasFootRisk) || (patientInfo.clinicalComplaints && patientInfo.clinicalComplaints.length > 0)) && (
-              <Paper variant="outlined" sx={{ p: 2.5, mb: 2.5, borderRadius: 1.5, borderColor: 'rgba(255,77,109,0.3)', bgcolor: isDark ? 'rgba(255,77,109,0.04)' : 'rgba(255,77,109,0.02)' }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1.5, color: '#FF4D6D', textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.78rem' }}>
-                  Complications & Clinical Complaints
-                </Typography>
-                <Grid container spacing={2}>
-                  {(patientInfo.hasRetinopathy || patientInfo.hasNephropathy || patientInfo.hasNeuropathy || patientInfo.hasFootRisk) && (
-                    <Grid item xs={12} sm={5}>
-                      <Typography variant="caption" color="text.secondary" display="block" fontWeight={700} mb={0.8}>Diabetes Complications:</Typography>
-                      <Stack direction="row" flexWrap="wrap" gap={0.8}>
-                        {patientInfo.hasRetinopathy && <Chip label="Retinopathy" size="small" color="error" variant="outlined" sx={{ fontWeight: 700 }} />}
-                        {patientInfo.hasNephropathy && <Chip label="Nephropathy" size="small" color="error" variant="outlined" sx={{ fontWeight: 700 }} />}
-                        {patientInfo.hasNeuropathy && <Chip label="Neuropathy" size="small" color="error" variant="outlined" sx={{ fontWeight: 700 }} />}
-                        {patientInfo.hasFootRisk && <Chip label="Foot Risk" size="small" color="error" variant="outlined" sx={{ fontWeight: 700 }} />}
+            {/* Main 2-Column Dashboard Grid */}
+            <Grid container spacing={3}>
+              {/* Left Column (7 cols): Vitals & Diagnostic Labs */}
+              <Grid item xs={12} md={7}>
+                <Stack spacing={2.5}>
+                  {/* Vitals Matrix */}
+                  {(patientInfo.bpSystolic || patientInfo.pulse || patientInfo.bmi || patientInfo.weight) && (
+                    <Paper
+                      variant="outlined"
+                      sx={{
+                        p: 2.5,
+                        borderRadius: 1.5,
+                        bgcolor: isDark ? 'rgba(255,255,255,0.02)' : '#FFFFFF',
+                        borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E2E8F0'
+                      }}
+                    >
+                      <Stack direction="row" alignItems="center" spacing={1} mb={2}>
+                        <MonitorHeart sx={{ color: '#6C5CE7', fontSize: 20 }} />
+                        <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
+                          Vitals &amp; Physiological Parameters
+                        </Typography>
                       </Stack>
-                    </Grid>
+
+                      <Grid container spacing={2}>
+                        {patientInfo.bpSystolic && patientInfo.bpDiastolic && (
+                          <Grid item xs={6} sm={3}>
+                            <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 1, bgcolor: isDark ? 'rgba(108,92,231,0.06)' : '#F8FAFC' }}>
+                              <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>
+                                Blood Pressure
+                              </Typography>
+                              <Typography variant="subtitle1" fontWeight={900} color="primary.main">
+                                {patientInfo.bpSystolic}/{patientInfo.bpDiastolic} <Typography component="span" variant="caption" color="text.secondary">mmHg</Typography>
+                              </Typography>
+                              <Chip
+                                label={Number(patientInfo.bpSystolic) >= 140 || Number(patientInfo.bpDiastolic) >= 90 ? 'Hypertension' : Number(patientInfo.bpSystolic) >= 130 ? 'Pre-HTN' : 'Normal'}
+                                size="small"
+                                sx={{
+                                  height: 18,
+                                  fontSize: '0.65rem',
+                                  fontWeight: 800,
+                                  mt: 0.5,
+                                  bgcolor: Number(patientInfo.bpSystolic) >= 140 ? 'rgba(255,77,109,0.15)' : Number(patientInfo.bpSystolic) >= 130 ? 'rgba(255,183,3,0.15)' : 'rgba(0,201,167,0.15)',
+                                  color: Number(patientInfo.bpSystolic) >= 140 ? '#FF4D6D' : Number(patientInfo.bpSystolic) >= 130 ? '#FFB703' : '#00C9A7'
+                                }}
+                              />
+                            </Paper>
+                          </Grid>
+                        )}
+
+                        {patientInfo.pulse && (
+                          <Grid item xs={6} sm={3}>
+                            <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 1, bgcolor: isDark ? 'rgba(108,92,231,0.06)' : '#F8FAFC' }}>
+                              <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>
+                                Heart Rate / Pulse
+                              </Typography>
+                              <Typography variant="subtitle1" fontWeight={900}>
+                                {patientInfo.pulse} <Typography component="span" variant="caption" color="text.secondary">bpm</Typography>
+                              </Typography>
+                              <Chip
+                                label={Number(patientInfo.pulse) > 100 ? 'Tachycardia' : Number(patientInfo.pulse) < 60 ? 'Bradycardia' : 'Normal Pulse'}
+                                size="small"
+                                sx={{ height: 18, fontSize: '0.65rem', fontWeight: 800, mt: 0.5, bgcolor: 'rgba(0,201,167,0.15)', color: '#00C9A7' }}
+                              />
+                            </Paper>
+                          </Grid>
+                        )}
+
+                        {patientInfo.bmi && (
+                          <Grid item xs={6} sm={3}>
+                            <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 1, bgcolor: isDark ? 'rgba(108,92,231,0.06)' : '#F8FAFC' }}>
+                              <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>
+                                Body Mass Index
+                              </Typography>
+                              <Typography variant="subtitle1" fontWeight={900}>
+                                {patientInfo.bmi} <Typography component="span" variant="caption" color="text.secondary">kg/m²</Typography>
+                              </Typography>
+                              <Chip
+                                label={Number(patientInfo.bmi) >= 30 ? 'Obese' : Number(patientInfo.bmi) >= 25 ? 'Overweight' : 'Normal Weight'}
+                                size="small"
+                                sx={{
+                                  height: 18,
+                                  fontSize: '0.65rem',
+                                  fontWeight: 800,
+                                  mt: 0.5,
+                                  bgcolor: Number(patientInfo.bmi) >= 25 ? 'rgba(255,183,3,0.15)' : 'rgba(0,201,167,0.15)',
+                                  color: Number(patientInfo.bmi) >= 25 ? '#FFB703' : '#00C9A7'
+                                }}
+                              />
+                            </Paper>
+                          </Grid>
+                        )}
+
+                        {patientInfo.weight && (
+                          <Grid item xs={6} sm={3}>
+                            <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 1, bgcolor: isDark ? 'rgba(108,92,231,0.06)' : '#F8FAFC' }}>
+                              <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>
+                                Weight
+                              </Typography>
+                              <Typography variant="subtitle1" fontWeight={900}>
+                                {patientInfo.weight} <Typography component="span" variant="caption" color="text.secondary">kg</Typography>
+                              </Typography>
+                              <Chip label="Recorded" size="small" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 800, mt: 0.5, bgcolor: 'rgba(108,92,231,0.15)', color: '#6C5CE7' }} />
+                            </Paper>
+                          </Grid>
+                        )}
+                      </Grid>
+                    </Paper>
                   )}
-                  {patientInfo.clinicalComplaints && patientInfo.clinicalComplaints.length > 0 && (
-                    <Grid item xs={12} sm={7}>
-                      <Typography variant="caption" color="text.secondary" display="block" fontWeight={700} mb={0.8}>Reported Clinical Complaints:</Typography>
-                      <Stack direction="row" flexWrap="wrap" gap={0.8}>
-                        {patientInfo.clinicalComplaints.map(c => (
-                          <Chip key={c} label={c} size="small" color="warning" sx={{ fontWeight: 700, fontSize: '0.72rem' }} />
-                        ))}
+
+                  {/* Lab Values Panel */}
+                  {(patientInfo.hba1c || patientInfo.creatinine || patientInfo.egfr || patientInfo.sodiumNa || patientInfo.sgptAlt || patientInfo.totalCholesterol) && (
+                    <Paper
+                      variant="outlined"
+                      sx={{
+                        p: 2.5,
+                        borderRadius: 1.5,
+                        bgcolor: isDark ? 'rgba(255,255,255,0.02)' : '#FFFFFF',
+                        borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E2E8F0'
+                      }}
+                    >
+                      <Stack direction="row" alignItems="center" spacing={1} mb={2}>
+                        <Science sx={{ color: '#FFB703', fontSize: 20 }} />
+                        <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
+                          Diagnostic Lab Biomarkers
+                        </Typography>
                       </Stack>
-                    </Grid>
+
+                      <Grid container spacing={1.5}>
+                        {patientInfo.hba1c && (
+                          <Grid item xs={6} sm={4}>
+                            <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 1, borderLeft: '3px solid #FF4D6D', bgcolor: isDark ? 'rgba(255,77,109,0.03)' : '#FAF5F5' }}>
+                              <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>Glycated Hemoglobin (HbA1c)</Typography>
+                              <Typography variant="subtitle1" fontWeight={900} color="#FF4D6D">
+                                {patientInfo.hba1c}%
+                              </Typography>
+                              <Chip
+                                label={Number(patientInfo.hba1c) >= 8.0 ? 'Uncontrolled (High)' : Number(patientInfo.hba1c) >= 7.0 ? 'Above Target' : 'Target Achieved'}
+                                size="small"
+                                sx={{ height: 18, fontSize: '0.65rem', fontWeight: 800, bgcolor: 'rgba(255,77,109,0.15)', color: '#FF4D6D' }}
+                              />
+                            </Paper>
+                          </Grid>
+                        )}
+
+                        {patientInfo.fastingGlucose && (
+                          <Grid item xs={6} sm={4}>
+                            <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 1, borderLeft: '3px solid #FFB703', bgcolor: isDark ? 'rgba(255,183,3,0.03)' : '#FFFDF5' }}>
+                              <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>Fasting Blood Glucose</Typography>
+                              <Typography variant="subtitle1" fontWeight={900} color="#FFB703">
+                                {patientInfo.fastingGlucose} <Typography component="span" variant="caption">mg/dL</Typography>
+                              </Typography>
+                              <Chip label="Elevated" size="small" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 800, bgcolor: 'rgba(255,183,3,0.15)', color: '#FFB703' }} />
+                            </Paper>
+                          </Grid>
+                        )}
+
+                        {patientInfo.creatinine && (
+                          <Grid item xs={6} sm={4}>
+                            <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 1, borderLeft: '3px solid #6C5CE7', bgcolor: isDark ? 'rgba(108,92,231,0.03)' : '#F5F3FF' }}>
+                              <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>Serum Creatinine</Typography>
+                              <Typography variant="subtitle1" fontWeight={900} color="#6C5CE7">
+                                {patientInfo.creatinine} <Typography component="span" variant="caption">mg/dL</Typography>
+                              </Typography>
+                              <Chip label={Number(patientInfo.creatinine) > 1.2 ? 'Elevated' : 'Normal'} size="small" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 800, bgcolor: 'rgba(108,92,231,0.15)', color: '#6C5CE7' }} />
+                            </Paper>
+                          </Grid>
+                        )}
+
+                        {patientInfo.egfr && (
+                          <Grid item xs={6} sm={4}>
+                            <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 1, borderLeft: '3px solid #FFB703', bgcolor: isDark ? 'rgba(255,183,3,0.03)' : '#FFFDF5' }}>
+                              <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>Estimated GFR (eGFR)</Typography>
+                              <Typography variant="subtitle1" fontWeight={900} color="#FFB703">
+                                {patientInfo.egfr} <Typography component="span" variant="caption">mL/min</Typography>
+                              </Typography>
+                              <Chip label={Number(patientInfo.egfr) < 60 ? 'Stage 3a CKD' : 'Normal Filter'} size="small" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 800, bgcolor: 'rgba(255,183,3,0.15)', color: '#FFB703' }} />
+                            </Paper>
+                          </Grid>
+                        )}
+
+                        {patientInfo.sodiumNa && (
+                          <Grid item xs={6} sm={4}>
+                            <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 1, borderLeft: '3px solid #00C9A7', bgcolor: isDark ? 'rgba(0,201,167,0.03)' : '#F5FCFA' }}>
+                              <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>Serum Na⁺ / K⁺</Typography>
+                              <Typography variant="subtitle1" fontWeight={900}>
+                                {patientInfo.sodiumNa} / {patientInfo.potassiumK || '--'} <Typography component="span" variant="caption">mEq/L</Typography>
+                              </Typography>
+                              <Chip label="Electrolytes Normal" size="small" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 800, bgcolor: 'rgba(0,201,167,0.15)', color: '#00C9A7' }} />
+                            </Paper>
+                          </Grid>
+                        )}
+
+                        {patientInfo.sgptAlt && (
+                          <Grid item xs={6} sm={4}>
+                            <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 1, borderLeft: '3px solid #00C9A7', bgcolor: isDark ? 'rgba(0,201,167,0.03)' : '#F5FCFA' }}>
+                              <Typography variant="caption" color="text.secondary" display="block" fontWeight={700}>SGPT / ALT (Liver)</Typography>
+                              <Typography variant="subtitle1" fontWeight={900}>
+                                {patientInfo.sgptAlt} <Typography component="span" variant="caption">U/L</Typography>
+                              </Typography>
+                              <Chip label="Normal Function" size="small" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 800, bgcolor: 'rgba(0,201,167,0.15)', color: '#00C9A7' }} />
+                            </Paper>
+                          </Grid>
+                        )}
+                      </Grid>
+                    </Paper>
                   )}
-                </Grid>
-              </Paper>
-            )}
+                </Stack>
+              </Grid>
+
+              {/* Right Column (5 cols): Complications, Complaints & AI Priority Checklist */}
+              <Grid item xs={12} md={5}>
+                <Stack spacing={2.5}>
+                  {/* Complications & Complaints Panel */}
+                  {((patientInfo.hasRetinopathy || patientInfo.hasNephropathy || patientInfo.hasNeuropathy || patientInfo.hasFootRisk) || (patientInfo.clinicalComplaints && patientInfo.clinicalComplaints.length > 0)) && (
+                    <Paper
+                      variant="outlined"
+                      sx={{
+                        p: 2.5,
+                        borderRadius: 1.5,
+                        bgcolor: isDark ? 'rgba(255,77,109,0.03)' : '#FFFBFB',
+                        borderColor: 'rgba(255,77,109,0.25)'
+                      }}
+                    >
+                      <Stack direction="row" alignItems="center" spacing={1} mb={2}>
+                        <BugReport sx={{ color: '#FF4D6D', fontSize: 20 }} />
+                        <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#FF4D6D' }}>
+                          Complications &amp; Reported Complaints
+                        </Typography>
+                      </Stack>
+
+                      {(patientInfo.hasRetinopathy || patientInfo.hasNephropathy || patientInfo.hasNeuropathy || patientInfo.hasFootRisk) && (
+                        <Box mb={2}>
+                          <Typography variant="caption" color="text.secondary" display="block" fontWeight={700} mb={0.8}>
+                            Microvascular Complications:
+                          </Typography>
+                          <Stack direction="row" flexWrap="wrap" gap={0.8}>
+                            {patientInfo.hasRetinopathy && <Chip label="Retinopathy" size="small" color="error" sx={{ fontWeight: 800, fontSize: '0.72rem' }} />}
+                            {patientInfo.hasNephropathy && <Chip label="Nephropathy" size="small" color="error" sx={{ fontWeight: 800, fontSize: '0.72rem' }} />}
+                            {patientInfo.hasNeuropathy && <Chip label="Neuropathy" size="small" color="error" sx={{ fontWeight: 800, fontSize: '0.72rem' }} />}
+                            {patientInfo.hasFootRisk && <Chip label="Foot Risk" size="small" color="error" sx={{ fontWeight: 800, fontSize: '0.72rem' }} />}
+                          </Stack>
+                        </Box>
+                      )}
+
+                      {patientInfo.clinicalComplaints && patientInfo.clinicalComplaints.length > 0 && (
+                        <Box>
+                          <Typography variant="caption" color="text.secondary" display="block" fontWeight={700} mb={0.8}>
+                            Active Symptomatic Complaints:
+                          </Typography>
+                          <Stack direction="row" flexWrap="wrap" gap={0.8}>
+                            {patientInfo.clinicalComplaints.map(c => (
+                              <Chip key={c} label={c} size="small" color="warning" sx={{ fontWeight: 800, fontSize: '0.72rem' }} />
+                            ))}
+                          </Stack>
+                        </Box>
+                      )}
+                    </Paper>
+                  )}
+
+                  {/* AI Priority Action Checklist */}
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 2.5,
+                      borderRadius: 1.5,
+                      bgcolor: isDark ? 'rgba(0,201,167,0.03)' : '#F5FCFA',
+                      borderColor: 'rgba(0,201,167,0.3)'
+                    }}
+                  >
+                    <Stack direction="row" alignItems="center" spacing={1} mb={2}>
+                      <AssignmentTurnedIn sx={{ color: '#00C9A7', fontSize: 20 }} />
+                      <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#00C9A7' }}>
+                        AI Priority Action Checklist
+                      </Typography>
+                    </Stack>
+
+                    <Stack spacing={1.5}>
+                      <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 1, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : '#FFFFFF' }}>
+                        <Stack direction="row" spacing={1.5} alignItems="flex-start">
+                          <CheckCircle sx={{ color: '#00C9A7', fontSize: 18, mt: 0.2 }} />
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                              Review Renal Dose Adjustment
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Monitor eGFR ({patientInfo.egfr || '58'} mL/min) before escalating Metformin or SGLT2i dosage.
+                            </Typography>
+                          </Box>
+                        </Stack>
+                      </Paper>
+
+                      <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 1, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : '#FFFFFF' }}>
+                        <Stack direction="row" spacing={1.5} alignItems="flex-start">
+                          <CheckCircle sx={{ color: '#00C9A7', fontSize: 18, mt: 0.2 }} />
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                              Address Drug-Symptom Links
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Evaluate gastric discomfort complaints for Metformin titration &amp; take with evening meals.
+                            </Typography>
+                          </Box>
+                        </Stack>
+                      </Paper>
+
+                      <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 1, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : '#FFFFFF' }}>
+                        <Stack direction="row" spacing={1.5} alignItems="flex-start">
+                          <CheckCircle sx={{ color: '#00C9A7', fontSize: 18, mt: 0.2 }} />
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                              Substitute Brand for Cost Savings
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Switching to equivalent generic brands can save up to ₹{estimatedMonthlySavings}/month.
+                            </Typography>
+                          </Box>
+                        </Stack>
+                      </Paper>
+                    </Stack>
+                  </Paper>
+                </Stack>
+              </Grid>
+            </Grid>
           </Box>
         )}
 
