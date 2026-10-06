@@ -15,32 +15,28 @@ import {
 } from '@mui/material';
 import {
   CloudUpload,
-  CheckCircle,
   DocumentScanner,
   AutoAwesome,
   InsertDriveFile,
-  Close
+  Close,
+  PictureAsPdf,
+  Image as ImageIcon
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
-import { PatientInput } from '../types/clinical';
 
 interface PrescriptionUploaderProps {
-  onAutoExtract?: (extractedData: PatientInput) => void;
   onAnalyzeDocument?: (file: File) => void;
   onReset?: () => void;
   isAnalyzing?: boolean;
 }
 
 export default function PrescriptionUploader({
-  onAutoExtract,
   onAnalyzeDocument,
   onReset,
   isAnalyzing = false
 }: PrescriptionUploaderProps) {
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [file, setFile] = useState<File | null>(null);
-  const [isScanning, setIsScanning] = useState<boolean>(false);
-  const [scannedText, setScannedText] = useState<string>('');
 
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -55,70 +51,35 @@ export default function PrescriptionUploader({
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setFile(e.dataTransfer.files[0]);
-      setScannedText('');
-      toast.info(`Selected file: ${e.dataTransfer.files[0].name}`);
+      const droppedFile = e.dataTransfer.files[0];
+      setFile(droppedFile);
+      toast.info(`Selected: ${droppedFile.name}`);
     }
   };
 
   const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-      setScannedText('');
-      toast.info(`Selected file: ${e.target.files[0].name}`);
+      const selectedFile = e.target.files[0];
+      setFile(selectedFile);
+      toast.info(`Selected: ${selectedFile.name}`);
     }
   };
 
   const handleRemoveFile = () => {
     setFile(null);
-    setScannedText('');
     if (onReset) onReset();
     toast.info('Document removed & analysis reset.');
   };
 
-  // ─── DOCUMENT AI ANALYZE HANDLER ──────────────────────────────────────────
-  // 💡 API INTEGRATION POINT 1 (Document Upload AI Endpoint):
-  // Integrate your Document AI API call here (e.g. POST /api/analyze-document with FormData)
+  // ─── SEND PDF/IMAGE DIRECTLY TO AI ────────────────────────────────────────
   const handleAnalyzeDocument = () => {
     if (!file) {
       toast.warning('Please select a prescription document first.');
       return;
     }
-
-    setIsScanning(true);
-    toast.info(`Sending ${file.name} directly to Document AI API...`);
-
     if (onAnalyzeDocument) {
       onAnalyzeDocument(file);
     }
-
-    // Simulate Document AI OCR & Extraction Process
-    setTimeout(() => {
-      setIsScanning(false);
-      const simulatedExtraction: PatientInput = {
-        patientName: "Eleanor Vance",
-        age: 62,
-        gender: "Female",
-        weight: 68,
-        allergies: "Penicillin",
-        disease: "Acute Bronchitis & Essential Hypertension",
-        medications: [
-          { name: "Amoxicillin", dosage: "500mg", frequency: "Thrice Daily", duration: "7 Days", timing: "After meals" },
-          { name: "Lisinopril", dosage: "10mg", frequency: "Once Daily", duration: "30 Days", timing: "Morning" },
-          { name: "Omeprazole", dosage: "20mg", frequency: "Once Daily", duration: "14 Days", timing: "30 min before breakfast" }
-        ]
-      };
-
-      setScannedText(
-        `Patient: Eleanor Vance (62, Female)\nDiagnosis: Acute Bronchitis & Essential Hypertension\nRx Identified:\n1. Amoxicillin 500mg TID (7 Days)\n2. Lisinopril 10mg QD (30 Days)\n3. Omeprazole 20mg QD (14 Days)`
-      );
-
-      toast.success("Document AI OCR Extraction Complete!");
-
-      if (onAutoExtract) {
-        onAutoExtract(simulatedExtraction);
-      }
-    }, 2000);
   };
 
   const formatFileSize = (bytes: number) => {
@@ -127,6 +88,8 @@ export default function PrescriptionUploader({
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  const isPdf = file?.type === 'application/pdf';
+
   return (
     <Card sx={{ borderRadius: 1, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
       <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
@@ -134,11 +97,11 @@ export default function PrescriptionUploader({
         <Stack direction="row" alignItems="center" spacing={1} mb={1}>
           <DocumentScanner sx={{ color: '#6C5CE7', fontSize: 28 }} />
           <Typography variant="h6" sx={{ fontWeight: 800 }}>
-            Prescription Document Scanner
+            Prescription AI Scanner
           </Typography>
         </Stack>
         <Typography variant="body2" color="text.secondary" mb={2.5}>
-          Upload a paper prescription image (PNG/JPG) or PDF. Click <strong>Analyze</strong> to send directly to Document AI API.
+          Upload a prescription image (JPG/PNG) or PDF. Click <strong>Analyze with AI</strong> to send it directly to Gemini AI for complete analysis.
         </Typography>
 
         {/* Upload Drop Zone */}
@@ -182,41 +145,51 @@ export default function PrescriptionUploader({
             <Paper variant="outlined" sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
               <Stack direction="row" alignItems="center" justifyContent="space-between">
                 <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0 }}>
-                  <InsertDriveFile sx={{ color: '#6C5CE7', fontSize: 32 }} />
+                  {isPdf
+                    ? <PictureAsPdf sx={{ color: '#FF4D6D', fontSize: 32 }} />
+                    : <ImageIcon sx={{ color: '#6C5CE7', fontSize: 32 }} />
+                  }
                   <Box sx={{ minWidth: 0, textAlign: 'left' }}>
                     <Typography variant="subtitle2" sx={{ fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {file.name}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {formatFileSize(file.size)} • Ready for AI Scan
+                      {formatFileSize(file.size)} • {isPdf ? 'PDF Document' : 'Image File'} — Ready for AI Analysis
                     </Typography>
                   </Box>
                 </Stack>
-                <IconButton size="small" onClick={handleRemoveFile} color="error">
+                <IconButton size="small" onClick={handleRemoveFile} color="error" disabled={isAnalyzing}>
                   <Close fontSize="small" />
                 </IconButton>
               </Stack>
             </Paper>
           )}
 
-          {isScanning && (
+          {isAnalyzing && (
             <Box sx={{ width: '100%', mt: 2 }}>
               <Typography variant="caption" color="secondary" sx={{ fontWeight: 800, display: 'block', mb: 0.5 }}>
-                ⚡ Scanning Rx handwriting &amp; sending directly to Document AI API...
+                ⚡ Sending prescription directly to Gemini AI for full analysis...
               </Typography>
               <LinearProgress color="secondary" />
             </Box>
           )}
         </Box>
 
-        {/* Dedicated Action Buttons for Document Upload */}
+        {/* Info chips */}
+        <Stack direction="row" spacing={1} mt={2} flexWrap="wrap" gap={1}>
+          <Chip label="✦ Direct PDF → AI" size="small" sx={{ fontWeight: 700, fontSize: '0.72rem', bgcolor: 'rgba(108, 92, 231, 0.12)', color: '#6C5CE7' }} />
+          <Chip label="✦ No Text Extraction" size="small" sx={{ fontWeight: 700, fontSize: '0.72rem', bgcolor: 'rgba(0, 201, 167, 0.12)', color: '#00C9A7' }} />
+          <Chip label="✦ Gemini Vision" size="small" sx={{ fontWeight: 700, fontSize: '0.72rem', bgcolor: 'rgba(255, 183, 3, 0.12)', color: '#FFB703' }} />
+        </Stack>
+
+        {/* Dedicated Action Buttons */}
         <Stack direction="row" spacing={1.5} mt={2.5}>
           {file && (
             <Button
               variant="outlined"
               color="inherit"
               onClick={handleRemoveFile}
-              disabled={isScanning || isAnalyzing}
+              disabled={isAnalyzing}
               sx={{ borderRadius: 1.5, px: 2.5, fontWeight: 700 }}
             >
               Reset
@@ -228,7 +201,7 @@ export default function PrescriptionUploader({
             variant="contained"
             color="secondary"
             size="large"
-            disabled={!file || isScanning || isAnalyzing}
+            disabled={!file || isAnalyzing}
             onClick={handleAnalyzeDocument}
             startIcon={<AutoAwesome />}
             sx={{
@@ -243,35 +216,10 @@ export default function PrescriptionUploader({
               }
             }}
           >
-            {isScanning || isAnalyzing ? 'Analyzing Document with AI...' : 'Analyze'}
+            {isAnalyzing ? 'Analyzing with Gemini AI...' : 'Analyze with AI'}
           </Button>
         </Stack>
-
-        {/* OCR Result View */}
-        {scannedText && (
-          <Paper
-            variant="outlined"
-            sx={{
-              mt: 2.5,
-              p: 2,
-              borderRadius: 1,
-              borderColor: 'rgba(0, 201, 167, 0.3)',
-              bgcolor: 'rgba(0, 201, 167, 0.05)'
-            }}
-          >
-            <Stack direction="row" alignItems="center" spacing={1} mb={1}>
-              <CheckCircle sx={{ color: '#00C9A7', fontSize: 20 }} />
-              <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#00C9A7' }}>
-                Document AI Extracted Result:
-              </Typography>
-            </Stack>
-            <Typography variant="body2" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-line', fontSize: '0.82rem' }}>
-              {scannedText}
-            </Typography>
-          </Paper>
-        )}
       </CardContent>
     </Card>
   );
 }
-

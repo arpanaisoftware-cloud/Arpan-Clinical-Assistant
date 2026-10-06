@@ -510,7 +510,7 @@ export function analyzePrescription(patientData: PatientInput, medications: Medi
     dietLifestyleDos: Array.from(new Set(dietLifestyleDos)),
     dietLifestyleDonts: Array.from(new Set(dietLifestyleDonts)),
     aiClinicalOverview,
-    estimatedMonthlySavings: "$45.00 - $120.00 (via Generic Equivalents)",
+
     timestamp: customTimestamp || new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
     drugIndicationAnalysis,
     doseFrequencyAnalysis,

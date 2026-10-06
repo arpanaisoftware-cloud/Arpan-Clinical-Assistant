@@ -156,7 +156,7 @@ export interface AnalysisResult {
   dietLifestyleDos: string[];
   dietLifestyleDonts: string[];
   aiClinicalOverview: string;
-  estimatedMonthlySavings: string;
+
   timestamp: string;
   // New SOP-mandated outputs
   drugIndicationAnalysis?: DrugIndicationItem[];

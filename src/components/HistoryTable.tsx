@@ -62,13 +62,16 @@ const INITIAL_HISTORY: HistoryRecord[] = [
 ];
 
 interface HistoryTableProps {
+  historyList?: HistoryRecord[];
   onLoadRecord?: (record: HistoryRecord) => void;
 }
 
-export default function HistoryTable({ onLoadRecord }: HistoryTableProps) {
+export default function HistoryTable({ historyList, onLoadRecord }: HistoryTableProps) {
   const [search, setSearch] = useState<string>('');
 
-  const filteredHistory = INITIAL_HISTORY.filter(
+  const records = historyList && historyList.length > 0 ? historyList : INITIAL_HISTORY;
+
+  const filteredHistory = records.filter(
     h => h.patientName.toLowerCase().includes(search.toLowerCase()) ||
       h.disease.toLowerCase().includes(search.toLowerCase()) ||
       h.id.toLowerCase().includes(search.toLowerCase())

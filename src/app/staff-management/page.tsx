@@ -23,7 +23,9 @@ export default function StaffManagementPage() {
     staffList,
     logout,
     addStaffUser,
-    toggleStaffStatus
+    toggleStaffStatus,
+    updateStaffUser,
+    deleteStaffUser
   } = useAuth();
 
   useEffect(() => {
@@ -102,6 +104,8 @@ export default function StaffManagementPage() {
             staffList={staffList}
             onAddStaff={addStaffUser}
             onToggleStatus={toggleStaffStatus}
+            onUpdateStaff={updateStaffUser}
+            onDeleteStaff={deleteStaffUser}
           />
         ) : (
           <Paper

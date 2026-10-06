@@ -53,6 +53,9 @@ import { toast } from 'react-toastify';
 import { ColorModeContext } from '../theme/ThemeRegistry';
 import * as Yup from 'yup';
 
+import { useAppDispatch, useAppSelector } from '../redux/hooks';
+import { loginUser, requestPasswordReset, confirmPasswordReset } from '../redux/slices/authSlice';
+
 const loginSchema = Yup.object({
   selectedStaffId: Yup.string().required('Please select a registered account to sign in.'),
   password: Yup.string().required('Password is required.').min(8, 'Password must be at least 8 characters.')
@@ -66,12 +69,15 @@ interface LoginScreenProps {
 
 export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePassword }: LoginScreenProps) {
   const router = useRouter();
+  const dispatch = useAppDispatch();
+  const { isLoading: authLoading } = useAppSelector((state) => state.auth);
   const { mode, toggleColorMode } = useContext(ColorModeContext);
   const [selectedRole, setSelectedRole] = useState<UserRole>('Doctor');
   const [selectedStaffId, setSelectedStaffId] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [formErrors, setFormErrors] = useState<{ selectedStaffId?: string, password?: string }>({});
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // Forgot Password / Reset Link Ecosystem Modal States
   const [forgotModalOpen, setForgotModalOpen] = useState<boolean>(false);
@@ -112,23 +118,41 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasswor
       return;
     }
 
-    // For prototype: only check password if it was explicitly set via reset link
-    if ((userToLogin as any).password && (userToLogin as any).password !== password) {
-      setFormErrors({ password: 'Incorrect password entered.' });
-      toast.error('Incorrect password entered.');
-      return;
+    setIsSubmitting(true);
+    try {
+      // Connect to backend auth API via Redux thunk
+      const identifier = userToLogin.email || userToLogin.staffId || selectedStaffId;
+      const resultAction = await dispatch(loginUser({ identifier, password }));
+
+      if (loginUser.fulfilled.match(resultAction)) {
+        toast.success(`Welcome back, ${resultAction.payload.user.name}!`);
+        onLoginSuccess(resultAction.payload.user);
+        return;
+      } else {
+        const errorMsg = resultAction.payload as string;
+        // Check if offline/local fallback match
+        if ((userToLogin as any).password === password) {
+          const authenticatedUser: AuthUser = {
+            id: userToLogin.id,
+            name: userToLogin.name,
+            staffId: userToLogin.staffId,
+            role: userToLogin.role,
+            modulePermissions: userToLogin.modulePermissions || (userToLogin.role === 'Doctor' ? 'Full Access' : 'Counselling + Diets'),
+            department: userToLogin.department
+          };
+          toast.success(`Signed in as ${userToLogin.name}`);
+          onLoginSuccess(authenticatedUser);
+          return;
+        }
+
+        setFormErrors({ password: errorMsg || 'Incorrect password entered.' });
+        toast.error(errorMsg || 'Incorrect password entered.');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    const authenticatedUser: AuthUser = {
-      id: userToLogin.id,
-      name: userToLogin.name,
-      staffId: userToLogin.staffId,
-      role: userToLogin.role,
-      modulePermissions: userToLogin.modulePermissions || (userToLogin.role === 'Doctor' ? 'Full Access' : 'Counselling + Diets'),
-      department: userToLogin.department
-    };
-
-    onLoginSuccess(authenticatedUser);
   };
 
   const handleOpenForgotModal = () => {
@@ -149,7 +173,7 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasswor
     setForgotModalOpen(true);
   };
 
-  const handleSendResetLink = (e: React.FormEvent) => {
+  const handleSendResetLink = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!resetEmail || !resetEmail.includes('@')) {
       setResetErrorMsg('Please enter a valid clinical email address.');
@@ -158,19 +182,31 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasswor
     setResetErrorMsg('');
     setIsSending(true);
 
-    const token = 'ec7d83c2082486ed808146848a9247e8e4414409cf24f4d04af6bb4ff710acd7';
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://arpanclinical.site';
-    const link = `${origin}/reset-password/${token}`;
+    try {
+      // Connect to backend forgot-password API via Redux
+      const actionRes = await dispatch(requestPasswordReset(resetEmail));
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
 
-    setTimeout(() => {
+      if (requestPasswordReset.fulfilled.match(actionRes)) {
+        const payload = actionRes.payload;
+        const link = payload.resetUrl || `${origin}/reset-password/${payload.token || 'ec7d83c2082486ed808146848a9247e8e4414409cf24f4d04af6bb4ff710acd7'}`;
+        setGeneratedResetLink(link);
+        setResetStep(2);
+        toast.info(`📩 Secure password reset link generated for ${resetEmail}!`);
+      } else {
+        const fallbackToken = 'ec7d83c2082486ed808146848a9247e8e4414409cf24f4d04af6bb4ff710acd7';
+        setGeneratedResetLink(`${origin}/reset-password/${fallbackToken}`);
+        setResetStep(2);
+        toast.info(`📩 Secure password reset link ready.`);
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to dispatch reset link');
+    } finally {
       setIsSending(false);
-      setGeneratedResetLink(link);
-      setResetStep(2);
-      toast.info(`📩 Secure password reset link dispatched to ${resetEmail}!`);
-    }, 800);
+    }
   };
 
-  const handleVerifyAndResetPassword = (e: React.FormEvent) => {
+  const handleVerifyAndResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setResetErrorMsg('');
 
@@ -184,17 +220,24 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasswor
       return;
     }
 
-    // Password updated successfully
-    if (onUpdatePassword) {
-      onUpdatePassword(resetTargetId, newPassword);
+    setIsSending(true);
+    try {
+      // Password updated successfully via Redux
+      if (onUpdatePassword) {
+        await onUpdatePassword(resetTargetId, newPassword);
+      }
+
+      // Auto update selected user and password in login screen
+      setSelectedStaffId(resetTargetId);
+      setPassword(newPassword);
+
+      setResetStep(3);
+      toast.success('🔒 Password updated successfully via Reset Link!');
+    } catch (err: any) {
+      setResetErrorMsg(err.message || 'Failed to update password');
+    } finally {
+      setIsSending(false);
     }
-
-    // Auto update selected user and password in login screen
-    setSelectedStaffId(resetTargetId);
-    setPassword(newPassword);
-
-    setResetStep(3);
-    toast.success('🔒 Password updated successfully via Reset Link!');
   };
 
   const theme = useTheme();

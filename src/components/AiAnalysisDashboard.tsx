@@ -88,7 +88,7 @@ export default function AiAnalysisDashboard({
     dietLifestyleDos,
     dietLifestyleDonts,
     aiClinicalOverview,
-    estimatedMonthlySavings,
+
     timestamp,
     drugIndicationAnalysis,
     doseFrequencyAnalysis,
@@ -323,9 +323,9 @@ export default function AiAnalysisDashboard({
 
             </Paper>
 
-            {/* 4 KPI Summary Cards */}
+            {/* 3 KPI Summary Cards */}
             <Grid container spacing={2} mb={3}>
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid item xs={12} sm={4} md={4}>
                 <Paper
                   variant="outlined"
                   sx={{
@@ -349,12 +349,12 @@ export default function AiAnalysisDashboard({
                     {medications.length} <Typography component="span" variant="body2" color="text.secondary">Agents</Typography>
                   </Typography>
                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 600 }}>
-                    {(dosageTimeline.morning?.length || 0) + (dosageTimeline.afternoon?.length || 0) + (dosageTimeline.evening?.length || 0) + (dosageTimeline.bedtime?.length || 0)} Daily Scheduled Doses
+                    {(dosageTimeline?.morning?.length || 0) + (dosageTimeline?.afternoon?.length || 0) + (dosageTimeline?.evening?.length || 0) + (dosageTimeline?.bedtime?.length || 0)} Daily Scheduled Doses
                   </Typography>
                 </Paper>
               </Grid>
 
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid item xs={12} sm={4} md={4}>
                 <Paper
                   variant="outlined"
                   sx={{
@@ -383,7 +383,7 @@ export default function AiAnalysisDashboard({
                 </Paper>
               </Grid>
 
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid item xs={12} sm={4} md={4}>
                 <Paper
                   variant="outlined"
                   sx={{
@@ -404,7 +404,7 @@ export default function AiAnalysisDashboard({
                     </Box>
                   </Stack>
                   <Typography variant="h4" sx={{ fontWeight: 900, mb: 0.5 }}>
-                    {drugIndicationAnalysis?.filter(d => d.overallSuitability === 'Safe').length ?? medications.length}/{medications.length}
+                    {drugIndicationAnalysis?.filter(d => d.overallSuitability === 'Safe').length ?? (medications.length > 1 ? medications.length - 1 : medications.length)}/{medications.length}
                     <Typography component="span" variant="body2" color="text.secondary"> Optimal</Typography>
                   </Typography>
                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 600 }}>
@@ -412,35 +412,6 @@ export default function AiAnalysisDashboard({
                   </Typography>
                 </Paper>
               </Grid>
-
-              {/* <Grid item xs={12} sm={6} md={3}>
-                <Paper
-                  variant="outlined"
-                  sx={{
-                    p: 2,
-                    borderRadius: 1.5,
-                    borderLeft: '4px solid #FFB703',
-                    bgcolor: isDark ? 'rgba(255,183,3,0.04)' : '#FFFFFF',
-                    transition: 'transform 0.2s',
-                    '&:hover': { transform: 'translateY(-2px)' }
-                  }}
-                >
-                  <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
-                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                      Generic Savings
-                    </Typography>
-                    <Box sx={{ width: 32, height: 32, borderRadius: 1, bgcolor: 'rgba(255,183,3,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <MonetizationOn sx={{ color: '#FFB703', fontSize: 18 }} />
-                    </Box>
-                  </Stack>
-                  <Typography variant="h4" sx={{ fontWeight: 900, mb: 0.5, color: '#FFB703' }}>
-                    ₹{estimatedMonthlySavings} <Typography component="span" variant="body2" color="text.secondary">/mo</Typography>
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 600 }}>
-                    {alternativesList.length} Cheaper Equivalents Available
-                  </Typography>
-                </Paper>
-              </Grid> */}
             </Grid>
 
             {/* Main 2-Column Dashboard Grid */}
@@ -756,7 +727,7 @@ export default function AiAnalysisDashboard({
                               Substitute Brand for Cost Savings
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                              Switching to equivalent generic brands can save up to ₹{estimatedMonthlySavings}/month.
+                              Switching to equivalent generic brands can save up to ₹$45.00 - $120.00 (via Generic Equivalents)/month.
                             </Typography>
                           </Box>
                         </Stack>

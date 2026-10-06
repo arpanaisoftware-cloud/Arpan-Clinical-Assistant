@@ -6,6 +6,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { getCustomTheme } from './theme';
 import { AuthProvider } from '../context/AuthContext';
+import { ReduxProvider } from '../redux/Providers';
 
 interface ColorModeContextType {
   mode: PaletteMode;
@@ -34,9 +35,11 @@ export default function ThemeRegistry({ children }: ThemeRegistryProps) {
     <ColorModeContext.Provider value={{ mode, toggleColorMode }}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <ReduxProvider>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </ReduxProvider>
         <ToastContainer
           position="bottom-right"
           autoClose={3500}

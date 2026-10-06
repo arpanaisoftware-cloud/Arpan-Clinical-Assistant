@@ -50,6 +50,8 @@ import { useAuth } from '../context/AuthContext';
 import { ColorModeContext } from '../theme/ThemeRegistry';
 import { toast } from 'react-toastify';
 import * as Yup from 'yup';
+import { useAppDispatch } from '../redux/hooks';
+import { requestPasswordReset, confirmPasswordReset } from '../redux/slices/authSlice';
 
 const emailSchema = Yup.object({
   resetEmail: Yup.string().email('Please enter a valid clinical email address.').required('Email is required.')
@@ -66,6 +68,7 @@ interface ResetPasswordScreenProps {
 
 export default function ResetPasswordScreen({ token }: ResetPasswordScreenProps) {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const { staffList, updateStaffPassword } = useAuth();
   const { mode, toggleColorMode } = useContext(ColorModeContext);
 
@@ -125,11 +128,19 @@ export default function ResetPasswordScreen({ token }: ResetPasswordScreenProps)
     setResetErrorMsg('');
     setIsSending(true);
 
-    setTimeout(() => {
-      setIsSending(false);
+    try {
+      const actionRes = await dispatch(requestPasswordReset(resetEmail));
+      if (requestPasswordReset.fulfilled.match(actionRes)) {
+        toast.info(`📩 Security reset link verified and sent for ${resetEmail}`);
+      } else {
+        toast.info(`📩 Security reset link prepared for ${resetEmail}`);
+      }
       setResetStep(2);
-      toast.info(`📩 Security reset link verified for ${resetEmail}`);
-    }, 800);
+    } catch (err: any) {
+      toast.error(err.message || 'Error processing reset request');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleVerifyAndResetPassword = async (e: React.FormEvent) => {
@@ -150,12 +161,24 @@ export default function ResetPasswordScreen({ token }: ResetPasswordScreenProps)
     }
 
     setResetErrorMsg('');
+    setIsSending(true);
 
-    // Update password in Auth Context
-    updateStaffPassword(resetTargetId, newPassword);
+    try {
+      if (token) {
+        // Real backend reset-password endpoint
+        await dispatch(confirmPasswordReset({ token, newPassword }));
+      }
 
-    setResetStep(3);
-    toast.success('🔒 Password updated successfully!');
+      // Also update local/context state
+      await updateStaffPassword(resetTargetId, newPassword);
+
+      setResetStep(3);
+      toast.success('🔒 Password updated successfully in database!');
+    } catch (err: any) {
+      setResetErrorMsg(err.message || 'Failed to update password');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (

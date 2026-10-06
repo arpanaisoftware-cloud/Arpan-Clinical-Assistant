@@ -122,10 +122,14 @@ export default function StaffManagementModal({
     const generatedId = staffIdInput.trim() || `STAFF-${randomSuffix}`;
     const generatedPass = customPassword.trim() || `staff${randomSuffix}`;
 
+    const cleanName = name.trim();
+    const generatedEmail = `${cleanName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@arpanclinical.org`;
+
     const newMember: StaffUser = {
       id: `ST-${Date.now()}`,
-      name: name.trim(),
+      name: cleanName,
       staffId: generatedId,
+      email: generatedEmail,
       department: assignedDept,
       role: assignedRole,
       modulePermissions: assignedPermissions,

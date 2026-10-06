@@ -41,7 +41,8 @@ import LoginScreen from '../components/LoginScreen';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { ColorModeContext } from '../theme/ThemeRegistry';
-// Mock data import removed
+import { useAppDispatch, useAppSelector } from '../redux/hooks';
+import { addHistoryRecord } from '../redux/slices/clinicalSlice';
 import { PatientInput, AnalysisResult, HistoryRecord, UserRole, StaffUser, AuthUser } from '../types/clinical';
 import { toast } from 'react-toastify';
 
@@ -60,6 +61,9 @@ export default function Home() {
     deleteStaffUser
   } = useAuth();
 
+  const dispatch = useAppDispatch();
+  const historyList = useAppSelector((state) => state.clinical.historyList);
+
   // Active Module Tab: 0 = Prescription, 1 = Counselling, 2 = Diets, 3 = Staff Management
   const [activeModuleTab, setActiveModuleTab] = useState<number>(0);
 
@@ -69,12 +73,26 @@ export default function Home() {
   const [printModalOpen, setPrintModalOpen] = useState<boolean>(false);
   const [copilotOpen, setCopilotOpen] = useState<boolean>(false);
 
+  // Prevent hydration mismatch: only render client-specific content after mount
+  const [mounted, setMounted] = useState<boolean>(false);
+  useEffect(() => { setMounted(true); }, []);
+
   // Redirect to dedicated login page if not authenticated
   useEffect(() => {
-    if (!currentUser) {
+    if (mounted && !currentUser) {
       router.push('/login');
     }
-  }, [currentUser, router]);
+  }, [mounted, currentUser, router]);
+
+  // Before client hydration, always render a consistent loading state (prevents server/client HTML mismatch)
+  if (!mounted) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', flexDirection: 'column' }}>
+        <CircularProgress color="primary" sx={{ mb: 2 }} />
+        <Typography variant="body1" color="text.secondary">Loading Arpan Clinical Assistant...</Typography>
+      </Box>
+    );
+  }
 
   // If we are redirecting, don't render the dashboard to prevent flash
   if (!currentUser) {
@@ -113,13 +131,28 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to analyze prescription');
       }
-      
+
       const result = await response.json();
       setAnalysisResult(result);
+
+      // Record consultation into dynamic Redux state
+      dispatch(addHistoryRecord({
+        id: `RX-${Math.floor(1000 + Math.random() * 9000)}`,
+        patientName: formData.patientName || 'Consultation Patient',
+        age: Number(formData.age) || 45,
+        gender: formData.gender || 'Other',
+        disease: formData.disease || 'General Diagnosis',
+        medCount: formData.medications?.length || 0,
+        safetyScore: result.safetyScore || 85,
+        risk: result.riskCategory || 'OPTIMAL / LOW RISK',
+        color: result.statusColor || '#00C9A7',
+        date: new Date().toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' })
+      }));
+
       toast.success('AI Prescription Analysis Complete! View breakdown below.');
 
       const elem = document.getElementById('analysis-dashboard-section');
@@ -134,8 +167,53 @@ export default function Home() {
     }
   };
 
-  const handleAutoExtract = (extractedData: PatientInput) => {
-    handleAnalyze(extractedData);
+  // ─── SEND PDF/IMAGE DIRECTLY TO GEMINI AI ──────────────────────────────
+  const handleAnalyzeDocument = async (file: File) => {
+    setIsAnalyzing(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        body: fd
+        // Do NOT set Content-Type header — browser sets it automatically with boundary
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.message || 'Failed to analyze prescription document');
+      }
+
+      const result = await response.json();
+      setAnalysisResult(result);
+
+      // Record consultation into dynamic Redux state
+      dispatch(addHistoryRecord({
+        id: `RX-${Math.floor(1000 + Math.random() * 9000)}`,
+        patientName: result.patientInfo?.patientName || 'Prescription Patient',
+        age: Number(result.patientInfo?.age) || 0,
+        gender: result.patientInfo?.gender || 'Other',
+        disease: result.patientInfo?.disease || 'See AI Analysis',
+        medCount: result.medications?.length || 0,
+        safetyScore: result.safetyScore || 85,
+        risk: result.riskCategory || 'See Analysis',
+        color: result.statusColor || '#00C9A7',
+        date: new Date().toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' })
+      }));
+
+      toast.success('AI Prescription Analysis Complete! Full details extracted from document.');
+
+      const elem = document.getElementById('analysis-dashboard-section');
+      if (elem) {
+        elem.scrollIntoView({ behavior: 'smooth' });
+      }
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || 'Failed to analyze document. Ensure GEMINI_API_KEY is set in .env.local.');
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const handleResetAnalysis = () => {
@@ -257,332 +335,332 @@ export default function Home() {
         {/* LOGGED IN STATE: Render Modules & Dashboards */}
         <>
           {/* Top Hero Banner */}
-            <Paper
-              elevation={0}
-              sx={{
-                p: { xs: 2.5, md: 3 },
-                mb: 3.5,
-                borderRadius: 1,
-                background: mode === 'dark'
-                  ? 'linear-gradient(135deg, rgba(0, 201, 167, 0.12) 0%, rgba(108, 92, 231, 0.18) 100%)'
-                  : 'linear-gradient(135deg, rgba(0, 201, 167, 0.08) 0%, rgba(108, 92, 231, 0.08) 100%)',
-                border: mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 201, 167, 0.25)',
-                boxShadow: mode === 'dark' ? '0 12px 32px rgba(0, 0, 0, 0.3)' : '0 12px 32px rgba(0, 201, 167, 0.08)',
-                position: 'relative',
-                overflow: 'hidden'
-              }}
-            >
-              <Grid container spacing={3} alignItems="center" justifyContent="space-between">
-                {/* Left Title & OS Identifier */}
-                <Grid item xs={12} md={7}>
-                  <Stack direction="row" alignItems="center" spacing={2}>
+          <Paper
+            elevation={0}
+            sx={{
+              p: { xs: 2.5, md: 3 },
+              mb: 3.5,
+              borderRadius: 1,
+              background: mode === 'dark'
+                ? 'linear-gradient(135deg, rgba(0, 201, 167, 0.12) 0%, rgba(108, 92, 231, 0.18) 100%)'
+                : 'linear-gradient(135deg, rgba(0, 201, 167, 0.08) 0%, rgba(108, 92, 231, 0.08) 100%)',
+              border: mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 201, 167, 0.25)',
+              boxShadow: mode === 'dark' ? '0 12px 32px rgba(0, 0, 0, 0.3)' : '0 12px 32px rgba(0, 201, 167, 0.08)',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
+            <Grid container spacing={3} alignItems="center" justifyContent="space-between">
+              {/* Left Title & OS Identifier */}
+              <Grid item xs={12} md={7}>
+                <Stack direction="row" alignItems="center" spacing={2}>
 
-                    <Box>
-                      <Typography variant="h4" sx={{ fontWeight: 900, letterSpacing: '-0.02em', color: 'text.primary', fontSize: { xs: '1.5rem', sm: '1.9rem', md: '2.125rem' } }}>
-                        Welcome to Arpan Clinical Assistant
-                      </Typography>
-                      <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 0.8, mt: 0.3 }}>
-                        <Box component="span" sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#00C9A7', display: 'inline-block', flexShrink: 0 }} />
-                        Patient Care &amp; Clinical Management OS
-                      </Typography>
+                  <Box>
+                    <Typography variant="h4" sx={{ fontWeight: 900, letterSpacing: '-0.02em', color: 'text.primary', fontSize: { xs: '1.5rem', sm: '1.9rem', md: '2.125rem' } }}>
+                      Welcome to Arpan Clinical Assistant
+                    </Typography>
+                    <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 0.8, mt: 0.3 }}>
+                      <Box component="span" sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#00C9A7', display: 'inline-block', flexShrink: 0 }} />
+                      Patient Care &amp; Clinical Management OS
+                    </Typography>
+                  </Box>
+                </Stack>
+              </Grid>
+
+              {/* Right Profile & Active Permissions Card */}
+              <Grid item xs={12} md={5}>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 2,
+                    borderRadius: 1,
+                    bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.9)',
+                    backdropFilter: 'blur(12px)',
+                    border: '1px solid',
+                    borderColor: userRole === 'Doctor' ? 'rgba(0, 201, 167, 0.35)' : 'rgba(108, 92, 231, 0.35)',
+                    boxShadow: userRole === 'Doctor' ? '0 4px 20px rgba(0, 201, 167, 0.1)' : '0 4px 20px rgba(108, 92, 231, 0.1)'
+                  }}
+                >
+                  <Stack direction="row" alignItems="center" spacing={2}>
+                    <Avatar
+                      sx={{
+                        width: 48,
+                        height: 48,
+                        bgcolor: userRole === 'Doctor' ? '#00C9A7' : '#6C5CE7',
+                        color: '#FFF',
+                        fontWeight: 800,
+                        fontSize: '1.05rem',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                      }}
+                    >
+                      {currentUser.name.replace('Dr. ', '').replace('Nurse ', '').slice(0, 2).toUpperCase()}
+                    </Avatar>
+
+                    <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                      <Stack direction="row" alignItems="center" justifyContent="space-between" mb={0.3}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 800, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {currentUser.name}
+                        </Typography>
+                        <Chip
+                          label={currentUser.role}
+                          size="small"
+                          color={userRole === 'Doctor' ? 'primary' : 'secondary'}
+                          sx={{ fontWeight: 800, fontSize: '0.65rem', height: 20 }}
+                        />
+                      </Stack>
+
+                      <Stack direction="row" alignItems="center" spacing={{ xs: 0.5, sm: 1 }} mb={1} flexWrap="wrap">
+                        <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
+                          ID: <strong>{currentUser.staffId}</strong>
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: 'text.disabled', display: { xs: 'none', sm: 'inline' } }}>•</Typography>
+                        <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: { xs: 'none', sm: 'inline' } }}>
+                          {currentUser.department}
+                        </Typography>
+                      </Stack>
+
+                      <Box sx={{ pt: 0.8, borderTop: '1px solid rgba(255, 255, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Typography variant="caption" sx={{ fontWeight: 800, color: userRole === 'Doctor' ? '#00C9A7' : '#6C5CE7', letterSpacing: 0.5 }}>
+                          PERMISSIONS:
+                        </Typography>
+                        <Chip
+                          icon={<VerifiedUser sx={{ fontSize: '12px !important' }} />}
+                          label={userPerm}
+                          size="small"
+                          variant="outlined"
+                          color={userRole === 'Doctor' ? 'primary' : 'secondary'}
+                          sx={{ fontWeight: 800, fontSize: '0.7rem', height: 22 }}
+                        />
+                      </Box>
                     </Box>
                   </Stack>
-                </Grid>
+                </Paper>
+              </Grid>
+            </Grid>
+          </Paper>
 
-                {/* Right Profile & Active Permissions Card */}
-                <Grid item xs={12} md={5}>
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      p: 2,
-                      borderRadius: 1,
-                      bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.9)',
-                      backdropFilter: 'blur(12px)',
-                      border: '1px solid',
-                      borderColor: userRole === 'Doctor' ? 'rgba(0, 201, 167, 0.35)' : 'rgba(108, 92, 231, 0.35)',
-                      boxShadow: userRole === 'Doctor' ? '0 4px 20px rgba(0, 201, 167, 0.1)' : '0 4px 20px rgba(108, 92, 231, 0.1)'
-                    }}
-                  >
-                    <Stack direction="row" alignItems="center" spacing={2}>
-                      <Avatar
+          {/* MAIN WORKSPACE MODULE SELECTOR CARDS (3 CLINICAL MODULES) - Only show when NOT in Staff Management */}
+          {activeModuleTab !== 3 && (
+            <>
+              <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 1 }}>
+                Clinical Workspaces & Active Modules:
+              </Typography>
+
+              <Grid container spacing={2.5} mb={4}>
+                {sortedModules.map((mod, index) => (
+                  <Grid item xs={12} sm={4} key={mod.id}>
+                    <Tooltip
+                      title={mod.canAccess ? `Switch to ${mod.name} module workspace` : `${mod.name} module is locked for '${userPerm}' permissions`}
+                      arrow
+                      placement="top"
+                    >
+                      <Paper
+                        variant="outlined"
+                        onClick={() => mod.canAccess && setActiveModuleTab(mod.id)}
                         sx={{
-                          width: 48,
-                          height: 48,
-                          bgcolor: userRole === 'Doctor' ? '#00C9A7' : '#6C5CE7',
-                          color: '#FFF',
-                          fontWeight: 800,
-                          fontSize: '1.05rem',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                          p: 2.5,
+                          borderRadius: 1.5,
+                          cursor: mod.canAccess ? 'pointer' : 'not-allowed',
+                          bgcolor: activeModuleTab === mod.id ? mod.bgActive : 'background.paper',
+                          borderColor: activeModuleTab === mod.id ? mod.activeColor : mod.canAccess ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 77, 109, 0.3)',
+                          borderWidth: activeModuleTab === mod.id ? 2 : 1,
+                          transition: 'all 0.2s ease-in-out',
+                          opacity: mod.canAccess ? 1 : 0.6,
+                          '&:hover': {
+                            borderColor: mod.canAccess ? mod.activeColor : 'rgba(255, 77, 109, 0.5)',
+                            transform: mod.canAccess ? 'translateY(-3px)' : 'none'
+                          }
                         }}
                       >
-                        {currentUser.name.replace('Dr. ', '').replace('Nurse ', '').slice(0, 2).toUpperCase()}
-                      </Avatar>
-
-                      <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={0.3}>
-                          <Typography variant="subtitle1" sx={{ fontWeight: 800, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {currentUser.name}
-                          </Typography>
+                        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
+                          <Box sx={{ width: 42, height: 42, borderRadius: 1.5, bgcolor: mod.bgIcon, color: mod.activeColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {mod.icon}
+                          </Box>
                           <Chip
-                            label={currentUser.role}
+                            label={mod.canAccess ? (activeModuleTab === mod.id ? 'ACTIVE' : 'READY') : 'LOCKED'}
                             size="small"
-                            color={userRole === 'Doctor' ? 'primary' : 'secondary'}
-                            sx={{ fontWeight: 800, fontSize: '0.65rem', height: 20 }}
+                            color={mod.canAccess ? (activeModuleTab === mod.id ? mod.chipColor : 'default') : 'error'}
+                            sx={{ fontWeight: 800, fontSize: '0.65rem' }}
                           />
                         </Stack>
-
-                        <Stack direction="row" alignItems="center" spacing={{ xs: 0.5, sm: 1 }} mb={1} flexWrap="wrap">
-                          <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
-                            ID: <strong>{currentUser.staffId}</strong>
-                          </Typography>
-                          <Typography variant="caption" sx={{ color: 'text.disabled', display: { xs: 'none', sm: 'inline' } }}>•</Typography>
-                          <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: { xs: 'none', sm: 'inline' } }}>
-                            {currentUser.department}
-                          </Typography>
-                        </Stack>
-
-                        <Box sx={{ pt: 0.8, borderTop: '1px solid rgba(255, 255, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <Typography variant="caption" sx={{ fontWeight: 800, color: userRole === 'Doctor' ? '#00C9A7' : '#6C5CE7', letterSpacing: 0.5 }}>
-                            PERMISSIONS:
-                          </Typography>
-                          <Chip
-                            icon={<VerifiedUser sx={{ fontSize: '12px !important' }} />}
-                            label={userPerm}
-                            size="small"
-                            variant="outlined"
-                            color={userRole === 'Doctor' ? 'primary' : 'secondary'}
-                            sx={{ fontWeight: 800, fontSize: '0.7rem', height: 22 }}
-                          />
-                        </Box>
-                      </Box>
-                    </Stack>
-                  </Paper>
-                </Grid>
+                        <Typography variant="h6" sx={{ fontWeight: 800, fontSize: '1.05rem', mb: 0.5 }}>
+                          {index + 1}. {mod.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.4 }}>
+                          {mod.desc}
+                        </Typography>
+                      </Paper>
+                    </Tooltip>
+                  </Grid>
+                ))}
               </Grid>
-            </Paper>
+            </>
+          )}
 
-            {/* MAIN WORKSPACE MODULE SELECTOR CARDS (3 CLINICAL MODULES) - Only show when NOT in Staff Management */}
-            {activeModuleTab !== 3 && (
-              <>
-                <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 1 }}>
-                  Clinical Workspaces & Active Modules:
-                </Typography>
-
-                <Grid container spacing={2.5} mb={4}>
-                  {sortedModules.map((mod, index) => (
-                    <Grid item xs={12} sm={4} key={mod.id}>
-                      <Tooltip
-                        title={mod.canAccess ? `Switch to ${mod.name} module workspace` : `${mod.name} module is locked for '${userPerm}' permissions`}
-                        arrow
-                        placement="top"
-                      >
-                        <Paper
-                          variant="outlined"
-                          onClick={() => mod.canAccess && setActiveModuleTab(mod.id)}
-                          sx={{
-                            p: 2.5,
-                            borderRadius: 1.5,
-                            cursor: mod.canAccess ? 'pointer' : 'not-allowed',
-                            bgcolor: activeModuleTab === mod.id ? mod.bgActive : 'background.paper',
-                            borderColor: activeModuleTab === mod.id ? mod.activeColor : mod.canAccess ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 77, 109, 0.3)',
-                            borderWidth: activeModuleTab === mod.id ? 2 : 1,
-                            transition: 'all 0.2s ease-in-out',
-                            opacity: mod.canAccess ? 1 : 0.6,
-                            '&:hover': {
-                              borderColor: mod.canAccess ? mod.activeColor : 'rgba(255, 77, 109, 0.5)',
-                              transform: mod.canAccess ? 'translateY(-3px)' : 'none'
-                            }
-                          }}
-                        >
-                          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
-                            <Box sx={{ width: 42, height: 42, borderRadius: 1.5, bgcolor: mod.bgIcon, color: mod.activeColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              {mod.icon}
-                            </Box>
-                            <Chip
-                              label={mod.canAccess ? (activeModuleTab === mod.id ? 'ACTIVE' : 'READY') : 'LOCKED'}
-                              size="small"
-                              color={mod.canAccess ? (activeModuleTab === mod.id ? mod.chipColor : 'default') : 'error'}
-                              sx={{ fontWeight: 800, fontSize: '0.65rem' }}
-                            />
-                          </Stack>
-                          <Typography variant="h6" sx={{ fontWeight: 800, fontSize: '1.05rem', mb: 0.5 }}>
-                            {index + 1}. {mod.name}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.4 }}>
-                            {mod.desc}
-                          </Typography>
-                        </Paper>
-                      </Tooltip>
-                    </Grid>
-                  ))}
-                </Grid>
-              </>
-            )}
-
-            {/* MODULE 0: PRESCRIPTION MODULE */}
-            {activeModuleTab === 0 && (
-              <Box>
-                {canAccessPrescriptions ? (
-                  <>
-                    {/* Prescription Form + Scanner */}
-                    <Grid container spacing={3.5} mb={4}>
-                      <Grid item xs={12} lg={8}>
-                        <PatientPrescriptionForm
-                          onAnalyze={handleAnalyze}
-                          onReset={handleResetAnalysis}
-                          isAnalyzing={isAnalyzing}
-                        />
-                      </Grid>
-
-                      <Grid item xs={12} lg={4} id="uploader-section">
-                        <PrescriptionUploader
-                          onAutoExtract={handleAutoExtract}
-                          onReset={handleResetAnalysis}
-                          isAnalyzing={isAnalyzing}
-                        />
-                      </Grid>
+          {/* MODULE 0: PRESCRIPTION MODULE */}
+          {activeModuleTab === 0 && (
+            <Box>
+              {canAccessPrescriptions ? (
+                <>
+                  {/* Prescription Form + Scanner */}
+                  <Grid container spacing={3.5} mb={4}>
+                    <Grid item xs={12} lg={8}>
+                      <PatientPrescriptionForm
+                        onAnalyze={handleAnalyze}
+                        onReset={handleResetAnalysis}
+                        isAnalyzing={isAnalyzing}
+                      />
                     </Grid>
 
-                    {/* AI Analysis Dashboard */}
-                    {analysisResult && (
-                      <Box id="analysis-dashboard-section" sx={{ mt: 4 }}>
-                        <AiAnalysisDashboard
-                          analysisResult={analysisResult}
-                          onOpenPrintModal={() => setPrintModalOpen(true)}
-                          onOpenCopilot={() => setCopilotOpen(true)}
-                        />
-                      </Box>
-                    )}
+                    <Grid item xs={12} lg={4} id="uploader-section">
+                      <PrescriptionUploader
+                        onAnalyzeDocument={handleAnalyzeDocument}
+                        onReset={handleResetAnalysis}
+                        isAnalyzing={isAnalyzing}
+                      />
+                    </Grid>
+                  </Grid>
 
-                    {/* History Table */}
-                    {/* <HistoryTable onLoadRecord={handleLoadHistoryRecord} /> */}
-                  </>
-                ) : (
-                  /* Module Permission Restricted Card */
-                  <Paper variant="outlined" sx={{ p: 5, borderRadius: 1, textAlign: 'center', bgcolor: 'rgba(255, 77, 109, 0.04)', borderColor: 'rgba(255, 77, 109, 0.3)', my: 4 }}>
-                    <Box sx={{ width: 64, height: 64, borderRadius: '50%', bgcolor: 'rgba(255, 77, 109, 0.15)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
-                      <Lock sx={{ color: '#FF4D6D', fontSize: 36 }} />
+                  {/* AI Analysis Dashboard */}
+                  {analysisResult && (
+                    <Box id="analysis-dashboard-section" sx={{ mt: 4 }}>
+                      <AiAnalysisDashboard
+                        analysisResult={analysisResult}
+                        onOpenPrintModal={() => setPrintModalOpen(true)}
+                        onOpenCopilot={() => setCopilotOpen(true)}
+                      />
                     </Box>
-                    <Typography variant="h5" sx={{ fontWeight: 800, mb: 1, color: '#FF4D6D' }}>
-                      Prescription Module Access Restricted
-                    </Typography>
-                    <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto', mb: 3 }}>
-                      Logged in as <strong>{currentUser.name}</strong> with <strong>'{userPerm}'</strong> permissions. Prescription creation is restricted.
-                    </Typography>
+                  )}
 
-                    <Stack direction="row" spacing={2} justifyContent="center">
-                      {canAccessCounselling && (
-                        <Button variant="contained" color="secondary" startIcon={<MedicalServices />} onClick={() => setActiveModuleTab(1)}>
-                          Open Counselling Module
-                        </Button>
-                      )}
-                      {canAccessDiets && (
-                        <Button variant="outlined" color="primary" startIcon={<Restaurant />} onClick={() => setActiveModuleTab(2)}>
-                          Open Diets Module
-                        </Button>
-                      )}
-                    </Stack>
-                  </Paper>
-                )}
-              </Box>
-            )}
+                  {/* Dynamic Consultation History Table */}
+                  {/* <HistoryTable historyList={historyList} onLoadRecord={handleLoadHistoryRecord} /> */}
+                </>
+              ) : (
+                /* Module Permission Restricted Card */
+                <Paper variant="outlined" sx={{ p: 5, borderRadius: 1, textAlign: 'center', bgcolor: 'rgba(255, 77, 109, 0.04)', borderColor: 'rgba(255, 77, 109, 0.3)', my: 4 }}>
+                  <Box sx={{ width: 64, height: 64, borderRadius: '50%', bgcolor: 'rgba(255, 77, 109, 0.15)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
+                    <Lock sx={{ color: '#FF4D6D', fontSize: 36 }} />
+                  </Box>
+                  <Typography variant="h5" sx={{ fontWeight: 800, mb: 1, color: '#FF4D6D' }}>
+                    Prescription Module Access Restricted
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto', mb: 3 }}>
+                    Logged in as <strong>{currentUser.name}</strong> with <strong>'{userPerm}'</strong> permissions. Prescription creation is restricted.
+                  </Typography>
 
-            {/* MODULE 1: COUNSELLING MODULE */}
-            {activeModuleTab === 1 && (
-              <Box sx={{ mt: 2 }}>
-                {canAccessCounselling ? (
-                  <CounsellingModule
-                    patientName={analysisResult?.patientInfo?.patientName || 'Robert Vance'}
-                    patientAge={analysisResult?.patientInfo?.age || 58}
-                    patientDisease={analysisResult?.patientInfo?.disease || 'Essential Hypertension, Type 2 Diabetes'}
-                  />
-                ) : (
-                  <Paper variant="outlined" sx={{ p: 5, borderRadius: 1, textAlign: 'center', bgcolor: 'rgba(255, 77, 109, 0.04)', borderColor: 'rgba(255, 77, 109, 0.3)', my: 4 }}>
-                    <Lock sx={{ color: '#FF4D6D', fontSize: 40, mb: 1 }} />
-                    <Typography variant="h5" sx={{ fontWeight: 800, mb: 1, color: '#FF4D6D' }}>
-                      Counselling Module Access Restricted
-                    </Typography>
-                    <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto', mb: 2 }}>
-                      Your account <strong>{currentUser.name}</strong> is currently assigned <strong>'{userPerm}'</strong> permissions.
-                    </Typography>
-                    {canAccessDiets && (
-                      <Button variant="contained" color="primary" startIcon={<Restaurant />} onClick={() => setActiveModuleTab(2)}>
-                        Switch to Diets Module
-                      </Button>
-                    )}
-                  </Paper>
-                )}
-              </Box>
-            )}
-
-            {/* MODULE 2: DIETS MODULE */}
-            {activeModuleTab === 2 && (
-              <Box sx={{ mt: 2 }}>
-                {canAccessDiets ? (
-                  <DietsModule
-                    patientName={analysisResult?.patientInfo?.patientName || 'Robert Vance'}
-                    patientAge={analysisResult?.patientInfo?.age || 58}
-                    patientDisease={analysisResult?.patientInfo?.disease || 'Essential Hypertension, Type 2 Diabetes'}
-                  />
-                ) : (
-                  <Paper variant="outlined" sx={{ p: 5, borderRadius: 1, textAlign: 'center', bgcolor: 'rgba(255, 77, 109, 0.04)', borderColor: 'rgba(255, 77, 109, 0.3)', my: 4 }}>
-                    <Lock sx={{ color: '#FF4D6D', fontSize: 40, mb: 1 }} />
-                    <Typography variant="h5" sx={{ fontWeight: 800, mb: 1, color: '#FF4D6D' }}>
-                      Diets Module Access Restricted
-                    </Typography>
-                    <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto', mb: 2 }}>
-                      Your account <strong>{currentUser.name}</strong> is currently assigned <strong>'{userPerm}'</strong> permissions.
-                    </Typography>
+                  <Stack direction="row" spacing={2} justifyContent="center">
                     {canAccessCounselling && (
                       <Button variant="contained" color="secondary" startIcon={<MedicalServices />} onClick={() => setActiveModuleTab(1)}>
-                        Switch to Counselling Module
+                        Open Counselling Module
                       </Button>
                     )}
-                  </Paper>
-                )}
-              </Box>
-            )}
-
-            {/* STAFF & USER MANAGEMENT CENTER PAGE (ACCESSED VIA HEADER BUTTON) */}
-            {activeModuleTab === 3 && (
-              <Box sx={{ mt: 2 }}>
-                <Paper variant="outlined" sx={{ p: 2, mb: 3, borderRadius: 1, bgcolor: 'rgba(108, 92, 231, 0.08)', borderColor: '#6C5CE7', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#6C5CE7' }}>
-                    Admin Staff & User Management Workspace
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={<ArrowForward sx={{ transform: 'rotate(180deg)' }} />}
-                    onClick={() => setActiveModuleTab(0)}
-                    sx={{ borderRadius: 1, fontWeight: 800 }}
-                  >
-                    Return to Patient Clinical Workspaces
-                  </Button>
+                    {canAccessDiets && (
+                      <Button variant="outlined" color="primary" startIcon={<Restaurant />} onClick={() => setActiveModuleTab(2)}>
+                        Open Diets Module
+                      </Button>
+                    )}
+                  </Stack>
                 </Paper>
+              )}
+            </Box>
+          )}
 
-                {canAccessStaffMgmt ? (
-                  <StaffManagementModule
-                    staffList={staffList}
-                    onAddStaff={handleAddStaff}
-                    onToggleStatus={handleToggleStaffStatus}
-                    onUpdateStaff={handleUpdateStaff}
-                    onDeleteStaff={handleDeleteStaff}
-                  />
-                ) : (
-                  <Paper variant="outlined" sx={{ p: 5, borderRadius: 1, textAlign: 'center', bgcolor: 'rgba(255, 77, 109, 0.04)', borderColor: 'rgba(255, 77, 109, 0.3)', my: 4 }}>
-                    <Lock sx={{ color: '#FF4D6D', fontSize: 40, mb: 1 }} />
-                    <Typography variant="h5" sx={{ fontWeight: 800, mb: 1, color: '#FF4D6D' }}>
-                      Staff & User Management Restricted to Doctor Access
-                    </Typography>
-                    <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto', mb: 2 }}>
-                      Your account <strong>{currentUser.name}</strong> has <strong>'{userPerm}'</strong> permissions. Admin staff management is reserved for attending Physicians.
-                    </Typography>
-                  </Paper>
-                )}
-              </Box>
-            )}
-          </>
+          {/* MODULE 1: COUNSELLING MODULE */}
+          {activeModuleTab === 1 && (
+            <Box sx={{ mt: 2 }}>
+              {canAccessCounselling ? (
+                <CounsellingModule
+                  patientName={analysisResult?.patientInfo?.patientName || 'Robert Vance'}
+                  patientAge={analysisResult?.patientInfo?.age || 58}
+                  patientDisease={analysisResult?.patientInfo?.disease || 'Essential Hypertension, Type 2 Diabetes'}
+                />
+              ) : (
+                <Paper variant="outlined" sx={{ p: 5, borderRadius: 1, textAlign: 'center', bgcolor: 'rgba(255, 77, 109, 0.04)', borderColor: 'rgba(255, 77, 109, 0.3)', my: 4 }}>
+                  <Lock sx={{ color: '#FF4D6D', fontSize: 40, mb: 1 }} />
+                  <Typography variant="h5" sx={{ fontWeight: 800, mb: 1, color: '#FF4D6D' }}>
+                    Counselling Module Access Restricted
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto', mb: 2 }}>
+                    Your account <strong>{currentUser.name}</strong> is currently assigned <strong>'{userPerm}'</strong> permissions.
+                  </Typography>
+                  {canAccessDiets && (
+                    <Button variant="contained" color="primary" startIcon={<Restaurant />} onClick={() => setActiveModuleTab(2)}>
+                      Switch to Diets Module
+                    </Button>
+                  )}
+                </Paper>
+              )}
+            </Box>
+          )}
+
+          {/* MODULE 2: DIETS MODULE */}
+          {activeModuleTab === 2 && (
+            <Box sx={{ mt: 2 }}>
+              {canAccessDiets ? (
+                <DietsModule
+                  patientName={analysisResult?.patientInfo?.patientName || 'Robert Vance'}
+                  patientAge={analysisResult?.patientInfo?.age || 58}
+                  patientDisease={analysisResult?.patientInfo?.disease || 'Essential Hypertension, Type 2 Diabetes'}
+                />
+              ) : (
+                <Paper variant="outlined" sx={{ p: 5, borderRadius: 1, textAlign: 'center', bgcolor: 'rgba(255, 77, 109, 0.04)', borderColor: 'rgba(255, 77, 109, 0.3)', my: 4 }}>
+                  <Lock sx={{ color: '#FF4D6D', fontSize: 40, mb: 1 }} />
+                  <Typography variant="h5" sx={{ fontWeight: 800, mb: 1, color: '#FF4D6D' }}>
+                    Diets Module Access Restricted
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto', mb: 2 }}>
+                    Your account <strong>{currentUser.name}</strong> is currently assigned <strong>'{userPerm}'</strong> permissions.
+                  </Typography>
+                  {canAccessCounselling && (
+                    <Button variant="contained" color="secondary" startIcon={<MedicalServices />} onClick={() => setActiveModuleTab(1)}>
+                      Switch to Counselling Module
+                    </Button>
+                  )}
+                </Paper>
+              )}
+            </Box>
+          )}
+
+          {/* STAFF & USER MANAGEMENT CENTER PAGE (ACCESSED VIA HEADER BUTTON) */}
+          {activeModuleTab === 3 && (
+            <Box sx={{ mt: 2 }}>
+              <Paper variant="outlined" sx={{ p: 2, mb: 3, borderRadius: 1, bgcolor: 'rgba(108, 92, 231, 0.08)', borderColor: '#6C5CE7', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#6C5CE7' }}>
+                  Admin Staff & User Management Workspace
+                </Typography>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<ArrowForward sx={{ transform: 'rotate(180deg)' }} />}
+                  onClick={() => setActiveModuleTab(0)}
+                  sx={{ borderRadius: 1, fontWeight: 800 }}
+                >
+                  Return to Patient Clinical Workspaces
+                </Button>
+              </Paper>
+
+              {canAccessStaffMgmt ? (
+                <StaffManagementModule
+                  staffList={staffList}
+                  onAddStaff={handleAddStaff}
+                  onToggleStatus={handleToggleStaffStatus}
+                  onUpdateStaff={handleUpdateStaff}
+                  onDeleteStaff={handleDeleteStaff}
+                />
+              ) : (
+                <Paper variant="outlined" sx={{ p: 5, borderRadius: 1, textAlign: 'center', bgcolor: 'rgba(255, 77, 109, 0.04)', borderColor: 'rgba(255, 77, 109, 0.3)', my: 4 }}>
+                  <Lock sx={{ color: '#FF4D6D', fontSize: 40, mb: 1 }} />
+                  <Typography variant="h5" sx={{ fontWeight: 800, mb: 1, color: '#FF4D6D' }}>
+                    Staff & User Management Restricted to Doctor Access
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto', mb: 2 }}>
+                    Your account <strong>{currentUser.name}</strong> has <strong>'{userPerm}'</strong> permissions. Admin staff management is reserved for attending Physicians.
+                  </Typography>
+                </Paper>
+              )}
+            </Box>
+          )}
+        </>
       </Container>
 
       {/* Prescription Print Modal */}
