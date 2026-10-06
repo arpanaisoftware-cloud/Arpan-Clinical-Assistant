@@ -41,7 +41,7 @@ import LoginScreen from '../components/LoginScreen';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { ColorModeContext } from '../theme/ThemeRegistry';
-import { analyzePrescription, SAMPLE_CLINICAL_CASE } from '../mockData/aiAnalysisData';
+// Mock data import removed
 import { PatientInput, AnalysisResult, HistoryRecord, UserRole, StaffUser, AuthUser } from '../types/clinical';
 import { toast } from 'react-toastify';
 
@@ -105,19 +105,33 @@ export default function Home() {
     router.push('/login');
   };
 
-  const handleAnalyze = (formData: PatientInput) => {
+  const handleAnalyze = async (formData: PatientInput) => {
     setIsAnalyzing(true);
-    setTimeout(() => {
-      const result = analyzePrescription(formData, formData.medications);
+    try {
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to analyze prescription');
+      }
+      
+      const result = await response.json();
       setAnalysisResult(result);
-      setIsAnalyzing(false);
       toast.success('AI Prescription Analysis Complete! View breakdown below.');
 
       const elem = document.getElementById('analysis-dashboard-section');
       if (elem) {
         elem.scrollIntoView({ behavior: 'smooth' });
       }
-    }, 1000);
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to get AI analysis. Ensure GEMINI_API_KEY is set in .env.local.');
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const handleAutoExtract = (extractedData: PatientInput) => {
@@ -142,7 +156,7 @@ export default function Home() {
       weight: 70,
       allergies: 'Penicillin',
       disease: record.disease,
-      medications: SAMPLE_CLINICAL_CASE.medications
+      medications: [] // History record usually has medCount, would fetch actual meds from backend in real app
     };
     handleAnalyze(mockCase);
     toast.info(`Loaded record ${record.id} for ${record.patientName}`);
