@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     // Attempt sending email via Resend
     let emailSent = false;
     if (process.env.RESEND_API_KEY) {
-      await resend.emails.send({
+      const resendResponse = await resend.emails.send({
         from: 'Arpan Clinical Assistant <onboarding@resend.dev>',
         to: [cleanEmail],
         subject: 'Clinical Security Alert: Password Reset Request',
@@ -52,6 +52,14 @@ export async function POST(req: Request) {
           <p>This security token expires in 60 minutes.</p>
         `,
       });
+      
+      if (resendResponse.error) {
+        console.error('Resend API Error:', resendResponse.error);
+        return NextResponse.json({ 
+          message: 'Failed to dispatch email. If you are using a test Resend API key, you can only send emails to your verified Resend account email address.', 
+          error: resendResponse.error 
+        }, { status: 400 });
+      }
       emailSent = true;
     } else {
       console.warn('RESEND_API_KEY is missing, email not sent');
