@@ -130,21 +130,6 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasswor
         return;
       } else {
         const errorMsg = resultAction.payload as string;
-        // Check if offline/local fallback match
-        if ((userToLogin as any).password === password) {
-          const authenticatedUser: AuthUser = {
-            id: userToLogin.id,
-            name: userToLogin.name,
-            staffId: userToLogin.staffId,
-            role: userToLogin.role,
-            modulePermissions: userToLogin.modulePermissions || (userToLogin.role === 'Doctor' ? 'Full Access' : 'Counselling + Diets'),
-            department: userToLogin.department
-          };
-          toast.success(`Signed in as ${userToLogin.name}`);
-          onLoginSuccess(authenticatedUser);
-          return;
-        }
-
         setFormErrors({ password: errorMsg || 'Incorrect password entered.' });
         toast.error(errorMsg || 'Incorrect password entered.');
       }

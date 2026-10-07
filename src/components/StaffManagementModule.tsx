@@ -99,6 +99,11 @@ export default function StaffManagementModule({
   // Recently created user credential slip state
   const [issuedUser, setIssuedUser] = useState<StaffUser | null>(null);
 
+  const totalUsers = staffList.length;
+  const doctorCount = staffList.filter(u => u.role === 'Doctor').length;
+  const isMaxUsersReached = !editingUserId && totalUsers >= 5;
+  const isDoctorRoleDisabled = !editingUserId && doctorCount >= 1 && role !== 'Doctor';
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
@@ -310,6 +315,14 @@ export default function StaffManagementModule({
             <PersonAdd fontSize="small" /> Issue Login Credentials & Access Level
           </Typography>
 
+          {isMaxUsersReached && (
+            <Box sx={{ p: 2, mb: 3, borderRadius: 1, bgcolor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+              <Typography variant="body2" sx={{ color: '#EF4444', fontWeight: 800 }}>
+                Note: Maximum limit of 5 users reached. You cannot add any more staff members or doctors.
+              </Typography>
+            </Box>
+          )}
+
           <form onSubmit={handleCreate}>
             <Grid container spacing={2.5}>
               <Grid item xs={12} sm={6} md={4}>
@@ -421,7 +434,7 @@ export default function StaffManagementModule({
                     <em>Select System Role</em>
                   </MenuItem>
                   <MenuItem value="Staff">Staff (Granular Access)</MenuItem>
-                  <MenuItem value="Doctor">Doctor (Full Access)</MenuItem>
+                  <MenuItem value="Doctor" disabled={isDoctorRoleDisabled}>Doctor (Full Access) {isDoctorRoleDisabled ? '- Limit Reached' : ''}</MenuItem>
                 </TextField>
               </Grid>
 
@@ -450,10 +463,12 @@ export default function StaffManagementModule({
               </Grid>
 
               <Grid item xs={12}>
-                <Tooltip title={editingUserId ? "Update existing staff member profile" : "Create staff user profile and issue Login ID with Password and Email"} arrow placement="top">
-                  <Button variant="contained" color="primary" type="submit" startIcon={editingUserId ? <Edit /> : <PersonAdd />} sx={{ borderRadius: 1, height: 42, px: 3, fontWeight: 800, width: { xs: '100%', sm: 'auto' } }}>
-                    {editingUserId ? "Update Credentials & Profile" : "Issue Credentials & Access Account"}
-                  </Button>
+                <Tooltip title={isMaxUsersReached ? "User limit reached" : editingUserId ? "Update existing staff member profile" : "Create staff user profile and issue Login ID with Password and Email"} arrow placement="top">
+                  <span>
+                    <Button variant="contained" color="primary" type="submit" disabled={isMaxUsersReached} startIcon={editingUserId ? <Edit /> : <PersonAdd />} sx={{ borderRadius: 1, height: 42, px: 3, fontWeight: 800, width: { xs: '100%', sm: 'auto' } }}>
+                      {editingUserId ? "Update Credentials & Profile" : "Issue Credentials & Access Account"}
+                    </Button>
+                  </span>
                 </Tooltip>
               </Grid>
             </Grid>

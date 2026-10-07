@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import connectDB from '@/lib/db';
 import User from '@/models/User';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_key_for_arpan_clinical';
 
-export async function GET(req: Request) {
+export async function POST(req: Request) {
   try {
     const authHeader = req.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -20,33 +21,35 @@ export async function GET(req: Request) {
       return NextResponse.json({ message: 'Invalid or expired token' }, { status: 401 });
     }
 
-    await connectDB();
-    const user = await User.findById(decoded.id).select('-password');
-    if (!user) {
-      return NextResponse.json({ message: 'User not found' }, { status: 404 });
+    const body = await req.json();
+    const { currentPassword, newPassword } = body;
+
+    if (!currentPassword || !newPassword) {
+      return NextResponse.json({ message: 'Missing currentPassword or newPassword' }, { status: 400 });
     }
 
-    if (!user.active) {
-      return NextResponse.json({ message: 'Account is deactivated' }, { status: 403 });
+    await connectDB();
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return NextResponse.json({ message: 'User not found' }, { status: 404 });
     }
 
     if (user.activeSessionId && decoded.sessionId && user.activeSessionId !== decoded.sessionId) {
       return NextResponse.json({ message: 'Session expired. Logged in from another device.' }, { status: 401 });
     }
 
-    return NextResponse.json({
-      user: {
-        id: user._id.toString(),
-        _id: user._id.toString(),
-        name: user.name,
-        email: user.email,
-        staffId: user.staffId,
-        department: user.department,
-        role: user.role,
-        modulePermissions: user.modulePermissions,
-        active: user.active
-      }
-    }, { status: 200 });
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return NextResponse.json({ message: 'Incorrect current password' }, { status: 401 });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    
+    // Optionally log out of other devices by changing sessionId, but keeping simple for now
+    await user.save();
+
+    return NextResponse.json({ message: 'Password changed successfully' }, { status: 200 });
   } catch (error: any) {
     return NextResponse.json({ message: 'Server error', error: error.message }, { status: 500 });
   }
