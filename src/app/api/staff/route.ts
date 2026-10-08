@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import connectDB from '@/lib/db';
 import User from '@/models/User';
+
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request) {
   try {
     await connectDB();
