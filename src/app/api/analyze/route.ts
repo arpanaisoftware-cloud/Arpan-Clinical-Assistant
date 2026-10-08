@@ -217,11 +217,11 @@ function enrichAnalysisResult(aiResult: any, incomingInput?: any): AnalysisResul
     : (inputInfo.medications && inputInfo.medications.length > 0)
       ? inputInfo.medications
       : [
-          { name: "Metformin", dosage: "1000mg", frequency: "Twice Daily", duration: "30 Days", timing: "With meals" },
-          { name: "Lisinopril", dosage: "10mg", frequency: "Once Daily", duration: "30 Days", timing: "Morning" },
-          { name: "Ibuprofen", dosage: "400mg", frequency: "Twice Daily", duration: "7 Days", timing: "After meals (For knee pain)" },
-          { name: "Atorvastatin", dosage: "20mg", frequency: "Once Daily", duration: "30 Days", timing: "At bedtime" }
-        ];
+        { name: "Metformin", dosage: "1000mg", frequency: "Twice Daily", duration: "30 Days", timing: "With meals" },
+        { name: "Lisinopril", dosage: "10mg", frequency: "Once Daily", duration: "30 Days", timing: "Morning" },
+        { name: "Ibuprofen", dosage: "400mg", frequency: "Twice Daily", duration: "7 Days", timing: "After meals (For knee pain)" },
+        { name: "Atorvastatin", dosage: "20mg", frequency: "Once Daily", duration: "30 Days", timing: "At bedtime" }
+      ];
 
   const enrichedPatientInfo: PatientInput = {
     patientName,

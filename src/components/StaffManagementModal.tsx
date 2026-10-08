@@ -91,6 +91,11 @@ export default function StaffManagementModal({
   // Recently created user credential slip state
   const [issuedUser, setIssuedUser] = useState<StaffUser | null>(null);
 
+  const totalUsers = staffList.length;
+  const doctorCount = staffList.filter(u => u.role === 'Doctor').length;
+  const isMaxUsersReached = totalUsers >= 5;
+  const isDoctorRoleDisabled = doctorCount >= 1;
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
@@ -256,6 +261,14 @@ export default function StaffManagementModal({
             <PersonAdd fontSize="small" /> Issue Login Credentials & Module Access
           </Typography>
 
+          {isMaxUsersReached && (
+            <Box sx={{ p: 2, mb: 3, borderRadius: 1, bgcolor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+              <Typography variant="body2" sx={{ color: '#EF4444', fontWeight: 800 }}>
+                Note: Maximum limit of 5 users reached. You cannot add any more staff members or doctors.
+              </Typography>
+            </Box>
+          )}
+
           <form onSubmit={handleCreate} noValidate>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
@@ -349,7 +362,7 @@ export default function StaffManagementModal({
                     <em>Select System Role</em>
                   </MenuItem>
                   <MenuItem value="Staff">Staff (Granular Access)</MenuItem>
-                  <MenuItem value="Doctor">Doctor (Full Access)</MenuItem>
+                  <MenuItem value="Doctor" disabled={isDoctorRoleDisabled}>Doctor (Full Access) {isDoctorRoleDisabled ? '- Limit Reached' : ''}</MenuItem>
                 </TextField>
               </Grid>
 
@@ -378,7 +391,7 @@ export default function StaffManagementModal({
               </Grid>
 
               <Grid item xs={12} textAlign="right" sx={{ mt: 1 }}>
-                <Button variant="contained" color="primary" type="submit" startIcon={<PersonAdd />} sx={{ borderRadius: 1, height: 42, px: 3, fontWeight: 800 }}>
+                <Button variant="contained" color="primary" type="submit" disabled={isMaxUsersReached} startIcon={<PersonAdd />} sx={{ borderRadius: 1, height: 42, px: 3, fontWeight: 800 }}>
                   Issue Credentials & Access
                 </Button>
               </Grid>

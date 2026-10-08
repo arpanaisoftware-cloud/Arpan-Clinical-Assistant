@@ -1,43 +1,6 @@
 import { StaffUser, RiskAssessmentItem, DietPlanItem } from '../types/clinical';
 
-export const INITIAL_STAFF_USERS: StaffUser[] = [
-  {
-    id: 'ST-101',
-    name: 'Nurse Alex Rivera',
-    staffId: 'STAFF-8921',
-    department: 'Diabetic & Chronic Care',
-    role: 'Staff',
-    modulePermissions: 'Counselling + Diets',
-    active: true,
-    createdAt: '2026-08-10',
-    password: 'staff123',
-    email: 'alex.rivera@arpanclinical.org'
-  },
-  {
-    id: 'ST-102',
-    name: 'Dietitian Priya Sharma',
-    staffId: 'STAFF-4402',
-    department: 'Clinical Nutrition & Metabolic Health',
-    role: 'Staff',
-    modulePermissions: 'Diets Only',
-    active: true,
-    createdAt: '2026-08-15',
-    password: 'staff123',
-    email: 'priya.sharma@arpanclinical.org'
-  },
-  {
-    id: 'ST-103',
-    name: 'Dr. Yashwant Dubey',
-    staffId: 'DOC-8849',
-    department: 'Chief Cardiology & Internal Medicine',
-    role: 'Doctor',
-    modulePermissions: 'Full Access',
-    active: true,
-    createdAt: '2026-01-01',
-    password: '00000000',
-    email: 'dr.yashwant@arpanclinical.org'
-  }
-];
+export const INITIAL_STAFF_USERS: StaffUser[] = [];
 
 export const COUNSELLING_RISK_DATABASE: RiskAssessmentItem[] = [
   {
