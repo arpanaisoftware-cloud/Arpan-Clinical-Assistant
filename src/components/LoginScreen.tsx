@@ -262,7 +262,13 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasswor
       >
         <Container maxWidth="xl">
           <Toolbar disableGutters sx={{ justifyContent: 'space-between', minHeight: 64, py: 0.5 }}>
-            <Stack direction="row" alignItems="center" spacing={1.5}>
+            <Stack
+              direction="row"
+              alignItems="center"
+              spacing={1.5}
+              onClick={() => router.push('/')}
+              sx={{ cursor: 'pointer', userSelect: 'none' }}
+            >
               <Box
                 sx={{
                   width: 40,

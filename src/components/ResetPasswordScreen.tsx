@@ -196,7 +196,13 @@ export default function ResetPasswordScreen({ token }: ResetPasswordScreenProps)
       >
         <Container maxWidth="xl">
           <Toolbar disableGutters sx={{ justifyContent: 'space-between', minHeight: 64, py: 0.5 }}>
-            <Stack direction="row" alignItems="center" spacing={1.5} sx={{ cursor: 'pointer' }} onClick={() => router.push('/login')}>
+            <Stack
+              direction="row"
+              alignItems="center"
+              spacing={1.5}
+              sx={{ cursor: 'pointer', userSelect: 'none' }}
+              onClick={() => router.push('/')}
+            >
               <Box
                 sx={{
                   width: 40,

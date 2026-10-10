@@ -25,6 +25,7 @@ import {
   SupervisorAccount,
   Logout
 } from '@mui/icons-material';
+import { useRouter } from 'next/navigation';
 import { AuthUser } from '../types/clinical';
 
 interface HeaderProps {
@@ -37,6 +38,7 @@ interface HeaderProps {
   currentUser: AuthUser | null;
   onLogout: () => void;
   onOpenManageStaff: () => void;
+  onHomeClick?: () => void;
 }
 
 export default function Header({
@@ -48,9 +50,18 @@ export default function Header({
   activeModuleTab,
   currentUser,
   onLogout,
-  onOpenManageStaff
+  onOpenManageStaff,
+  onHomeClick
 }: HeaderProps) {
+  const router = useRouter();
   const userRole = currentUser?.role || 'Doctor';
+
+  const handleLogoClick = () => {
+    if (onHomeClick) {
+      onHomeClick();
+    }
+    router.push('/');
+  };
 
   return (
     <AppBar
@@ -70,8 +81,14 @@ export default function Header({
     >
       <Container maxWidth="xl">
         <Toolbar disableGutters sx={{ justifyContent: 'space-between', minHeight: 70, py: 1 }}>
-          {/* Logo & Brand */}
-          <Stack direction="row" alignItems="center" spacing={1.5}>
+          {/* Logo & Brand (Clickable, redirects to Home page) */}
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={1.5}
+            onClick={handleLogoClick}
+            sx={{ cursor: 'pointer', userSelect: 'none' }}
+          >
             <Box
               sx={{
                 width: 44,

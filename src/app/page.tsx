@@ -328,6 +328,10 @@ export default function Home() {
           currentUser={currentUser}
           onLogout={handleLogout}
           onOpenManageStaff={() => router.push('/staff-management')}
+          onHomeClick={() => {
+            setActiveModuleTab(0);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
         />
       )}
 

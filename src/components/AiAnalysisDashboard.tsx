@@ -332,9 +332,7 @@ export default function AiAnalysisDashboard({
                     p: 2,
                     borderRadius: 1.5,
                     borderLeft: '4px solid #6C5CE7',
-                    bgcolor: isDark ? 'rgba(108,92,231,0.04)' : '#FFFFFF',
-                    transition: 'transform 0.2s',
-                    '&:hover': { transform: 'translateY(-2px)' }
+                    bgcolor: isDark ? 'rgba(108,92,231,0.04)' : '#FFFFFF'
                   }}
                 >
                   <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
@@ -361,9 +359,7 @@ export default function AiAnalysisDashboard({
                     p: 2,
                     borderRadius: 1.5,
                     borderLeft: `4px solid ${flaggedInteractions.length + flaggedAllergies.length > 0 ? '#FF4D6D' : '#00C9A7'}`,
-                    bgcolor: isDark ? 'rgba(255,255,255,0.02)' : '#FFFFFF',
-                    transition: 'transform 0.2s',
-                    '&:hover': { transform: 'translateY(-2px)' }
+                    bgcolor: isDark ? 'rgba(255,255,255,0.02)' : '#FFFFFF'
                   }}
                 >
                   <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
@@ -390,9 +386,7 @@ export default function AiAnalysisDashboard({
                     p: 2,
                     borderRadius: 1.5,
                     borderLeft: '4px solid #00C9A7',
-                    bgcolor: isDark ? 'rgba(0,201,167,0.04)' : '#FFFFFF',
-                    transition: 'transform 0.2s',
-                    '&:hover': { transform: 'translateY(-2px)' }
+                    bgcolor: isDark ? 'rgba(0,201,167,0.04)' : '#FFFFFF'
                   }}
                 >
                   <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
