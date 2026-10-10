@@ -118,8 +118,8 @@ export default function Home() {
     }
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     toast.info('Logged out from Arpan Clinical Assistant.');
     router.push('/login');
   };
@@ -138,14 +138,33 @@ export default function Home() {
   const handleAnalyze = async (formData: PatientInput) => {
     setIsAnalyzing(true);
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('arpan_auth_token') : '';
       const response = await fetch('/api/analyze', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token || ''}`,
+        },
         body: JSON.stringify(formData)
       });
 
       if (!response.ok) {
-        throw new Error('Failed to analyze prescription');
+        const errJson = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('arpan_auth_token');
+            localStorage.removeItem('arpan_auth_user');
+            window.dispatchEvent(
+              new CustomEvent('session-terminated-by-other-device', {
+                detail: {
+                  loggedOutByOtherDevice: !!errJson.loggedOutByOtherDevice,
+                  message: errJson.message || 'Your account has been logged in on another device. You have been automatically logged out.'
+                }
+              })
+            );
+          }
+        }
+        throw new Error(errJson.message || 'Failed to analyze prescription');
       }
 
       const result = await response.json();
@@ -168,9 +187,9 @@ export default function Home() {
       toast.success('AI Prescription Analysis Complete! View breakdown below.');
 
       scrollToAnalysis();
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error('Failed to get AI analysis. Ensure GEMINI_API_KEY is set in .env.local.');
+      toast.error(error.message || 'Failed to get AI analysis. Ensure GEMINI_API_KEY is set in .env.local.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -180,17 +199,35 @@ export default function Home() {
   const handleAnalyzeDocument = async (file: File) => {
     setIsAnalyzing(true);
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('arpan_auth_token') : '';
       const fd = new FormData();
       fd.append('file', file);
 
       const response = await fetch('/api/analyze', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token || ''}`,
+        },
         body: fd
         // Do NOT set Content-Type header — browser sets it automatically with boundary
       });
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('arpan_auth_token');
+            localStorage.removeItem('arpan_auth_user');
+            window.dispatchEvent(
+              new CustomEvent('session-terminated-by-other-device', {
+                detail: {
+                  loggedOutByOtherDevice: !!errData.loggedOutByOtherDevice,
+                  message: errData.message || 'Your account has been logged in on another device. You have been automatically logged out.'
+                }
+              })
+            );
+          }
+        }
         throw new Error(errData.message || 'Failed to analyze prescription document');
       }
 

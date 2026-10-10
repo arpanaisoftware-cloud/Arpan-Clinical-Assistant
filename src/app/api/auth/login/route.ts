@@ -10,20 +10,30 @@ export async function POST(req: Request) {
     await connectDB();
 
     const body = await req.json();
-    const identifier = body.email || body.staffId || body.identifier;
+    const cleanStaffId = body.staffId ? String(body.staffId).trim() : '';
+    const cleanEmail = body.email ? String(body.email).trim() : '';
+    const cleanIdentifier = body.identifier ? String(body.identifier).trim() : '';
     const { password } = body;
 
-    if (!identifier || !password) {
+    if ((!cleanStaffId && !cleanEmail && !cleanIdentifier) || !password) {
       return NextResponse.json({ message: 'Missing email/staff ID or password' }, { status: 400 });
     }
 
-    const cleanId = String(identifier).trim();
-    const user = await User.findOne({
-      $or: [
-        { email: { $regex: new RegExp(`^${cleanId}$`, 'i') } },
-        { staffId: { $regex: new RegExp(`^${cleanId}$`, 'i') } }
-      ]
-    });
+    const orConditions: any[] = [];
+    if (cleanStaffId) {
+      orConditions.push({ staffId: { $regex: new RegExp(`^${cleanStaffId}$`, 'i') } });
+    }
+    if (cleanEmail) {
+      orConditions.push({ email: { $regex: new RegExp(`^${cleanEmail}$`, 'i') } });
+    }
+    if (cleanIdentifier) {
+      orConditions.push(
+        { email: { $regex: new RegExp(`^${cleanIdentifier}$`, 'i') } },
+        { staffId: { $regex: new RegExp(`^${cleanIdentifier}$`, 'i') } }
+      );
+    }
+
+    const user = await User.findOne({ $or: orConditions });
 
     if (!user) {
       return NextResponse.json({ message: 'Invalid credentials. User not found.' }, { status: 401 });
@@ -38,13 +48,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: 'Invalid credentials. Incorrect password.' }, { status: 401 });
     }
 
-    if (user.activeSessionId) {
-      return NextResponse.json(
-        { message: 'This account is already logged in on another device or window. Please log out from the active session first.' },
-        { status: 403 }
-      );
-    }
-
+    // Always generate a fresh sessionId upon login to supersede any prior active device session
     const sessionId = crypto.randomUUID();
     user.activeSessionId = sessionId;
     await user.save();

@@ -24,7 +24,7 @@ export const fetchStaffList = createAsyncThunk<
   { rejectValue: string }
 >('staff/fetchStaffList', async (_, { rejectWithValue }) => {
   try {
-    const response = await axiosClient.get('/api/staff/public');
+    const response = await axiosClient.get('/api/all-staff');
     return response.data.staff || [];
   } catch (error: any) {
     return rejectWithValue(error.message || 'Failed to fetch staff list');

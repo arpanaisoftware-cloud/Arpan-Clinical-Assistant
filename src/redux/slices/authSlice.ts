@@ -39,15 +39,29 @@ const initialState: AuthState = {
 // Async Thunks
 export const loginUser = createAsyncThunk<
   { user: AuthUser; token: string; message: string },
-  { identifier: string; password: string },
+  { staffId?: string; email?: string; identifier?: string; password: string; forceLogout?: boolean },
   { rejectValue: string }
->('auth/loginUser', async ({ identifier, password }, { rejectWithValue }) => {
+>('auth/loginUser', async ({ staffId, email, identifier, password, forceLogout }, { rejectWithValue }) => {
   try {
-    const response = await axiosClient.post('/api/auth/login', {
-      email: identifier,
-      staffId: identifier,
+    const payload: { staffId?: string; email?: string; password: string; forceLogout?: boolean } = {
       password,
-    });
+      forceLogout: !!forceLogout
+    };
+    if (staffId) {
+      payload.staffId = staffId;
+    }
+    if (email) {
+      payload.email = email;
+    }
+    if (!staffId && !email && identifier) {
+      if (identifier.includes('@')) {
+        payload.email = identifier;
+      } else {
+        payload.staffId = identifier;
+      }
+    }
+
+    const response = await axiosClient.post('/api/auth/login', payload);
     const { user, token, message } = response.data;
     if (typeof window !== 'undefined') {
       localStorage.setItem('arpan_auth_token', token);
@@ -115,14 +129,34 @@ export const confirmPasswordReset = createAsyncThunk<
   }
 });
 
-export const logoutUser = createAsyncThunk<void, void, { rejectValue: string }>(
+export const logoutUser = createAsyncThunk<
+  void,
+  { userId?: string; email?: string; staffId?: string } | void,
+  { rejectValue: string }
+>(
   'auth/logoutUser',
-  async (_, { rejectWithValue }) => {
+  async (data, { getState }) => {
     try {
-      await axiosClient.post('/api/auth/logout');
+      const state: any = getState();
+      const currentUser = state?.auth?.currentUser;
+      const token = typeof window !== 'undefined' ? localStorage.getItem('arpan_auth_token') : null;
+
+      const payload = {
+        userId: data?.userId || currentUser?.id || currentUser?._id,
+        email: data?.email || currentUser?.email,
+        staffId: data?.staffId || currentUser?.staffId,
+      };
+
+      await axiosClient.post('/api/auth/logout', payload, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined
+      });
     } catch (error: any) {
-      console.warn('Logout API failed, proceeding with local logout', error);
-      // We don't reject here because we still want to clear local state
+      console.warn('Logout API failed, proceeding with client cleanup', error);
+    } finally {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('arpan_auth_user');
+        localStorage.removeItem('arpan_auth_token');
+      }
     }
   }
 );
@@ -204,10 +238,12 @@ const authSlice = createSlice({
       state.currentUser = action.payload;
     });
     builder.addCase(verifySession.rejected, (state) => {
-      // If token expired, clear token
+      // If session expired or superseded, clear token and current user
       state.token = null;
+      state.currentUser = null;
       if (typeof window !== 'undefined') {
         localStorage.removeItem('arpan_auth_token');
+        localStorage.removeItem('arpan_auth_user');
       }
     });
 

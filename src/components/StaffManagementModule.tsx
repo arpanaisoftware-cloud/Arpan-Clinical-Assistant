@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import * as Yup from 'yup';
 import {
   Card,
@@ -65,6 +65,25 @@ const staffSchema = Yup.object({
   }),
 });
 
+// ─── Helper to identify Super Admin accounts (Super Admin 1 & 2) ─────────────
+const isSuperAdminAccount = (user: StaffUser): boolean => {
+  const name = (user.name || '').toLowerCase().trim();
+  const staffId = (user.staffId || '').toLowerCase().trim();
+  const email = (user.email || '').toLowerCase().trim();
+
+  return (
+    name.includes('Super Admin') ||
+    name.includes('Super Admin 2') ||
+    name.includes('superadmin') ||
+    name.includes('admin 1') ||
+    name.includes('admin 2') ||
+    staffId === 'ADMIN' ||
+    staffId === 'ADMIN 2' ||
+    email === 'arpanaisoftware@gmail.com' ||
+    email === 'dikshajain9907580417@gmail.com'
+  );
+};
+
 type FormErrors = { name?: string; email?: string; department?: string; role?: string; permission?: string };
 
 interface StaffManagementModuleProps {
@@ -90,7 +109,7 @@ export default function StaffManagementModule({
   const [role, setRole] = useState<UserRole | ''>('');
   const [permission, setPermission] = useState<ModulePermission | ''>('');
   const [errors, setErrors] = useState<FormErrors>({});
-  
+
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
@@ -99,8 +118,48 @@ export default function StaffManagementModule({
   // Recently created user credential slip state
   const [issuedUser, setIssuedUser] = useState<StaffUser | null>(null);
 
-  const totalUsers = staffList.length;
-  const doctorCount = staffList.filter(u => u.role === 'Doctor').length;
+  // Detect whether running locally or on production (https://www.arpanaisoftware.in/)
+  const [isLocalHost, setIsLocalHost] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const host = window.location.hostname.toLowerCase();
+      if (host.includes('arpanaisoftware.in')) return false;
+      return (
+        host === 'localhost' ||
+        host === '127.0.0.1' ||
+        host === '0.0.0.0' ||
+        host.endsWith('.local') ||
+        host.startsWith('192.168.') ||
+        host.startsWith('10.')
+      );
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const host = window.location.hostname.toLowerCase();
+      if (host.includes('arpanaisoftware.in')) {
+        setIsLocalHost(false);
+      } else {
+        const local =
+          host === 'localhost' ||
+          host === '127.0.0.1' ||
+          host === '0.0.0.0' ||
+          host.endsWith('.local') ||
+          host.startsWith('192.168.') ||
+          host.startsWith('10.');
+        setIsLocalHost(local);
+      }
+    }
+  }, []);
+
+  // Filter roster for production vs local
+  const displayedStaffList = isLocalHost
+    ? staffList
+    : staffList.filter((u) => !isSuperAdminAccount(u));
+
+  const totalUsers = displayedStaffList.length;
+  const doctorCount = displayedStaffList.filter(u => u.role === 'Doctor').length;
   const isMaxUsersReached = !editingUserId && totalUsers >= 5;
   const isDoctorRoleDisabled = !editingUserId && doctorCount >= 1 && role !== 'Doctor';
 
@@ -551,7 +610,7 @@ export default function StaffManagementModule({
 
         {/* Existing Roster Directory */}
         <Typography variant="h6" sx={{ fontWeight: 800, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Badge color="primary" /> Clinic Roster & Account Directory ({staffList.length} Users)
+          <Badge color="primary" /> Clinic Roster & Account Directory ({displayedStaffList.length} Users)
         </Typography>
 
         {/* DESKTOP TABLE VIEW (md and up) */}
@@ -571,7 +630,7 @@ export default function StaffManagementModule({
                 </TableRow>
               </TableHead>
               <TableBody>
-                {staffList.map((user) => (
+                {displayedStaffList.map((user) => (
                   <TableRow key={user.id} hover>
                     <TableCell sx={{ fontWeight: 900, color: '#00C9A7' }}>{user.staffId}</TableCell>
                     <TableCell sx={{ fontWeight: 800, color: '#FFB703', fontFamily: 'monospace' }}>
@@ -630,7 +689,7 @@ export default function StaffManagementModule({
                             <Delete fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                        
+
                         <Tooltip title={user.active ? "Click to suspend account access" : "Click to enable active account access"} arrow placement="top">
                           <FormControlLabel
                             control={
@@ -657,7 +716,7 @@ export default function StaffManagementModule({
         {/* MOBILE CARD VIEW (xs / sm - No Horizontal Scroll!) */}
         <Box sx={{ display: { xs: 'block', md: 'none' } }}>
           <Stack spacing={2}>
-            {staffList.map((user) => (
+            {displayedStaffList.map((user) => (
               <Paper
                 key={user.id}
                 variant="outlined"

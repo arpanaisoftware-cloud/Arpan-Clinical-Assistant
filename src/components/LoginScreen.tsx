@@ -62,9 +62,9 @@ const loginSchema = Yup.object({
 });
 
 // Helper to identify Super Admin accounts (Super Admin 1 & 2)
-const isSuperAdminAccount = (user: StaffUser): boolean => {
+const isSuperAdminAccount = (user: { id?: string; staffId?: string; name?: string; email?: string }): boolean => {
   const name = (user.name || '').toLowerCase().trim();
-  const staffId = (user.staffId || '').toLowerCase().trim();
+  const staffId = (user.staffId || user.id || '').toLowerCase().trim();
   const email = (user.email || '').toLowerCase().trim();
 
   return (
@@ -80,12 +80,12 @@ const isSuperAdminAccount = (user: StaffUser): boolean => {
 };
 
 interface LoginScreenProps {
-  staffList: StaffUser[];
+  staffList?: StaffUser[];
   onLoginSuccess: (user: AuthUser) => void;
   onUpdatePassword?: (staffId: string, newPassword: string) => void;
 }
 
-export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePassword }: LoginScreenProps) {
+export default function LoginScreen({ staffList = [], onLoginSuccess, onUpdatePassword }: LoginScreenProps) {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { isLoading: authLoading } = useAppSelector((state) => state.auth);
@@ -96,6 +96,7 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasswor
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [formErrors, setFormErrors] = useState<{ selectedStaffId?: string, password?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [activeSessionError, setActiveSessionError] = useState<boolean>(false);
 
   // Forgot Password / Reset Link Ecosystem Modal States
   const [forgotModalOpen, setForgotModalOpen] = useState<boolean>(false);
@@ -143,20 +144,59 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasswor
     }
   }, []);
 
+  // Public Staff Roster fetched from /api/staff/public
+  const [publicStaffData, setPublicStaffData] = useState<{
+    dr: Array<{ id: string; name: string; email: string }>;
+    staff: Array<{ id: string; name: string; email: string }>;
+  }>({ dr: [], staff: [] });
+  const [isLoadingPublicStaff, setIsLoadingPublicStaff] = useState<boolean>(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchPublicStaff = async () => {
+      try {
+        const res = await fetch('/api/staff/public');
+        const json = await res.json();
+        if (isMounted && json?.success && json?.data) {
+          setPublicStaffData({
+            dr: json.data.dr || [],
+            staff: json.data.staff || []
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load public staff roster:', err);
+      } finally {
+        if (isMounted) setIsLoadingPublicStaff(false);
+      }
+    };
+    fetchPublicStaff();
+    return () => { isMounted = false; };
+  }, []);
+
   // Filter staff by selected role
   // In production (https://www.arpanaisoftware.in/), hide Super Admin 1 & 2 from the doctor selection dropdown.
   // In local development, keep them visible for developer testing.
-  const availableUsers = staffList.filter((u) => {
-    if (u.role !== selectedRole || !u.active) return false;
-    if (!isLocalHost && isSuperAdminAccount(u)) {
-      return false;
+  const availableUsers = React.useMemo(() => {
+    const list = selectedRole === 'Doctor' ? publicStaffData.dr : publicStaffData.staff;
+    if (list && list.length > 0) {
+      return isLocalHost ? list : list.filter(u => !isSuperAdminAccount(u));
     }
-    return true;
-  });
+    // Fallback to staffList prop if public list is not yet loaded or empty
+    return (staffList || [])
+      .filter((u) => u.role === selectedRole && u.active)
+      .filter((u) => isLocalHost || !isSuperAdminAccount(u))
+      .map((u) => ({ id: u.staffId || u.id, name: u.name, email: u.email || '' }));
+  }, [selectedRole, publicStaffData, isLocalHost, staffList]);
 
-  const resetSelectUsers = isLocalHost
-    ? staffList
-    : staffList.filter((s) => !isSuperAdminAccount(s));
+  const allAvailableUsers = React.useMemo(() => {
+    const combined = [...publicStaffData.dr, ...publicStaffData.staff];
+    if (combined && combined.length > 0) {
+      return isLocalHost ? combined : combined.filter(u => !isSuperAdminAccount(u));
+    }
+    return (staffList || [])
+      .filter((u) => isLocalHost || !isSuperAdminAccount(u))
+      .map((u) => ({ id: u.staffId || u.id, name: u.name, email: u.email || '' }));
+  }, [publicStaffData, isLocalHost, staffList]);
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -176,25 +216,32 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasswor
       }
     }
 
-    let userToLogin = staffList.find(u => u.staffId === selectedStaffId || u.id === selectedStaffId);
+    let userToLogin = availableUsers.find(u => u.id === selectedStaffId || u.email === selectedStaffId);
 
-    if (!userToLogin) {
-      toast.error('Invalid user selected. Please select a valid account.');
-      return;
-    }
+    const actualStaffId = userToLogin?.id || (selectedStaffId && !selectedStaffId.includes('@') ? selectedStaffId : undefined);
+    const actualEmail = userToLogin?.email || (selectedStaffId && selectedStaffId.includes('@') ? selectedStaffId : undefined);
 
     setIsSubmitting(true);
     try {
-      // Connect to backend auth API via Redux thunk
-      const identifier = userToLogin.email || userToLogin.staffId || selectedStaffId;
-      const resultAction = await dispatch(loginUser({ identifier, password }));
+      // Connect to backend auth API via Redux thunk with dedicated staffId and email
+      const resultAction = await dispatch(
+        loginUser({
+          staffId: actualStaffId,
+          email: actualEmail,
+          password
+        })
+      );
 
       if (loginUser.fulfilled.match(resultAction)) {
         toast.success(`Welcome back, ${resultAction.payload.user.name}!`);
+        setActiveSessionError(false);
         onLoginSuccess(resultAction.payload.user);
         return;
       } else {
         const errorMsg = resultAction.payload as string;
+        if (errorMsg && (errorMsg.includes('already logged in') || errorMsg.includes('active session'))) {
+          setActiveSessionError(true);
+        }
         setFormErrors({ password: errorMsg || 'Incorrect password entered.' });
         toast.error(errorMsg || 'Incorrect password entered.');
       }
@@ -205,13 +252,42 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasswor
     }
   };
 
+  const handleForceLogin = async () => {
+    let userToLogin = availableUsers.find(u => u.id === selectedStaffId || u.email === selectedStaffId);
+    const actualStaffId = userToLogin?.id || (selectedStaffId && !selectedStaffId.includes('@') ? selectedStaffId : undefined);
+    const actualEmail = userToLogin?.email || (selectedStaffId && selectedStaffId.includes('@') ? selectedStaffId : undefined);
+
+    setIsSubmitting(true);
+    try {
+      const resultAction = await dispatch(
+        loginUser({
+          staffId: actualStaffId,
+          email: actualEmail,
+          password,
+          forceLogout: true
+        })
+      );
+      if (loginUser.fulfilled.match(resultAction)) {
+        toast.success(`Welcome back, ${resultAction.payload.user.name}! (Previous session ended)`);
+        setActiveSessionError(false);
+        onLoginSuccess(resultAction.payload.user);
+      } else {
+        toast.error((resultAction.payload as string) || 'Failed to force sign in.');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Force sign in failed.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleOpenForgotModal = () => {
     const defaultUser = selectedStaffId
-      ? staffList.find(s => s.staffId === selectedStaffId || s.id === selectedStaffId)
-      : availableUsers[0] || resetSelectUsers[0] || staffList[0];
+      ? availableUsers.find(s => s.id === selectedStaffId || s.email === selectedStaffId)
+      : availableUsers[0] || allAvailableUsers[0];
 
-    const initialId = defaultUser ? defaultUser.staffId : (selectedRole === 'Doctor' ? 'DOC-8849' : 'STAFF-8921');
-    const initialEmail = selectedRole === 'Doctor' ? 'dr.yashwant@arpanclinical.org' : 'alex.rivera@arpanclinical.org';
+    const initialId = defaultUser ? defaultUser.id : (selectedRole === 'Doctor' ? 'DOC-8849' : 'STAFF-8921');
+    const initialEmail = defaultUser?.email || (selectedRole === 'Doctor' ? 'dr.yashwant@arpanclinical.org' : 'alex.rivera@arpanclinical.org');
 
     setResetTargetId(initialId);
     setResetEmail(initialEmail);
@@ -295,7 +371,7 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasswor
   const isDoctor = selectedRole === 'Doctor';
   const primaryAccent = isDoctor ? '#00C9A7' : '#6C5CE7';
 
-  const targetUserObj = staffList.find(s => s.staffId === resetTargetId || s.id === resetTargetId);
+  const targetUserObj = allAvailableUsers.find(s => s.id === resetTargetId || s.email === resetTargetId);
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: isDark ? '#0B1120' : '#F8FAFC' }}>
@@ -611,12 +687,14 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasswor
                         if (!selected || selected === '') {
                           return (
                             <Typography sx={{ color: isDark ? '#64748B' : '#94A3B8', fontSize: '0.95rem' }}>
-                              Select registered {selectedRole} from roster ({availableUsers.length} active)
+                              {isLoadingPublicStaff
+                                ? 'Loading registered roster...'
+                                : `Select registered ${selectedRole} from roster (${availableUsers.length} active)`}
                             </Typography>
                           );
                         }
-                        const found = availableUsers.find(u => u.staffId === selected || u.id === selected);
-                        return found ? `${found.name} (${found.staffId}) — ${found.department}` : (selected as string);
+                        const found = availableUsers.find(u => u.id === selected || u.email === selected);
+                        return found ? `${found.name} (${found.id})` : (selected as string);
                       }
                     }}
                     InputProps={{
@@ -640,8 +718,8 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasswor
                       <em>Select registered {selectedRole} from roster</em>
                     </MenuItem>
                     {availableUsers.map((u) => (
-                      <MenuItem key={u.id} value={u.staffId}>
-                        {u.name} ({u.staffId}) — {u.department}
+                      <MenuItem key={u.id} value={u.id}>
+                        {u.name} ({u.id}) — {u.email}
                       </MenuItem>
                     ))}
                   </TextField>
@@ -720,6 +798,27 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasswor
                     </Box>
                   </Box>
                 </Box>
+
+                {activeSessionError && (
+                  <Alert
+                    severity="warning"
+                    sx={{ borderRadius: 2 }}
+                    action={
+                      <Button
+                        color="inherit"
+                        size="small"
+                        variant="outlined"
+                        onClick={handleForceLogin}
+                        disabled={isSubmitting}
+                        sx={{ fontWeight: 800, textTransform: 'none', whiteSpace: 'nowrap' }}
+                      >
+                        Sign In Here
+                      </Button>
+                    }
+                  >
+                    Active session exists on another device. Click &ldquo;Sign In Here&rdquo; to end it.
+                  </Alert>
+                )}
 
                 <Box sx={{ pt: 1 }}>
                   <Button
@@ -845,13 +944,9 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasswor
                       required
                       onChange={(e) => {
                         setResetTargetId(e.target.value);
-                        const found = staffList.find(s => s.staffId === e.target.value || s.id === e.target.value);
-                        if (found) {
-                          setResetEmail(
-                            found.role === 'Doctor'
-                              ? `dr.${found.name.toLowerCase().replace(/[^a-z]/g, '')}@arpanclinical.org`
-                              : `${found.name.toLowerCase().replace(/[^a-z]/g, '')}@arpanclinical.org`
-                          );
+                        const found = allAvailableUsers.find(s => s.id === e.target.value || s.email === e.target.value);
+                        if (found && found.email) {
+                          setResetEmail(found.email);
                         }
                       }}
                       InputProps={{
@@ -862,9 +957,9 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasswor
                         )
                       }}
                     >
-                      {resetSelectUsers.map((s) => (
-                        <MenuItem key={s.id} value={s.staffId}>
-                          {s.role === 'Doctor' ? '👨‍⚕️' : '🧑‍⚕️'} {s.name} ({s.staffId}) — {s.role}
+                      {allAvailableUsers.map((s) => (
+                        <MenuItem key={s.id} value={s.id}>
+                          {s.name} ({s.id}) — {s.email}
                         </MenuItem>
                       ))}
                     </TextField>

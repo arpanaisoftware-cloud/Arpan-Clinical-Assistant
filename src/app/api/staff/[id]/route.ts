@@ -3,9 +3,16 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import connectDB from '@/lib/db';
 import User from '@/models/User';
+import { verifyAuthToken } from '@/lib/auth';
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
   try {
+    // Enforce token-based authentication
+    const auth = await verifyAuthToken(req);
+    if (auth.errorResponse) {
+      return auth.errorResponse;
+    }
+
     await connectDB();
     const id = params.id;
     const body = await req.json();
@@ -15,7 +22,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       : await User.findOne({ $or: [{ staffId: id }, { email: id }] });
 
     if (!user) {
-      return NextResponse.json({ message: 'Staff user not found' }, { status: 404 });
+      return NextResponse.json({ success: false, message: 'Staff user not found' }, { status: 404 });
     }
 
     const cleanEmail = body.email !== undefined ? body.email.trim().toLowerCase() : undefined;
@@ -32,7 +39,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       });
       if (conflict) {
         return NextResponse.json(
-          { message: 'A staff member with this email or staff ID already exists.' },
+          { success: false, message: 'A staff member with this email or staff ID already exists.' },
           { status: 400 }
         );
       }
@@ -61,6 +68,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     await user.save();
 
     return NextResponse.json({
+      success: true,
       message: 'Staff updated successfully',
       user: {
         id: user._id.toString(),
@@ -79,14 +87,20 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   } catch (error: any) {
     console.error('Update staff DB error:', error.message);
     if (error.code === 11000) {
-      return NextResponse.json({ message: 'A staff member with this email or staff ID already exists.' }, { status: 400 });
+      return NextResponse.json({ success: false, message: 'A staff member with this email or staff ID already exists.' }, { status: 400 });
     }
-    return NextResponse.json({ message: error.message || 'Server error' }, { status: 500 });
+    return NextResponse.json({ success: false, message: error.message || 'Server error' }, { status: 500 });
   }
 }
 
 export async function DELETE(req: Request, { params }: { params: { id: string } }) {
   try {
+    // Enforce token-based authentication
+    const auth = await verifyAuthToken(req);
+    if (auth.errorResponse) {
+      return auth.errorResponse;
+    }
+
     await connectDB();
     const id = params.id;
 
@@ -95,12 +109,12 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
       : await User.findOneAndDelete({ $or: [{ staffId: id }, { email: id }] });
 
     if (!user) {
-      return NextResponse.json({ message: 'Staff user not found' }, { status: 404 });
+      return NextResponse.json({ success: false, message: 'Staff user not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ message: 'Staff deleted successfully', id }, { status: 200 });
+    return NextResponse.json({ success: true, message: 'Staff deleted successfully', id }, { status: 200 });
   } catch (error: any) {
     console.error('Delete staff DB warning:', error.message);
-    return NextResponse.json({ message: 'Staff deleted successfully', id: params.id }, { status: 200 });
+    return NextResponse.json({ success: true, message: 'Staff deleted successfully', id: params.id }, { status: 200 });
   }
 }

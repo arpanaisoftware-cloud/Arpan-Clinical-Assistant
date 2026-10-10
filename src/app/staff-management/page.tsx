@@ -41,8 +41,8 @@ export default function StaffManagementPage() {
     }
   }, [mounted, currentUser, router]);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     router.push('/login');
   };
 

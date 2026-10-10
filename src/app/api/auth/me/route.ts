@@ -30,8 +30,28 @@ export async function GET(req: Request) {
       return NextResponse.json({ message: 'Account is deactivated' }, { status: 403 });
     }
 
-    if (user.activeSessionId && decoded.sessionId && user.activeSessionId !== decoded.sessionId) {
-      return NextResponse.json({ message: 'Session expired. Logged in from another device.' }, { status: 401 });
+    if (!decoded.sessionId || (user.activeSessionId && user.activeSessionId !== decoded.sessionId)) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Session expired. Your account has been logged in on another device.',
+          sessionExpired: true,
+          loggedOutByOtherDevice: true
+        },
+        { status: 401 }
+      );
+    }
+
+    if (!user.activeSessionId) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Session terminated. You have been logged out.',
+          sessionExpired: true,
+          loggedOutByOtherDevice: true
+        },
+        { status: 401 }
+      );
     }
 
     return NextResponse.json({

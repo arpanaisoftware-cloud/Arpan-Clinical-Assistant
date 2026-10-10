@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { analyzePrescription } from '@/mockData/aiAnalysisData';
 import { PatientInput, MedicationInput, AnalysisResult } from '@/types/clinical';
+import { verifyAuthToken } from '@/lib/auth';
 
 // Use the v1alpha endpoint + x-goog-api-key header — required for AQ. format keys
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1alpha/models/gemini-3.8-flash:generateContent`;
@@ -337,6 +338,11 @@ function enrichAnalysisResult(aiResult: any, incomingInput?: any): AnalysisResul
 
 export async function POST(req: Request) {
   try {
+    const auth = await verifyAuthToken(req);
+    if (auth.errorResponse) {
+      return auth.errorResponse;
+    }
+
     const contentType = req.headers.get('content-type') || '';
 
     // ─── MULTIPART: Direct file upload (PDF / Image) ──────────────────────

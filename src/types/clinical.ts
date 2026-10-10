@@ -198,6 +198,22 @@ export interface StaffUser {
   email?: string;
 }
 
+export interface PublicStaffItem {
+  id: string;
+  name: string;
+  email: string;
+}
+
+export interface PublicStaffData {
+  dr: PublicStaffItem[];
+  staff: PublicStaffItem[];
+}
+
+export interface PublicStaffResponse {
+  success: boolean;
+  data: PublicStaffData;
+}
+
 export interface AuthUser {
   id: string;
   name: string;
