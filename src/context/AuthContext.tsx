@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, ReactNode } from 'react';
 import { AuthUser, StaffUser, ModulePermission } from '../types/clinical';
 import { useAppDispatch, useAppSelector } from '../redux/hooks';
-import { setCurrentUser, logout as reduxLogout, verifySession } from '../redux/slices/authSlice';
+import { setCurrentUser, logoutUser, verifySession } from '../redux/slices/authSlice';
 import {
   fetchStaffList,
   addStaffMember,
@@ -50,7 +50,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = () => {
-    dispatch(reduxLogout());
+    dispatch(logoutUser());
   };
 
   const refreshStaff = () => {
@@ -58,8 +58,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const addStaffUser = async (user: StaffUser) => {
-    // Optimistic local update
-    dispatch(localAddStaff(user));
     try {
       await dispatch(
         addStaffMember({
@@ -73,7 +71,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         })
       ).unwrap();
     } catch (e) {
-      console.warn('Backend sync failed, kept in local state:', e);
+      console.warn('Backend sync failed:', e);
+      throw e;
     }
   };
 
@@ -90,6 +89,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       ).unwrap();
     } catch (e) {
       console.warn('Backend toggle failed:', e);
+      dispatch(fetchStaffList());
+      throw e;
     }
   };
 
@@ -104,6 +105,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       ).unwrap();
     } catch (e) {
       console.warn('Backend update failed:', e);
+      dispatch(fetchStaffList());
+      throw e;
     }
   };
 
@@ -118,6 +121,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       ).unwrap();
     } catch (e) {
       console.warn('Backend password update failed:', e);
+      dispatch(fetchStaffList());
+      throw e;
     }
   };
 
@@ -132,6 +137,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       ).unwrap();
     } catch (e) {
       console.warn('Backend staff update failed:', e);
+      dispatch(fetchStaffList());
+      throw e;
     }
   };
 
@@ -141,6 +148,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await dispatch(deleteStaffMember(id)).unwrap();
     } catch (e) {
       console.warn('Backend delete failed:', e);
+      dispatch(fetchStaffList());
+      throw e;
     }
   };
 

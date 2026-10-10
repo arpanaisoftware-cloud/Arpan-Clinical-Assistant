@@ -4,16 +4,17 @@ import bcrypt from 'bcryptjs';
 import connectDB from '@/lib/db';
 import User from '@/models/User';
 
-export async function POST(req: Request) {
+export async function POST(req: Request, { params }: { params: { token: string } }) {
   try {
     await connectDB();
-    const { token, newPassword } = await req.json();
+    const { password } = await req.json();
+    const { token } = params;
 
-    if (!token || !newPassword) {
+    if (!token || !password) {
       return NextResponse.json({ message: 'Token and new password are required' }, { status: 400 });
     }
 
-    if (newPassword.length < 8) {
+    if (password.length < 8) {
       return NextResponse.json({ message: 'Password must be at least 8 characters long' }, { status: 400 });
     }
 
@@ -24,8 +25,8 @@ export async function POST(req: Request) {
       resetPasswordExpires: { $gt: Date.now() },
     });
 
-    // Fallback: check unhashed token if stored directly or demo token
     if (!user) {
+      // Fallback: check unhashed token if stored directly or demo token
       user = await User.findOne({
         resetPasswordToken: token.trim(),
         resetPasswordExpires: { $gt: Date.now() },
@@ -36,10 +37,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: 'Invalid or expired password reset token' }, { status: 400 });
     }
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
     user.password = hashedPassword;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
+    // We should probably also invalidate active sessions here so they have to login again
+    user.activeSessionId = null;
     await user.save();
 
     return NextResponse.json({
@@ -54,9 +57,6 @@ export async function POST(req: Request) {
     }, { status: 200 });
   } catch (error: any) {
     console.error('Reset password warning:', error.message);
-    return NextResponse.json({
-      message: 'Password has been successfully updated. You can now login with your new credentials.',
-      success: true
-    }, { status: 200 });
+    return NextResponse.json({ message: 'Server error', error: error.message }, { status: 500 });
   }
 }

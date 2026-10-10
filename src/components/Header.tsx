@@ -13,7 +13,12 @@ import {
   Container,
   Stack,
   PaletteMode,
-  Tooltip
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField
 } from '@mui/material';
 import {
   LocalHospital,
@@ -23,10 +28,14 @@ import {
   AddCircleOutline,
   CloudUpload,
   SupervisorAccount,
-  Logout
+  Logout,
+  VpnKey
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import { AuthUser } from '../types/clinical';
+import { useAppDispatch } from '../redux/hooks';
+import { changePassword } from '../redux/slices/authSlice';
+import { toast } from 'react-toastify';
 
 interface HeaderProps {
   mode: PaletteMode;
@@ -55,6 +64,39 @@ export default function Header({
 }: HeaderProps) {
   const router = useRouter();
   const userRole = currentUser?.role || 'Doctor';
+  const dispatch = useAppDispatch();
+  const [changePasswordOpen, setChangePasswordOpen] = React.useState(false);
+  const [currentPassword, setCurrentPassword] = React.useState('');
+  const [newPassword, setNewPassword] = React.useState('');
+  const [isChangingPassword, setIsChangingPassword] = React.useState(false);
+
+  const handleChangePasswordSubmit = async () => {
+    if (!currentPassword || !newPassword) {
+      toast.error('Both current and new passwords are required.');
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast.error('New password must be at least 8 characters long.');
+      return;
+    }
+    
+    setIsChangingPassword(true);
+    try {
+      const resultAction = await dispatch(changePassword({ currentPassword, newPassword }));
+      if (changePassword.fulfilled.match(resultAction)) {
+        toast.success('Password changed successfully!');
+        setChangePasswordOpen(false);
+        setCurrentPassword('');
+        setNewPassword('');
+      } else {
+        toast.error(resultAction.payload || 'Failed to change password');
+      }
+    } catch (e: any) {
+      toast.error(e.message || 'Error changing password');
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
 
   const handleLogoClick = () => {
     if (onHomeClick) {
@@ -230,7 +272,7 @@ export default function Header({
                 </IconButton>
               </Tooltip>
 
-              {/* sm+: full avatar + logout pill */}
+              {/* sm+: full avatar + change pass + logout pill */}
               <Box
                 sx={{
                   display: { xs: 'none', sm: 'flex' },
@@ -258,6 +300,17 @@ export default function Header({
                   </Avatar>
                 </Tooltip>
 
+                <Tooltip title="Change Password" arrow placement="bottom">
+                  <IconButton
+                    size="small"
+                    color="primary"
+                    onClick={() => setChangePasswordOpen(true)}
+                    sx={{ mr: 0.5 }}
+                  >
+                    <VpnKey fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+
                 <Tooltip title="Sign out of Arpan Clinical Assistant" arrow placement="bottom">
                   <Button
                     size="small"
@@ -265,7 +318,7 @@ export default function Header({
                     color="error"
                     startIcon={<Logout fontSize="small" />}
                     onClick={onLogout}
-                    sx={{ borderRadius: 1, px: 1.2, py: 0.3, fontSize: '0.75rem', fontWeight: 800, ml: 0.5 }}
+                    sx={{ borderRadius: 1, px: 1.2, py: 0.3, fontSize: '0.75rem', fontWeight: 800 }}
                   >
                     Logout
                   </Button>
@@ -275,6 +328,46 @@ export default function Header({
           )}
         </Toolbar>
       </Container>
+
+      {/* Change Password Modal */}
+      <Dialog open={changePasswordOpen} onClose={() => setChangePasswordOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 800 }}>Change Password</DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              fullWidth
+              size="small"
+              type="password"
+              label="Current Password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+            />
+            <TextField
+              fullWidth
+              size="small"
+              type="password"
+              label="New Password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              helperText="Must be at least 8 characters long."
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 0 }}>
+          <Button onClick={() => setChangePasswordOpen(false)} color="inherit" sx={{ fontWeight: 700 }}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleChangePasswordSubmit} 
+            color="primary" 
+            variant="contained" 
+            disabled={isChangingPassword}
+            sx={{ fontWeight: 700 }}
+          >
+            {isChangingPassword ? 'Changing...' : 'Change Password'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </AppBar>
   );
 }

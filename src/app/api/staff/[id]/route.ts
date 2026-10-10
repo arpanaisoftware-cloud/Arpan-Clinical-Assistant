@@ -46,21 +46,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     }, { status: 200 });
   } catch (error: any) {
     console.error('Update staff DB warning:', error.message);
-    const body = await req.clone().json().catch(() => ({}));
-    return NextResponse.json({
-      message: 'Staff updated successfully',
-      user: {
-        id: params.id,
-        _id: params.id,
-        name: body.name || 'Staff Member',
-        email: body.email,
-        staffId: body.staffId || params.id,
-        department: body.department || 'General Medicine',
-        role: body.role || 'Staff',
-        modulePermissions: body.modulePermissions || 'Full Access',
-        active: body.active !== undefined ? Boolean(body.active) : true
-      }
-    }, { status: 200 });
+    return NextResponse.json({ message: 'Server error', error: error.message }, { status: 500 });
   }
 }
 

@@ -5,7 +5,7 @@ import User from '@/models/User';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_key_for_arpan_clinical';
 
-export async function GET(req: Request) {
+export async function POST(req: Request) {
   try {
     const authHeader = req.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -21,32 +21,18 @@ export async function GET(req: Request) {
     }
 
     await connectDB();
-    const user = await User.findById(decoded.id).select('-password');
+    const user = await User.findById(decoded.id);
     if (!user) {
       return NextResponse.json({ message: 'User not found' }, { status: 404 });
     }
 
-    if (!user.active) {
-      return NextResponse.json({ message: 'Account is deactivated' }, { status: 403 });
+    // Only invalidate if the session matches (preventing a logout from an old token killing a new session)
+    if (user.activeSessionId === decoded.sessionId) {
+      user.activeSessionId = null;
+      await user.save();
     }
 
-    if (user.activeSessionId && decoded.sessionId && user.activeSessionId !== decoded.sessionId) {
-      return NextResponse.json({ message: 'Session expired. Logged in from another device.' }, { status: 401 });
-    }
-
-    return NextResponse.json({
-      user: {
-        id: user._id.toString(),
-        _id: user._id.toString(),
-        name: user.name,
-        email: user.email,
-        staffId: user.staffId,
-        department: user.department,
-        role: user.role,
-        modulePermissions: user.modulePermissions,
-        active: user.active
-      }
-    }, { status: 200 });
+    return NextResponse.json({ message: 'Logged out successfully' }, { status: 200 });
   } catch (error: any) {
     return NextResponse.json({ message: 'Server error', error: error.message }, { status: 500 });
   }

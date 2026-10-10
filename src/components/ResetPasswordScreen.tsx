@@ -75,7 +75,7 @@ export default function ResetPasswordScreen({ token }: ResetPasswordScreenProps)
   // Stepper state (1: Request, 2: Set New Password, 3: Success)
   const [resetStep, setResetStep] = useState<number>(token ? 2 : 1);
   const [resetTargetId, setResetTargetId] = useState<string>(staffList[0]?.staffId || 'DOC-8849');
-  const [resetEmail, setResetEmail] = useState<string>('dr.yashwant@arpanclinical.org');
+  const [resetEmail, setResetEmail] = useState<string>('');
   const [newPassword, setNewPassword] = useState<string>('');
   const [confirmPassword, setConfirmPassword] = useState<string>('');
   const [showNewPassword, setShowNewPassword] = useState<boolean>(false);
@@ -166,11 +166,8 @@ export default function ResetPasswordScreen({ token }: ResetPasswordScreenProps)
     try {
       if (token) {
         // Real backend reset-password endpoint
-        await dispatch(confirmPasswordReset({ token, newPassword }));
+        await dispatch(confirmPasswordReset({ token, newPassword })).unwrap();
       }
-
-      // Also update local/context state
-      await updateStaffPassword(resetTargetId, newPassword);
 
       setResetStep(3);
       toast.success('🔒 Password updated successfully in database!');

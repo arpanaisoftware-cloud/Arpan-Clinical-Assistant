@@ -27,6 +27,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: 'A staff member with this email or staff ID already exists' }, { status: 400 });
     }
 
+    const totalUsersCount = await User.countDocuments();
+    if (totalUsersCount >= 5) {
+      return NextResponse.json({ message: 'Maximum user limit (5) reached.' }, { status: 403 });
+    }
+
+    const requestedRole = role || 'Staff';
+
+    if (requestedRole === 'Doctor') {
+      const doctorCount = await User.countDocuments({ role: 'Doctor' });
+      if (doctorCount >= 1) {
+        return NextResponse.json({ message: 'Maximum Doctor limit (1) reached.' }, { status: 403 });
+      }
+    } else {
+      const staffCount = await User.countDocuments({ role: 'Staff' });
+      if (staffCount >= 4) {
+        return NextResponse.json({ message: 'Maximum Staff limit (4) reached.' }, { status: 403 });
+      }
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = await User.create({

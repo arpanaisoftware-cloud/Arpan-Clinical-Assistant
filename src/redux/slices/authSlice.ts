@@ -19,15 +19,7 @@ const getInitialUser = (): AuthUser | null => {
   } catch (e) {
     console.error('Failed to parse saved user', e);
   }
-  // Default Doctor user for initial offline preview
-  return {
-    id: 'ST-103',
-    name: 'Dr. Yashwant Dubey',
-    staffId: 'DOC-8849',
-    role: 'Doctor',
-    modulePermissions: 'Full Access',
-    department: 'Chief Cardiology & Internal Medicine'
-  };
+  return null;
 };
 
 const getInitialToken = (): string | null => {
@@ -63,7 +55,7 @@ export const loginUser = createAsyncThunk<
     }
     return { user, token, message };
   } catch (error: any) {
-    return rejectWithValue(error.message || 'Login failed');
+    return rejectWithValue(error.response?.data?.message || error.message || 'Login failed');
   }
 });
 
@@ -116,10 +108,35 @@ export const confirmPasswordReset = createAsyncThunk<
   { rejectValue: string }
 >('auth/confirmPasswordReset', async ({ token, newPassword }, { rejectWithValue }) => {
   try {
-    const response = await axiosClient.post('/api/auth/reset-password', { token, newPassword });
+    const response = await axiosClient.post(`/api/auth/reset-password/${token}`, { password: newPassword });
     return response.data;
   } catch (error: any) {
     return rejectWithValue(error.message || 'Password reset failed');
+  }
+});
+
+export const logoutUser = createAsyncThunk<void, void, { rejectValue: string }>(
+  'auth/logoutUser',
+  async (_, { rejectWithValue }) => {
+    try {
+      await axiosClient.post('/api/auth/logout');
+    } catch (error: any) {
+      console.warn('Logout API failed, proceeding with local logout', error);
+      // We don't reject here because we still want to clear local state
+    }
+  }
+);
+
+export const changePassword = createAsyncThunk<
+  { message: string },
+  { currentPassword: string; newPassword: string },
+  { rejectValue: string }
+>('auth/changePassword', async (passwords, { rejectWithValue }) => {
+  try {
+    const response = await axiosClient.post('/api/auth/change-password', passwords);
+    return response.data;
+  } catch (error: any) {
+    return rejectWithValue(error.response?.data?.message || error.message || 'Failed to change password');
   }
 });
 
@@ -223,6 +240,17 @@ const authSlice = createSlice({
     builder.addCase(confirmPasswordReset.rejected, (state, action) => {
       state.isLoading = false;
       state.error = action.payload || 'Password reset failed';
+    });
+
+    // Logout
+    builder.addCase(logoutUser.fulfilled, (state) => {
+      state.currentUser = null;
+      state.token = null;
+      state.error = null;
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('arpan_auth_user');
+        localStorage.removeItem('arpan_auth_token');
+      }
     });
   },
 });
