@@ -33,6 +33,7 @@ import PrescriptionUploader from '../components/PrescriptionUploader';
 import AiAnalysisDashboard from '../components/AiAnalysisDashboard';
 import PrescriptionPreviewModal from '../components/PrescriptionPreviewModal';
 import DoctorCopilotChat from '../components/DoctorCopilotChat';
+import FullPageAnalysisLoader from '../components/FullPageAnalysisLoader';
 import HistoryTable from '../components/HistoryTable';
 import CounsellingModule from '../components/CounsellingModule';
 import DietsModule from '../components/DietsModule';
@@ -123,6 +124,17 @@ export default function Home() {
     router.push('/login');
   };
 
+  const scrollToAnalysis = () => {
+    setTimeout(() => {
+      const elem = document.getElementById('analysis-dashboard-section');
+      if (elem) {
+        const yOffset = -96; // Leaves 110px breathing room below sticky header so section is positioned higher up
+        const y = elem.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+      }
+    }, 150);
+  };
+
   const handleAnalyze = async (formData: PatientInput) => {
     setIsAnalyzing(true);
     try {
@@ -155,10 +167,7 @@ export default function Home() {
 
       toast.success('AI Prescription Analysis Complete! View breakdown below.');
 
-      const elem = document.getElementById('analysis-dashboard-section');
-      if (elem) {
-        elem.scrollIntoView({ behavior: 'smooth' });
-      }
+      scrollToAnalysis();
     } catch (error) {
       console.error(error);
       toast.error('Failed to get AI analysis. Ensure GEMINI_API_KEY is set in .env.local.');
@@ -204,10 +213,7 @@ export default function Home() {
 
       toast.success('AI Prescription Analysis Complete! Full details extracted from document.');
 
-      const elem = document.getElementById('analysis-dashboard-section');
-      if (elem) {
-        elem.scrollIntoView({ behavior: 'smooth' });
-      }
+      scrollToAnalysis();
     } catch (error: any) {
       console.error(error);
       toast.error(error.message || 'Failed to analyze document. Ensure GEMINI_API_KEY is set in .env.local.');
@@ -241,21 +247,21 @@ export default function Home() {
     window.scrollTo({ top: 200, behavior: 'smooth' });
   };
 
-  const handleAddStaff = (newStaff: StaffUser) => {
-    addStaffUser(newStaff);
+  const handleAddStaff = async (newStaff: StaffUser) => {
+    return await addStaffUser(newStaff);
   };
 
-  const handleToggleStaffStatus = (staffId: string) => {
-    toggleStaffStatus(staffId);
+  const handleToggleStaffStatus = async (staffId: string) => {
+    await toggleStaffStatus(staffId);
     toast.info('Staff status updated.');
   };
 
-  const handleUpdateStaff = (staffId: string, updatedData: Partial<StaffUser>) => {
-    updateStaffUser(staffId, updatedData);
+  const handleUpdateStaff = async (staffId: string, updatedData: Partial<StaffUser>) => {
+    return await updateStaffUser(staffId, updatedData);
   };
 
-  const handleDeleteStaff = (staffId: string) => {
-    deleteStaffUser(staffId);
+  const handleDeleteStaff = async (staffId: string) => {
+    await deleteStaffUser(staffId);
     toast.info('Staff member deleted successfully.');
   };
 
@@ -666,6 +672,9 @@ export default function Home() {
           )}
         </>
       </Container>
+
+      {/* Full Page Prescription AI Analysis 1 to 100% Loading Screen */}
+      <FullPageAnalysisLoader open={isAnalyzing} onFinished={scrollToAnalysis} />
 
       {/* Prescription Print Modal */}
       <PrescriptionPreviewModal

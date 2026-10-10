@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Card,
@@ -61,6 +61,24 @@ const loginSchema = Yup.object({
   password: Yup.string().required('Password is required.').min(8, 'Password must be at least 8 characters.')
 });
 
+// Helper to identify Super Admin accounts (Super Admin 1 & 2)
+const isSuperAdminAccount = (user: StaffUser): boolean => {
+  const name = (user.name || '').toLowerCase().trim();
+  const staffId = (user.staffId || '').toLowerCase().trim();
+  const email = (user.email || '').toLowerCase().trim();
+
+  return (
+    name.includes('super admin') ||
+    name.includes('superadmin') ||
+    name.includes('admin 1') ||
+    name.includes('admin 2') ||
+    staffId === 'admin' ||
+    staffId === 'stf005' ||
+    email === 'arpanaisoftware@gmail.com' ||
+    email === 'dikshajain9907580417@gmail.com'
+  );
+};
+
 interface LoginScreenProps {
   staffList: StaffUser[];
   onLoginSuccess: (user: AuthUser) => void;
@@ -90,8 +108,55 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasswor
   const [isSending, setIsSending] = useState<boolean>(false);
   const [resetErrorMsg, setResetErrorMsg] = useState<string>('');
 
+  // Detect whether running locally or on production (https://www.arpanaisoftware.in/)
+  const [isLocalHost, setIsLocalHost] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const host = window.location.hostname.toLowerCase();
+      if (host.includes('arpanaisoftware.in')) return false;
+      return (
+        host === 'localhost' ||
+        host === '127.0.0.1' ||
+        host === '0.0.0.0' ||
+        host.endsWith('.local') ||
+        host.startsWith('192.168.') ||
+        host.startsWith('10.')
+      );
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const host = window.location.hostname.toLowerCase();
+      if (host.includes('arpanaisoftware.in')) {
+        setIsLocalHost(false);
+      } else {
+        const local =
+          host === 'localhost' ||
+          host === '127.0.0.1' ||
+          host === '0.0.0.0' ||
+          host.endsWith('.local') ||
+          host.startsWith('192.168.') ||
+          host.startsWith('10.');
+        setIsLocalHost(local);
+      }
+    }
+  }, []);
+
   // Filter staff by selected role
-  const availableUsers = staffList.filter(u => u.role === selectedRole && u.active);
+  // In production (https://www.arpanaisoftware.in/), hide Super Admin 1 & 2 from the doctor selection dropdown.
+  // In local development, keep them visible for developer testing.
+  const availableUsers = staffList.filter((u) => {
+    if (u.role !== selectedRole || !u.active) return false;
+    if (!isLocalHost && isSuperAdminAccount(u)) {
+      return false;
+    }
+    return true;
+  });
+
+  const resetSelectUsers = isLocalHost
+    ? staffList
+    : staffList.filter((s) => !isSuperAdminAccount(s));
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,7 +208,7 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasswor
   const handleOpenForgotModal = () => {
     const defaultUser = selectedStaffId
       ? staffList.find(s => s.staffId === selectedStaffId || s.id === selectedStaffId)
-      : availableUsers[0] || staffList[0];
+      : availableUsers[0] || resetSelectUsers[0] || staffList[0];
 
     const initialId = defaultUser ? defaultUser.staffId : (selectedRole === 'Doctor' ? 'DOC-8849' : 'STAFF-8921');
     const initialEmail = selectedRole === 'Doctor' ? 'dr.yashwant@arpanclinical.org' : 'alex.rivera@arpanclinical.org';
@@ -797,7 +862,7 @@ export default function LoginScreen({ staffList, onLoginSuccess, onUpdatePasswor
                         )
                       }}
                     >
-                      {staffList.map((s) => (
+                      {resetSelectUsers.map((s) => (
                         <MenuItem key={s.id} value={s.staffId}>
                           {s.role === 'Doctor' ? '👨‍⚕️' : '🧑‍⚕️'} {s.name} ({s.staffId}) — {s.role}
                         </MenuItem>

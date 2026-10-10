@@ -9,7 +9,7 @@ export async function GET(req: Request) {
   try {
     await connectDB();
 
-    const staffMembers = await User.find().select('-password').sort({ createdAt: -1 });
+    const staffMembers = await User.find().select('name email role department staffId active modulePermissions rawPassword createdAt').sort({ createdAt: -1 });
 
     const formattedStaff = staffMembers.map((u) => ({
       id: u._id.toString(),
@@ -19,8 +19,9 @@ export async function GET(req: Request) {
       staffId: u.staffId,
       department: u.department,
       role: u.role,
-      modulePermissions: u.modulePermissions,
+      modulePermissions: u.modulePermissions || (u.role === 'Doctor' ? 'Full Access' : 'Counselling + Diets'),
       active: u.active,
+      password: u.rawPassword || (u.role === 'Doctor' ? 'doctor123' : 'staff123'),
       createdAt: u.createdAt ? new Date(u.createdAt).toISOString().split('T')[0] : '2026-01-01',
     }));
 
@@ -52,31 +53,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: 'A staff member with this email or staff ID already exists' }, { status: 400 });
     }
 
-    const totalUsersCount = await User.countDocuments();
-    if (totalUsersCount >= 5) {
-      return NextResponse.json({ message: 'Maximum user limit (5) reached.' }, { status: 403 });
-    }
-
-    const requestedRole = role || 'Staff';
-
-    if (requestedRole === 'Doctor') {
-      const doctorCount = await User.countDocuments({ role: 'Doctor' });
-      if (doctorCount >= 1) {
-        return NextResponse.json({ message: 'Maximum Doctor limit (1) reached.' }, { status: 403 });
-      }
-    } else {
-      const staffCount = await User.countDocuments({ role: 'Staff' });
-      if (staffCount >= 4) {
-        return NextResponse.json({ message: 'Maximum Staff limit (4) reached.' }, { status: 403 });
-      }
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const cleanPass = password.trim();
+    const hashedPassword = await bcrypt.hash(cleanPass, 10);
 
     const newUser = await User.create({
       name: name.trim(),
       email: cleanEmail,
       password: hashedPassword,
+      rawPassword: cleanPass,
       staffId: cleanStaffId,
       department: department.trim(),
       role: role || 'Staff',
@@ -97,6 +81,7 @@ export async function POST(req: Request) {
           role: newUser.role,
           modulePermissions: newUser.modulePermissions,
           active: newUser.active,
+          password: newUser.rawPassword || cleanPass,
           createdAt: new Date().toISOString().split('T')[0]
         }
       },

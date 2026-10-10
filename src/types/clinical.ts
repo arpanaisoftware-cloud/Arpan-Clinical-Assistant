@@ -201,6 +201,7 @@ export interface StaffUser {
 export interface AuthUser {
   id: string;
   name: string;
+  email?: string;
   staffId: string;
   role: UserRole;
   modulePermissions: ModulePermission;

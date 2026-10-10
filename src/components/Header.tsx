@@ -178,7 +178,7 @@ export default function Header({
               {/* Doctor Manage Staff Button — icon-only on mobile, full button on sm+ */}
               {(userRole === 'Doctor' || currentUser.modulePermissions === 'Full Access') && (
                 <Tooltip title="Manage Staff Accounts & Module Access Permissions" arrow placement="bottom">
-                  <>
+                  <Box component="span" sx={{ display: 'inline-flex' }}>
                     {/* Icon-only on xs */}
                     <IconButton
                       onClick={onOpenManageStaff}
@@ -204,13 +204,13 @@ export default function Header({
                     >
                       Manage Staff
                     </Button>
-                  </>
+                  </Box>
                 </Tooltip>
               )}
 
               {/* Ask AI — icon-only on mobile, full button on sm+ */}
               <Tooltip title="Open AI Clinical Assistant" arrow placement="bottom">
-                <>
+                <Box component="span" sx={{ display: 'inline-flex' }}>
                   {/* Icon-only on xs */}
                   <IconButton
                     onClick={onOpenCopilot}
@@ -243,7 +243,7 @@ export default function Header({
                   >
                     Ask AI
                   </Button>
-                </>
+                </Box>
               </Tooltip>
 
               <Tooltip title={mode === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'} arrow placement="bottom">

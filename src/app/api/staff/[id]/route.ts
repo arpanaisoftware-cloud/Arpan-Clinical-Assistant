@@ -18,14 +18,44 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       return NextResponse.json({ message: 'Staff user not found' }, { status: 404 });
     }
 
+    const cleanEmail = body.email !== undefined ? body.email.trim().toLowerCase() : undefined;
+    const cleanStaffId = body.staffId !== undefined ? body.staffId.trim().toUpperCase() : undefined;
+
+    // Check for conflicting duplicate email or staffId in another document
+    const duplicateQuery: any[] = [];
+    if (cleanEmail) duplicateQuery.push({ email: cleanEmail });
+    if (cleanStaffId) duplicateQuery.push({ staffId: cleanStaffId });
+    if (duplicateQuery.length > 0) {
+      const conflict = await User.findOne({
+        _id: { $ne: user._id },
+        $or: duplicateQuery
+      });
+      if (conflict) {
+        return NextResponse.json(
+          { message: 'A staff member with this email or staff ID already exists.' },
+          { status: 400 }
+        );
+      }
+    }
+
     if (body.name !== undefined) user.name = body.name.trim();
-    if (body.email !== undefined) user.email = body.email.trim().toLowerCase();
-    if (body.active !== undefined) user.active = Boolean(body.active);
-    if (body.modulePermissions !== undefined) user.modulePermissions = body.modulePermissions;
-    if (body.role !== undefined) user.role = body.role;
+    if (cleanEmail !== undefined) user.email = cleanEmail;
+    if (cleanStaffId !== undefined) user.staffId = cleanStaffId;
     if (body.department !== undefined) user.department = body.department.trim();
-    if (body.password) {
-      user.password = await bcrypt.hash(body.password, 10);
+    if (body.role !== undefined) user.role = body.role;
+    if (body.role === 'Doctor') {
+      user.modulePermissions = 'Full Access';
+    } else if (body.modulePermissions !== undefined) {
+      user.modulePermissions = body.modulePermissions;
+    }
+    if (body.active !== undefined) user.active = Boolean(body.active);
+    
+    if (body.password && typeof body.password === 'string' && body.password.trim()) {
+      const cleanPass = body.password.trim();
+      user.password = await bcrypt.hash(cleanPass, 10);
+      user.rawPassword = cleanPass;
+    } else if (!user.rawPassword) {
+      user.rawPassword = user.role === 'Doctor' ? 'doctor123' : 'staff123';
     }
 
     await user.save();
@@ -41,12 +71,17 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
         department: user.department,
         role: user.role,
         modulePermissions: user.modulePermissions,
-        active: user.active
+        active: user.active,
+        password: user.rawPassword || (user.role === 'Doctor' ? 'doctor123' : 'staff123'),
+        createdAt: user.createdAt ? new Date(user.createdAt).toISOString().split('T')[0] : '2026-01-01'
       }
     }, { status: 200 });
   } catch (error: any) {
-    console.error('Update staff DB warning:', error.message);
-    return NextResponse.json({ message: 'Server error', error: error.message }, { status: 500 });
+    console.error('Update staff DB error:', error.message);
+    if (error.code === 11000) {
+      return NextResponse.json({ message: 'A staff member with this email or staff ID already exists.' }, { status: 400 });
+    }
+    return NextResponse.json({ message: error.message || 'Server error' }, { status: 500 });
   }
 }
 

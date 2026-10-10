@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useContext, useEffect } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Container,
   Box,
   Typography,
   Button,
-  Paper
+  Paper,
+  CircularProgress
 } from '@mui/material';
 import { ArrowBack, Lock } from '@mui/icons-material';
 import Header from '../../components/Header';
@@ -28,19 +29,40 @@ export default function StaffManagementPage() {
     deleteStaffUser
   } = useAuth();
 
+  // Prevent hydration mismatch: render identical loading state until client mounts
+  const [mounted, setMounted] = useState<boolean>(false);
   useEffect(() => {
-    if (!currentUser) {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted && !currentUser) {
       router.push('/login');
     }
-  }, [currentUser, router]);
+  }, [mounted, currentUser, router]);
 
   const handleLogout = () => {
     logout();
     router.push('/login');
   };
 
+  // Consistent server and client HTML before hydration completes
+  if (!mounted) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', flexDirection: 'column' }}>
+        <CircularProgress color="primary" sx={{ mb: 2 }} />
+        <Typography variant="body1" color="text.secondary">Loading Staff Management Workspace...</Typography>
+      </Box>
+    );
+  }
+
   if (!currentUser) {
-    return null;
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', flexDirection: 'column' }}>
+        <CircularProgress color="primary" sx={{ mb: 2 }} />
+        <Typography variant="body1" color="text.secondary">Redirecting to login portal...</Typography>
+      </Box>
+    );
   }
 
   const userRole = currentUser.role || 'Doctor';

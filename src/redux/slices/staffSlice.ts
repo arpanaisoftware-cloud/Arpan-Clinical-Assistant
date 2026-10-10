@@ -107,7 +107,9 @@ const staffSlice = createSlice({
     },
     localUpdateStaff: (state, action: PayloadAction<{ id: string; updatedData: Partial<StaffUser> }>) => {
       const { id, updatedData } = action.payload;
-      const index = state.staffList.findIndex((s) => s.id === id || s.staffId === id);
+      const index = state.staffList.findIndex(
+        (s) => s.id === id || (s as any)._id === id || s.staffId === id
+      );
       if (index !== -1) {
         state.staffList[index] = { ...state.staffList[index], ...updatedData };
       }
@@ -137,7 +139,6 @@ const staffSlice = createSlice({
     });
     builder.addCase(addStaffMember.fulfilled, (state, action) => {
       state.isLoading = false;
-      // Replace if existing or add to start
       const idx = state.staffList.findIndex(
         (s) => s.id === action.payload.id || s.staffId === action.payload.staffId
       );
@@ -155,12 +156,21 @@ const staffSlice = createSlice({
 
     // Update Staff
     builder.addCase(updateStaffMember.fulfilled, (state, action) => {
+      const targetId = action.meta.arg.id;
+      const updated = action.payload;
       const idx = state.staffList.findIndex(
-        (s) => s.id === action.payload.id || s.staffId === action.payload.staffId
+        (s) => s.id === targetId || s.id === updated.id || (s as any)._id === targetId || (s as any)._id === updated.id || s.staffId === targetId || s.staffId === updated.staffId
       );
       if (idx !== -1) {
-        state.staffList[idx] = { ...state.staffList[idx], ...action.payload };
+        state.staffList[idx] = { ...state.staffList[idx], ...updated };
+      } else {
+        state.staffList.unshift(updated);
       }
+      state.lastActionSuccess = 'Staff updated successfully';
+    });
+    builder.addCase(updateStaffMember.rejected, (state, action) => {
+      state.isLoading = false;
+      state.error = action.payload || 'Failed to update staff member';
     });
 
     // Toggle Staff Status

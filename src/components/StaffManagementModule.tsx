@@ -69,10 +69,10 @@ type FormErrors = { name?: string; email?: string; department?: string; role?: s
 
 interface StaffManagementModuleProps {
   staffList: StaffUser[];
-  onAddStaff: (newStaff: StaffUser) => void;
-  onUpdateStaff?: (staffId: string, updatedData: Partial<StaffUser>) => void;
-  onDeleteStaff?: (staffId: string) => void;
-  onToggleStatus: (staffId: string) => void;
+  onAddStaff: (newStaff: StaffUser) => Promise<any> | void;
+  onUpdateStaff?: (staffId: string, updatedData: Partial<StaffUser>) => Promise<any> | void;
+  onDeleteStaff?: (staffId: string) => Promise<any> | void;
+  onToggleStatus: (staffId: string) => Promise<any> | void;
 }
 
 export default function StaffManagementModule({
@@ -137,17 +137,31 @@ export default function StaffManagementModule({
     const generatedEmail = email.trim();
 
     if (editingUserId && onUpdateStaff) {
-      onUpdateStaff(editingUserId, {
-        name: name.trim(),
-        email: generatedEmail,
-        department: assignedDept,
-        role: assignedRole,
-        modulePermissions: assignedPermissions,
-        ...(staffIdInput.trim() ? { staffId: staffIdInput.trim() } : {}),
-        ...(customPassword.trim() ? { password: customPassword.trim() } : {})
-      });
-      toast.success('Staff Account Updated!', { toastId: 'staff-updated' });
-      setEditingUserId(null);
+      try {
+        await onUpdateStaff(editingUserId, {
+          name: name.trim(),
+          email: generatedEmail,
+          department: assignedDept,
+          role: assignedRole,
+          modulePermissions: assignedPermissions,
+          ...(staffIdInput.trim() ? { staffId: staffIdInput.trim() } : {}),
+          ...(customPassword.trim() ? { password: customPassword.trim() } : {})
+        });
+        toast.success('Staff Account Updated Successfully!', { toastId: 'staff-updated' });
+        setEditingUserId(null);
+        // Reset form
+        setName('');
+        setEmail('');
+        setStaffIdInput('');
+        setCustomPassword('');
+        setDepartment('');
+        setRole('');
+        setPermission('');
+        setErrors({});
+      } catch (err: any) {
+        toast.error(err.message || 'Failed to update staff account. Please try again.');
+      }
+      return;
     } else {
       const newMember: StaffUser = {
         id: `ST-${Date.now()}`,
@@ -162,15 +176,30 @@ export default function StaffManagementModule({
         password: generatedPass
       };
 
-      onAddStaff(newMember);
-      setIssuedUser(newMember);
-      toast.success(
-        `Staff Account Issued! Login ID: ${generatedId} | Password: ${generatedPass}`,
-        { toastId: `staff-created-${newMember.id}` }
-      );
+      try {
+        await onAddStaff(newMember);
+        setIssuedUser(newMember);
+        toast.success(
+          `Staff Account Issued! Login ID: ${generatedId} | Password: ${generatedPass}`,
+          { toastId: `staff-created-${newMember.id}` }
+        );
+        // Reset form
+        setName('');
+        setEmail('');
+        setStaffIdInput('');
+        setCustomPassword('');
+        setDepartment('');
+        setRole('');
+        setPermission('');
+        setErrors({});
+      } catch (err: any) {
+        toast.error(err.message || 'Failed to issue staff account. Please try again.');
+      }
     }
+  };
 
-    // Reset form
+  const handleCancelEdit = () => {
+    setEditingUserId(null);
     setName('');
     setEmail('');
     setStaffIdInput('');
@@ -188,8 +217,8 @@ export default function StaffManagementModule({
     setStaffIdInput(user.staffId);
     setDepartment(user.department);
     setRole(user.role);
-    setPermission(user.modulePermissions);
-    setCustomPassword(user.password || '');
+    setPermission(user.modulePermissions || (user.role === 'Doctor' ? 'Full Access' : 'Counselling + Diets'));
+    setCustomPassword(user.password || (user.role === 'Doctor' ? 'doctor123' : 'staff123'));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -207,7 +236,8 @@ export default function StaffManagementModule({
   };
 
   const handleCopyCredentials = (user: StaffUser) => {
-    const text = `Arpan Clinical Assistant Login Credentials:\nName: ${user.name}\nEmail: ${user.email || 'N/A'}\nRole: ${user.role}\nDepartment: ${user.department}\nPermissions: ${user.modulePermissions}\nLogin ID: ${user.staffId}\nPassword: ${user.password || 'staff123'}`;
+    const effectivePass = user.password || (user.role === 'Doctor' ? 'doctor123' : 'staff123');
+    const text = `Arpan Clinical Assistant Login Credentials:\nName: ${user.name}\nEmail: ${user.email || 'N/A'}\nRole: ${user.role}\nDepartment: ${user.department}\nPermissions: ${user.modulePermissions}\nLogin ID: ${user.staffId}\nPassword: ${effectivePass}`;
     navigator.clipboard.writeText(text);
     toast.info('Credentials copied to clipboard!', { toastId: 'copy-credentials' });
   };
@@ -309,11 +339,35 @@ export default function StaffManagementModule({
           </Paper>
         )}
 
-        {/* Issue Credentials Form */}
-        <Paper variant="outlined" sx={{ p: 3, mb: 4, borderRadius: 1, bgcolor: 'rgba(0, 201, 167, 0.03)', borderColor: 'rgba(0, 201, 167, 0.3)' }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#00C9A7', display: 'flex', alignItems: 'center', gap: 1, mb: 2.5 }}>
-            <PersonAdd fontSize="small" /> Issue Login Credentials & Access Level
-          </Typography>
+        {/* Issue / Edit Credentials Form */}
+        <Paper
+          variant="outlined"
+          sx={{
+            p: 3,
+            mb: 4,
+            borderRadius: 1,
+            bgcolor: editingUserId ? 'rgba(56, 189, 248, 0.05)' : 'rgba(0, 201, 167, 0.03)',
+            borderColor: editingUserId ? 'rgba(56, 189, 248, 0.4)' : 'rgba(0, 201, 167, 0.3)',
+            transition: 'all 0.3s ease'
+          }}
+        >
+          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2.5}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 800, color: editingUserId ? '#38BDF8' : '#00C9A7', display: 'flex', alignItems: 'center', gap: 1 }}>
+              {editingUserId ? <Edit fontSize="small" /> : <PersonAdd fontSize="small" />}
+              {editingUserId ? `Edit Staff Account Credentials & Profile (${name || 'Selected Staff'})` : 'Issue Login Credentials & Access Level'}
+            </Typography>
+            {editingUserId && (
+              <Button
+                size="small"
+                variant="outlined"
+                color="inherit"
+                onClick={handleCancelEdit}
+                sx={{ textTransform: 'none', fontWeight: 700 }}
+              >
+                Cancel Edit
+              </Button>
+            )}
+          </Stack>
 
           {isMaxUsersReached && (
             <Box sx={{ p: 2, mb: 3, borderRadius: 1, bgcolor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
@@ -463,13 +517,33 @@ export default function StaffManagementModule({
               </Grid>
 
               <Grid item xs={12}>
-                <Tooltip title={isMaxUsersReached ? "User limit reached" : editingUserId ? "Update existing staff member profile" : "Create staff user profile and issue Login ID with Password and Email"} arrow placement="top">
-                  <span>
-                    <Button variant="contained" color="primary" type="submit" disabled={isMaxUsersReached} startIcon={editingUserId ? <Edit /> : <PersonAdd />} sx={{ borderRadius: 1, height: 42, px: 3, fontWeight: 800, width: { xs: '100%', sm: 'auto' } }}>
-                      {editingUserId ? "Update Credentials & Profile" : "Issue Credentials & Access Account"}
+                <Stack direction="row" spacing={2} alignItems="center">
+                  <Tooltip title={isMaxUsersReached ? "User limit reached" : editingUserId ? "Update existing staff member profile" : "Create staff user profile and issue Login ID with Password and Email"} arrow placement="top">
+                    <span>
+                      <Button
+                        variant="contained"
+                        color={editingUserId ? "info" : "primary"}
+                        type="submit"
+                        disabled={isMaxUsersReached}
+                        startIcon={editingUserId ? <Edit /> : <PersonAdd />}
+                        sx={{ borderRadius: 1, height: 42, px: 3, fontWeight: 800, width: { xs: '100%', sm: 'auto' } }}
+                      >
+                        {editingUserId ? "Update Credentials & Profile" : "Issue Credentials & Access Account"}
+                      </Button>
+                    </span>
+                  </Tooltip>
+
+                  {editingUserId && (
+                    <Button
+                      variant="outlined"
+                      color="inherit"
+                      onClick={handleCancelEdit}
+                      sx={{ borderRadius: 1, height: 42, px: 3, fontWeight: 700 }}
+                    >
+                      Cancel Edit
                     </Button>
-                  </span>
-                </Tooltip>
+                  )}
+                </Stack>
               </Grid>
             </Grid>
           </form>
@@ -501,7 +575,7 @@ export default function StaffManagementModule({
                   <TableRow key={user.id} hover>
                     <TableCell sx={{ fontWeight: 900, color: '#00C9A7' }}>{user.staffId}</TableCell>
                     <TableCell sx={{ fontWeight: 800, color: '#FFB703', fontFamily: 'monospace' }}>
-                      {user.password || 'staff123'}
+                      {user.password || (user.role === 'Doctor' ? 'doctor123' : 'staff123')}
                     </TableCell>
                     <TableCell sx={{ fontWeight: 700 }}>{user.name}</TableCell>
                     <TableCell sx={{ fontSize: '0.82rem', color: isDark ? '#94A3B8' : '#64748B' }}>
@@ -606,7 +680,7 @@ export default function StaffManagementModule({
                         ID: {user.staffId}
                       </Typography>
                       <Typography variant="caption" sx={{ color: '#FFB703', fontWeight: 800, fontFamily: 'monospace', bgcolor: 'rgba(255, 183, 3, 0.1)', px: 1, py: 0.2, borderRadius: 1 }}>
-                        Pass: {user.password || 'staff123'}
+                        Pass: {user.password || (user.role === 'Doctor' ? 'doctor123' : 'staff123')}
                       </Typography>
                     </Stack>
                   </Box>

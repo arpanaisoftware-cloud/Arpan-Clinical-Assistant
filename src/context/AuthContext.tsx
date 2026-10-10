@@ -135,6 +135,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           updatedData,
         })
       ).unwrap();
+      dispatch(fetchStaffList());
+      if (
+        currentUser &&
+        (currentUser.id === id || (currentUser as any).staffId === id || currentUser.email === updatedData.email)
+      ) {
+        dispatch(
+          setCurrentUser({
+            ...currentUser,
+            name: updatedData.name || currentUser.name,
+            email: updatedData.email || currentUser.email,
+            role: updatedData.role || currentUser.role,
+            modulePermissions: updatedData.modulePermissions || currentUser.modulePermissions,
+            department: updatedData.department || currentUser.department,
+            staffId: updatedData.staffId || (currentUser as any).staffId,
+          })
+        );
+      }
     } catch (e) {
       console.warn('Backend staff update failed:', e);
       dispatch(fetchStaffList());
