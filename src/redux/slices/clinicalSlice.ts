@@ -375,6 +375,18 @@ const clinicalSlice = createSlice({
         localStorage.setItem('arpan_history_list', JSON.stringify(state.historyList));
       }
     },
+    setHistoryList: (state, action: PayloadAction<HistoryRecord[]>) => {
+      state.historyList = action.payload;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('arpan_history_list', JSON.stringify(state.historyList));
+      }
+    },
+    removeHistoryRecord: (state, action: PayloadAction<string>) => {
+      state.historyList = state.historyList.filter((item) => item.id !== action.payload);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('arpan_history_list', JSON.stringify(state.historyList));
+      }
+    },
     clearAnalysisResult: (state) => {
       state.analysisResult = null;
     },
@@ -386,6 +398,8 @@ export const {
   setActiveModuleTab,
   setCurrentPatientDraft,
   addHistoryRecord,
+  setHistoryList,
+  removeHistoryRecord,
   clearAnalysisResult,
 } = clinicalSlice.actions;
 
