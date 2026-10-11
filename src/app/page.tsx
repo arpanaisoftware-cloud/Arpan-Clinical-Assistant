@@ -73,6 +73,7 @@ export default function Home() {
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [printModalOpen, setPrintModalOpen] = useState<boolean>(false);
   const [copilotOpen, setCopilotOpen] = useState<boolean>(false);
+  const [selectedCopilotPatient, setSelectedCopilotPatient] = useState<HistoryRecord | null>(null);
 
   // Prevent hydration mismatch: only render client-specific content after mount
   const [mounted, setMounted] = useState<boolean>(false);
@@ -181,7 +182,9 @@ export default function Home() {
         safetyScore: result.safetyScore || 85,
         risk: result.riskCategory || 'OPTIMAL / LOW RISK',
         color: result.statusColor || '#00C9A7',
-        date: new Date().toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' })
+        date: new Date().toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' }),
+        analysisResult: result,
+        patientInput: formData
       }));
 
       toast.success('AI Prescription Analysis Complete! View breakdown below.');
@@ -245,7 +248,9 @@ export default function Home() {
         safetyScore: result.safetyScore || 85,
         risk: result.riskCategory || 'See Analysis',
         color: result.statusColor || '#00C9A7',
-        date: new Date().toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' })
+        date: new Date().toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' }),
+        analysisResult: result,
+        patientInput: result.patientInfo
       }));
 
       toast.success('AI Prescription Analysis Complete! Full details extracted from document.');
@@ -270,7 +275,13 @@ export default function Home() {
   };
 
   const handleLoadHistoryRecord = (record: HistoryRecord) => {
-    const mockCase: PatientInput = {
+    if (record.analysisResult) {
+      setAnalysisResult(record.analysisResult);
+      toast.success(`Loaded full analysis for ${record.patientName} (${record.id})`);
+      scrollToAnalysis();
+      return;
+    }
+    const mockCase: PatientInput = record.patientInput || {
       patientName: record.patientName,
       age: record.age,
       gender: record.gender,
@@ -282,6 +293,12 @@ export default function Home() {
     handleAnalyze(mockCase);
     toast.info(`Loaded record ${record.id} for ${record.patientName}`);
     window.scrollTo({ top: 200, behavior: 'smooth' });
+  };
+
+  const handleAskAiForPatient = (record: HistoryRecord) => {
+    setSelectedCopilotPatient(record);
+    setCopilotOpen(true);
+    toast.info(`Opened AI Copilot for ${record.patientName}`);
   };
 
   const handleAddStaff = async (newStaff: StaffUser) => {
@@ -580,7 +597,11 @@ export default function Home() {
                   )}
 
                   {/* Dynamic Consultation History Table */}
-                  {/* <HistoryTable historyList={historyList} onLoadRecord={handleLoadHistoryRecord} /> */}
+                  <HistoryTable
+                    historyList={historyList}
+                    onLoadRecord={handleLoadHistoryRecord}
+                    onAskAi={handleAskAiForPatient}
+                  />
                 </>
               ) : (
                 /* Module Permission Restricted Card */
@@ -725,7 +746,10 @@ export default function Home() {
         open={copilotOpen}
         onClose={() => setCopilotOpen(false)}
         currentPatientData={analysisResult?.patientInfo}
+        analysisData={analysisResult}
         currentUser={currentUser}
+        selectedPatientRecord={selectedCopilotPatient}
+        onSelectPatientRecord={(rec) => setSelectedCopilotPatient(rec)}
       />
     </Box>
   );

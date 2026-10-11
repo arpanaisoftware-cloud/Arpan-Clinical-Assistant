@@ -175,6 +175,8 @@ export interface HistoryRecord {
   risk: string;
   color: string;
   date: string;
+  analysisResult?: AnalysisResult;
+  patientInput?: PatientInput;
 }
 
 export type UserRole = 'Doctor' | 'Staff';

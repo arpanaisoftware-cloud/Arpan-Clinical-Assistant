@@ -19,7 +19,9 @@ import {
   Stack,
   Box
 } from '@mui/material';
-import { Search, History, PlayArrow } from '@mui/icons-material';
+import { useRouter } from 'next/navigation';
+import { Search, History, PlayArrow, Psychology, OpenInNew } from '@mui/icons-material';
+import { Tooltip, IconButton } from '@mui/material';
 import { HistoryRecord } from '../types/clinical';
 
 const INITIAL_HISTORY: HistoryRecord[] = [
@@ -64,9 +66,11 @@ const INITIAL_HISTORY: HistoryRecord[] = [
 interface HistoryTableProps {
   historyList?: HistoryRecord[];
   onLoadRecord?: (record: HistoryRecord) => void;
+  onAskAi?: (record: HistoryRecord) => void;
 }
 
-export default function HistoryTable({ historyList, onLoadRecord }: HistoryTableProps) {
+export default function HistoryTable({ historyList, onLoadRecord, onAskAi }: HistoryTableProps) {
+  const router = useRouter();
   const [search, setSearch] = useState<string>('');
 
   const records = historyList && historyList.length > 0 ? historyList : INITIAL_HISTORY;
@@ -88,7 +92,7 @@ export default function HistoryTable({ historyList, onLoadRecord }: HistoryTable
                 Recent Patient Prescription Analysis History
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Search past clinical analyses and reload patient profiles with one click.
+                Search past clinical analyses, reload full patient dashboards, or consult with AI Copilot on analyzed records.
               </Typography>
             </Box>
           </Stack>
@@ -120,35 +124,85 @@ export default function HistoryTable({ historyList, onLoadRecord }: HistoryTable
                 <TableCell sx={{ fontWeight: 800 }}>Rx Count</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>Safety Score</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>Date</TableCell>
-                <TableCell sx={{ fontWeight: 800 }} align="right">Action</TableCell>
+                <TableCell sx={{ fontWeight: 800, whiteSpace: 'nowrap', width: '1%' }} align="center">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {filteredHistory.map((row) => (
                 <TableRow key={row.id} hover>
-                  <TableCell sx={{ fontWeight: 700, color: '#00C9A7' }}>{row.id}</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>{row.patientName}</TableCell>
-                  <TableCell>{row.age} Y / {row.gender}</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#00C9A7', whiteSpace: 'nowrap' }}>{row.id}</TableCell>
+                  <TableCell sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{row.patientName}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{row.age} Y / {row.gender}</TableCell>
                   <TableCell>{row.disease}</TableCell>
-                  <TableCell>{row.medCount} Drugs</TableCell>
-                  <TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{row.medCount} Drugs</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>
                     <Chip
                       label={`${row.safetyScore}/100 - ${row.risk}`}
                       size="small"
                       sx={{ bgcolor: row.color, color: '#FFF', fontWeight: 800, fontSize: '0.7rem' }}
                     />
                   </TableCell>
-                  <TableCell sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>{row.date}</TableCell>
-                  <TableCell align="right">
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      color="primary"
-                      startIcon={<PlayArrow />}
-                      onClick={() => onLoadRecord && onLoadRecord(row)}
-                    >
-                      Reload
-                    </Button>
+                  <TableCell sx={{ fontSize: '0.8rem', color: 'text.secondary', whiteSpace: 'nowrap' }}>{row.date}</TableCell>
+                  <TableCell align="center" sx={{ whiteSpace: 'nowrap', width: '1%' }}>
+                    <Stack direction="row" spacing={1} justifyContent="center" alignItems="center" sx={{ flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
+                      <Tooltip title={`Consult AI Doctor regarding ${row.patientName}'s analyzed profile (Quick Drawer)`} arrow>
+                        <Button
+                          variant="contained"
+                          size="small"
+                          startIcon={<Psychology fontSize="small" />}
+                          onClick={() => onAskAi && onAskAi(row)}
+                          sx={{
+                            background: 'linear-gradient(135deg, #6C5CE7 0%, #4834D4 100%)',
+                            color: '#FFF',
+                            fontWeight: 700,
+                            fontSize: '0.75rem',
+                            textTransform: 'none',
+                            px: 1.5,
+                            whiteSpace: 'nowrap',
+                            flexShrink: 0,
+                            boxShadow: '0 2px 8px rgba(108, 92, 231, 0.3)',
+                            '&:hover': {
+                              background: 'linear-gradient(135deg, #5a4bd1 0%, #3b28b8 100%)',
+                            }
+                          }}
+                        >
+                          Ask AI
+                        </Button>
+                      </Tooltip>
+
+                      <Tooltip title={`Open ${row.patientName} in Full-Page Clinical AI Workspace`} arrow>
+                        <IconButton
+                          size="small"
+                          onClick={() => router.push(`/ai-chat?patient=${row.id}`)}
+                          sx={{
+                            color: '#6C5CE7',
+                            border: '1px solid rgba(108, 92, 231, 0.3)',
+                            borderRadius: 1,
+                            p: 0.6,
+                            flexShrink: 0,
+                            '&:hover': {
+                              bgcolor: 'rgba(108, 92, 231, 0.1)',
+                              borderColor: '#6C5CE7',
+                            }
+                          }}
+                        >
+                          <OpenInNew fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+
+                      <Tooltip title="Reload full analysis dashboard for this patient" arrow>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          color="primary"
+                          startIcon={<PlayArrow fontSize="small" />}
+                          onClick={() => onLoadRecord && onLoadRecord(row)}
+                          sx={{ textTransform: 'none', fontSize: '0.75rem', fontWeight: 700, px: 1.5, whiteSpace: 'nowrap', flexShrink: 0 }}
+                        >
+                          Reload
+                        </Button>
+                      </Tooltip>
+                    </Stack>
                   </TableCell>
                 </TableRow>
               ))}

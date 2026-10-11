@@ -29,7 +29,8 @@ import {
   CloudUpload,
   SupervisorAccount,
   Logout,
-  VpnKey
+  VpnKey,
+  AutoAwesome
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import { AuthUser } from '../types/clinical';
@@ -79,7 +80,7 @@ export default function Header({
       toast.error('New password must be at least 8 characters long.');
       return;
     }
-    
+
     setIsChangingPassword(true);
     try {
       const resultAction = await dispatch(changePassword({ currentPassword, newPassword }));
@@ -208,10 +209,54 @@ export default function Header({
                 </Tooltip>
               )}
 
-              {/* Ask AI — icon-only on mobile, full button on sm+ */}
-              <Tooltip title="Open AI Clinical Assistant" arrow placement="bottom">
+              {/* Dedicated Full-Page AI Chat */}
+              <Tooltip title="Open Dedicated Full-Page AI Consultation Workspace" arrow placement="bottom">
                 <Box component="span" sx={{ display: 'inline-flex' }}>
-                  {/* Icon-only on xs */}
+                  {/* Icon-only on mobile (xs, sm) */}
+                  <IconButton
+                    onClick={() => router.push('/ai-chat')}
+                    size="small"
+                    sx={{
+                      display: { xs: 'inline-flex', md: 'none' },
+                      background: 'linear-gradient(135deg, #6C5CE7 0%, #4834D4 100%)',
+                      color: '#FFF',
+                      borderRadius: 1,
+                      p: 0.75,
+                      boxShadow: '0 4px 15px rgba(108, 92, 231, 0.4)',
+                      '&:hover': { background: 'linear-gradient(135deg, #5a4bd1 0%, #3b28b8 100%)' }
+                    }}
+                  >
+                    <AutoAwesome fontSize="small" />
+                  </IconButton>
+
+                  {/* Full button on md+ */}
+                  <Button
+                    variant="outlined"
+                    color="secondary"
+                    size="small"
+                    startIcon={<AutoAwesome />}
+                    onClick={() => router.push('/ai-chat')}
+                    sx={{
+                      display: { xs: 'none', md: 'inline-flex' },
+                      borderRadius: 1,
+                      fontWeight: 700,
+                      borderColor: 'rgba(108, 92, 231, 0.4)',
+                      color: mode === 'dark' ? '#C4B5FD' : '#6C5CE7',
+                      '&:hover': {
+                        borderColor: '#6C5CE7',
+                        background: 'rgba(108, 92, 231, 0.1)',
+                      }
+                    }}
+                  >
+                    AI Chat Page
+                  </Button>
+                </Box>
+              </Tooltip>
+
+              {/* Ask AI (Drawer) — icon-only on mobile, full button on sm+ */}
+              {/* <Tooltip title="Open Quick AI Copilot Drawer" arrow placement="bottom">
+                <Box component="span" sx={{ display: 'inline-flex' }}>
+                 
                   <IconButton
                     onClick={onOpenCopilot}
                     size="small"
@@ -227,7 +272,7 @@ export default function Header({
                   >
                     <Psychology fontSize="small" />
                   </IconButton>
-                  {/* Full button on sm+ */}
+                  
                   <Button
                     variant="contained"
                     color="secondary"
@@ -244,7 +289,7 @@ export default function Header({
                     Ask AI
                   </Button>
                 </Box>
-              </Tooltip>
+              </Tooltip> */}
 
               <Tooltip title={mode === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'} arrow placement="bottom">
                 <IconButton onClick={onToggleMode} color="inherit" size="small" sx={{ border: '1px solid rgba(255, 255, 255, 0.12)' }}>
@@ -357,10 +402,10 @@ export default function Header({
           <Button onClick={() => setChangePasswordOpen(false)} color="inherit" sx={{ fontWeight: 700 }}>
             Cancel
           </Button>
-          <Button 
-            onClick={handleChangePasswordSubmit} 
-            color="primary" 
-            variant="contained" 
+          <Button
+            onClick={handleChangePasswordSubmit}
+            color="primary"
+            variant="contained"
             disabled={isChangingPassword}
             sx={{ fontWeight: 700 }}
           >

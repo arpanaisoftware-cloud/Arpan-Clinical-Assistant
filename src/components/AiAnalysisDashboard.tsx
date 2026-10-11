@@ -173,7 +173,7 @@ export default function AiAnalysisDashboard({
                 </Typography>
               </Box>
 
-              <Stack direction={{ xs: 'row', sm: 'column' }} spacing={1} alignItems="flex-end" flexWrap="wrap" justifyContent={{ xs: 'flex-start', sm: 'flex-end' }} mt={{ xs: 1, sm: 0 }}>
+              <Stack direction={{ xs: 'row', sm: 'column' }} spacing={1} alignItems="flex-end" flexWrap="nowrap" justifyContent={{ xs: 'flex-start', sm: 'flex-end' }} mt={{ xs: 1, sm: 0 }} sx={{ flexShrink: 0 }}>
                 <Button
                   variant="contained"
                   color="primary"
@@ -183,7 +183,7 @@ export default function AiAnalysisDashboard({
                     triggerConfetti();
                     setPrintOpen(true);
                   }}
-                  sx={{ borderRadius: 1, width: { xs: '100%', sm: 'auto' } }}
+                  sx={{ borderRadius: 1, width: { xs: '100%', sm: 'auto' }, whiteSpace: 'nowrap', flexShrink: 0 }}
                 >
                   Print Full Analysis
                 </Button>
@@ -193,6 +193,7 @@ export default function AiAnalysisDashboard({
                   size="small"
                   startIcon={<Psychology />}
                   onClick={onOpenCopilot}
+                  sx={{ borderRadius: 1, whiteSpace: 'nowrap', flexShrink: 0, width: { xs: '100%', sm: 'auto' } }}
                 >
                   Ask AI
                 </Button>
