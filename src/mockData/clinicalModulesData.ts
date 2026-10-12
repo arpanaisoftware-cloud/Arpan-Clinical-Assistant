@@ -4,29 +4,54 @@ export const INITIAL_STAFF_USERS: StaffUser[] = [];
 
 export const COUNSELLING_RISK_DATABASE: RiskAssessmentItem[] = [
   {
-    id: 'cardiovascular',
-    title: 'Heart Attack & Stroke (Cardiovascular Disease Risk)',
-    subtitle: 'Atherosclerotic Cardiovascular Disease (ASCVD) & Arterial Health',
+    id: 'heartAttack',
+    title: 'Heart Attack (Myocardial Infarction & Coronary Artery Risk)',
+    subtitle: 'Coronary Perfusion, Plaque Rupture & Cardiac Ischemia Prevention',
     riskLevel: 'HIGH RISK',
-    score: 74,
+    score: 72,
     color: '#FF4D6D',
     keyIndicators: [
       'Elevated Systolic Blood Pressure (>140 mmHg)',
-      'LDL-C > 130 mg/dL with mild HDL reduction',
+      'LDL-C > 130 mg/dL with arterial plaque progression',
       'History of long-standing Type 2 Diabetes Mellitus',
-      'Sedentary desk lifestyle with elevated BMI (27.5)'
+      'Cardiometabolic strain with sedentary lifestyle'
     ],
     clinicalGuidance: [
-      'Target Blood Pressure: < 130/80 mmHg using ACE-Inhibitor / ARB therapy.',
-      'Initiate high-intensity Statin therapy (e.g. Atorvastatin 20mg-40mg) to reduce LDL by >50%.',
-      'Evaluate antiplatelet therapy (Low-dose Aspirin 75-100mg daily) if 10-year ASCVD risk exceeds 10%.'
+      'Target Blood Pressure: < 130/80 mmHg using ACE-Inhibitor or ARB cardioprotective therapy.',
+      'Initiate or optimize high-intensity Statin therapy (e.g., Atorvastatin 20mg-40mg daily).',
+      'Consider low-dose Aspirin (75-100mg daily) if 10-year coronary event risk is elevated.'
     ],
     patientAdvice: [
-      'Engage in 150 minutes of moderate aerobic activity (brisk walking, swimming) per week.',
-      'Strictly avoid tobacco smoke and limit daily dietary sodium under 2,000 mg.',
-      'Recognize emergency stroke/heart attack warning signs: sudden chest tightness, shortness of breath, left arm pain, or facial drooping.'
+      'Engage in 150 minutes of moderate cardiovascular aerobic activity (brisk walking) per week.',
+      'Adopt a heart-healthy Mediterranean diet with strictly low dietary saturated fats and low sodium (<2,000 mg/day).',
+      'Immediately seek emergency medical care if you experience chest heaviness, radiating arm/jaw pain, or sudden cold sweats.'
     ],
-    screeningSchedule: 'Lipid panel every 6 months; 24-hr Ambulatory BP monitoring annually.'
+    screeningSchedule: 'Annual ECG, Echocardiogram and 6-monthly fasting Lipid Panel.'
+  },
+  {
+    id: 'stroke',
+    title: 'Stroke (Cerebrovascular Accident & Brain Health Risk)',
+    subtitle: 'Carotid Artery Intima-Media Health & Cerebral Vascular Perfusion',
+    riskLevel: 'HIGH RISK',
+    score: 68,
+    color: '#E056FD',
+    keyIndicators: [
+      'Systolic BP fluctuations and persistent arterial stiffness',
+      'Elevated pulse pressure and carotid vascular shear stress',
+      'Uncontrolled glycemic excursions contributing to cerebral microangiopathy',
+      'Sedentary lifestyle with elevated BMI'
+    ],
+    clinicalGuidance: [
+      'Strict 24-hour BP control (<130/80 mmHg) to prevent cerebral aneurysm rupture or ischemic penumbra.',
+      'Screen carotid arteries via Doppler ultrasound if systolic BP >150 mmHg or bruits detected.',
+      'Maintain anticoagulant or antiplatelet protocol if atrial fibrillation or transient ischemic signs occur.'
+    ],
+    patientAdvice: [
+      'Memorize B.E. F.A.S.T. stroke warning signs: Balance loss, Eyesight changes, Facial drooping, Arm weakness, Slurred speech, and Time to call emergency services.',
+      'Avoid sudden emotional or physical strain surges that elevate cerebral arterial pressure.',
+      'Keep a daily blood pressure logbook and avoid high-sodium snacks.'
+    ],
+    screeningSchedule: 'Annual Carotid Artery Doppler Ultrasound and 24-hr Ambulatory BP Monitoring.'
   },
   {
     id: 'retinopathy',

@@ -29,6 +29,7 @@ import {
 } from '@mui/material';
 import {
   Favorite,
+  Psychology,
   Visibility,
   WaterDrop,
   FlashOn,
@@ -48,6 +49,7 @@ import { COUNSELLING_RISK_DATABASE } from '../mockData/clinicalModulesData';
 import { RiskAssessmentItem, RiskCategoryType } from '../types/clinical';
 import confetti from 'canvas-confetti';
 import { toast } from 'react-toastify';
+import CounsellingAnalysisLoader from './CounsellingAnalysisLoader';
 
 // ─── Yup Validation Schema ────────────────────────────────────────────────────
 const counsellingSchema = Yup.object({
@@ -107,6 +109,10 @@ export default function CounsellingModule({
   const [sensationLoss, setSensationLoss] = useState<string>('');
   const [footGrade, setFootGrade] = useState<string>('');
 
+  // Dynamic Risk factors from API (defaults to 6 factors from database)
+  const [riskFactors, setRiskFactors] = useState<RiskAssessmentItem[]>(COUNSELLING_RISK_DATABASE);
+  const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
+
   // Print modal state
   const [printOpen, setPrintOpen] = useState<boolean>(false);
 
@@ -116,6 +122,72 @@ export default function CounsellingModule({
 
   // Field-level validation errors
   const [formErrors, setFormErrors] = useState<FormErrors>({});
+
+  const executeAnalysis = async (formData: {
+    currPatientName: string;
+    currPatientAge: number | string;
+    currPatientGender: string;
+    currPatientDisease: string;
+    sbp: number | string;
+    dbp: number | string;
+    hba1c: number | string;
+    egfr: number | string;
+    sensationLoss?: string;
+    footGrade?: string;
+  }) => {
+    setIsAnalyzing(true);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('arpan_auth_token') : '';
+
+      const res = await fetch('/api/counselling/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token || ''}`,
+        },
+        body: JSON.stringify(formData)
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        if (res.status === 401 && typeof window !== 'undefined') {
+          localStorage.removeItem('arpan_auth_token');
+          localStorage.removeItem('arpan_auth_user');
+          window.dispatchEvent(
+            new CustomEvent('session-terminated-by-other-device', {
+              detail: {
+                loggedOutByOtherDevice: !!errorData.loggedOutByOtherDevice,
+                message: errorData.message || 'Authentication required to generate counselling analysis.',
+              },
+            })
+          );
+        }
+        throw new Error(errorData.message || 'Failed to generate counselling report');
+      }
+
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+        setRiskFactors(json.data);
+      }
+
+      confetti({ particleCount: 70, spread: 80, origin: { y: 0.6 } });
+      setSubmitted(true);
+      setActiveTab(0);
+      toast.success('Patient Chronic Risk Counselling Report Generated Successfully!');
+
+      setTimeout(() => {
+        const el = document.getElementById('counselling-risk-section');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }, 200);
+    } catch (err: any) {
+      console.error('Error generating counselling analysis:', err);
+      toast.error(err.message || 'Failed to generate counselling analysis. Using baseline clinical guidelines.');
+      // Keep fallback baseline
+      setSubmitted(true);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   const handleSubmitForm = async () => {
     setFormErrors({});
@@ -135,33 +207,52 @@ export default function CounsellingModule({
         return;
       }
     }
-    confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
-    setSubmitted(true);
-    setTimeout(() => {
-      const el = document.getElementById('counselling-risk-section');
-      if (el) el.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
+
+    await executeAnalysis({
+      currPatientName,
+      currPatientAge,
+      currPatientGender,
+      currPatientDisease,
+      sbp,
+      dbp,
+      hba1c,
+      egfr,
+      sensationLoss,
+      footGrade
+    });
   };
 
   const handleLoadDemo = () => {
-    // Fill all fields with a realistic demo patient
-    setCurrPatientName('Robert Vance');
-    setCurrPatientAge(58);
-    setCurrPatientGender('Male');
-    setCurrPatientDisease('Essential Hypertension, Type 2 Diabetes, Dyslipidaemia');
-    setSbp(152);
-    setDbp(92);
-    setHba1c(8.4);
-    setEgfr(61);
-    setSensationLoss('Mild Loss');
-    setFootGrade('Grade 1 (Superficial Ulcer)');
-    // Auto-submit after filling
-    confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
-    setSubmitted(true);
-    setTimeout(() => {
-      const el = document.getElementById('counselling-risk-section');
-      if (el) el.scrollIntoView({ behavior: 'smooth' });
-    }, 150);
+    // Fill all fields with a realistic demo patient only — do not trigger AI analysis
+    const demoData = {
+      currPatientName: 'Robert Vance',
+      currPatientAge: 58,
+      currPatientGender: 'Male',
+      currPatientDisease: 'Essential Hypertension, Type 2 Diabetes, Dyslipidaemia',
+      sbp: 152,
+      dbp: 92,
+      hba1c: 8.4,
+      egfr: 61,
+      sensationLoss: 'Mild Loss',
+      footGrade: 'Grade 1 (Superficial Ulcer)'
+    };
+
+    setCurrPatientName(demoData.currPatientName);
+    setCurrPatientAge(demoData.currPatientAge);
+    setCurrPatientGender(demoData.currPatientGender);
+    setCurrPatientDisease(demoData.currPatientDisease);
+    setSbp(demoData.sbp);
+    setDbp(demoData.dbp);
+    setHba1c(demoData.hba1c);
+    setEgfr(demoData.egfr);
+    setSensationLoss(demoData.sensationLoss);
+    setFootGrade(demoData.footGrade);
+    setFormErrors({});
+    setSubmitted(false);
+
+    toast.info('Demo patient profile loaded. Click "Generate Counselling Report" to analyze.', {
+      toastId: 'demo-patient-loaded',
+    });
   };
 
   const handlePrint = () => {
@@ -480,7 +571,7 @@ export default function CounsellingModule({
           </Box>
         </Paper>
 
-        {/* 5 Risk Category Tabs — shown only after form is submitted */}
+        {/* 6 Risk Category Tabs — shown only after form is submitted */}
         {!submitted && (
           <Paper
             variant="outlined"
@@ -499,14 +590,14 @@ export default function CounsellingModule({
               Counselling Report Not Generated Yet
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Fill in the patient details and vitals above, then click <strong>Generate Counselling Report</strong> to view all 5 risk category assessments.
+              Fill in the patient details and vitals above, then click <strong>Generate Counselling Report</strong> to view all 6 risk category assessments.
             </Typography>
           </Paper>
         )}
 
         {submitted && (
           <Box id="counselling-risk-section">
-            {/* Tabs for Risk Categories */}
+            {/* Tabs for 6 Risk Categories */}
             <Tabs
               value={activeTab}
               onChange={(e, newValue) => setActiveTab(newValue)}
@@ -517,16 +608,18 @@ export default function CounsellingModule({
                 borderBottom: 1,
                 borderColor: 'divider',
                 '& .MuiTab-root': { fontWeight: 800, textTransform: 'none', fontSize: '0.9rem', minHeight: 64 },
-                '& .Mui-selected': { color: COUNSELLING_RISK_DATABASE[activeTab]?.color }
+                '& .Mui-selected': { color: riskFactors[activeTab]?.color }
               }}
-              TabIndicatorProps={{ style: { backgroundColor: COUNSELLING_RISK_DATABASE[activeTab]?.color } }}
+              TabIndicatorProps={{ style: { backgroundColor: riskFactors[activeTab]?.color } }}
             >
-              {COUNSELLING_RISK_DATABASE.map((risk, idx) => {
-                const Icon = [Favorite, Visibility, WaterDrop, FlashOn, Pets][idx] || Shield;
+              {riskFactors.map((risk, idx) => {
+                // Distinct icons for the 6 factors: Heart, Brain/Psychology (Stroke), Eye, WaterDrop (Kidney), Flash (Nerves), Foot/Pets
+                const factorIcons = [Favorite, Psychology, Visibility, WaterDrop, FlashOn, Pets];
+                const IconComponent = factorIcons[idx] || Shield;
                 return (
                   <Tab
                     key={risk.id}
-                    icon={<Icon />}
+                    icon={<IconComponent />}
                     iconPosition="start"
                     label={`${idx + 1}. ${risk.title.split('(')[0].trim()}`}
                     sx={{ color: activeTab === idx ? risk.color : 'text.secondary' }}
@@ -537,7 +630,7 @@ export default function CounsellingModule({
 
             {/* Selected Risk Category Overview */}
             <Box>
-              {[COUNSELLING_RISK_DATABASE[activeTab]].filter(Boolean).map((risk) => (
+              {[riskFactors[activeTab]].filter(Boolean).map((risk) => (
                 <Grid container spacing={3} key={risk.id}>
                   {/* Left Column: Risk Score & Key Indicators */}
                   <Grid item xs={12} md={5}>
@@ -632,6 +725,7 @@ export default function CounsellingModule({
                 size="small"
                 onClick={() => {
                   setSubmitted(false);
+                  setRiskFactors(COUNSELLING_RISK_DATABASE);
                   setCurrPatientName('');
                   setCurrPatientAge('');
                   setCurrPatientGender('');
@@ -682,9 +776,6 @@ export default function CounsellingModule({
                 <Typography variant="caption" sx={{ color: '#64748B !important', display: 'block' }} suppressHydrationWarning>
                   Date: {new Date().toLocaleDateString('en-US', { dateStyle: 'medium' })}
                 </Typography>
-                {/* <Typography variant="caption" sx={{ fontWeight: 700, color: '#6C5CE7 !important' }}>
-                  Ref: #COUNSEL-9941
-                </Typography> */}
               </Grid>
             </Grid>
 
@@ -694,16 +785,16 @@ export default function CounsellingModule({
                 Patient: {currPatientName} ({currPatientAge} Y, {currPatientGender}) • Diagnosis: {currPatientDisease}{sbp && dbp ? ` • BP: ${sbp}/${dbp} mmHg` : ''}
               </Typography>
               <Typography variant="caption" sx={{ color: '#475569 !important' }}>
-                Comprehensive 5-Point Diabetic & Hypertensive Risk Evaluation
+                Comprehensive 6-Point Diabetic, Coronary & Hypertensive Risk Evaluation
               </Typography>
             </Paper>
 
             {/* Content List */}
             <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#4C1D95 !important', mb: 2 }}>
-              Key Health Action Steps For Patient:
+              Key Health Action Steps For Patient (6 Chronic Factors):
             </Typography>
             <Box sx={{ pl: 1, mb: 3 }}>
-              {COUNSELLING_RISK_DATABASE.map((risk) => (
+              {riskFactors.map((risk) => (
                 <Box key={risk.id} sx={{ mb: 2 }}>
                   <Typography variant="caption" sx={{ fontWeight: 800, color: risk.color }}>
                     {risk.title} ({risk.riskLevel})
@@ -746,6 +837,9 @@ export default function CounsellingModule({
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Full Page Analysis Loader for Counselling Generation */}
+      <CounsellingAnalysisLoader open={isAnalyzing} />
     </Card>
   );
 }

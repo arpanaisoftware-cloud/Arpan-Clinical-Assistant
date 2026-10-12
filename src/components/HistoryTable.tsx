@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, ChangeEvent } from 'react';
+import React, { useState, useEffect, useRef, ChangeEvent } from 'react';
 import {
   Card,
   CardContent,
@@ -17,74 +17,237 @@ import {
   TextField,
   InputAdornment,
   Stack,
-  Box
+  Box,
+  Tooltip,
+  IconButton,
+  TablePagination,
+  LinearProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  CircularProgress
 } from '@mui/material';
 import { useRouter } from 'next/navigation';
-import { Search, History, PlayArrow, Psychology, OpenInNew } from '@mui/icons-material';
-import { Tooltip, IconButton } from '@mui/material';
+import {
+  Search,
+  History,
+  PlayArrow,
+  Psychology,
+  OpenInNew,
+  DeleteOutline,
+  Refresh
+} from '@mui/icons-material';
+import { toast } from 'react-toastify';
 import { HistoryRecord } from '../types/clinical';
-
-const INITIAL_HISTORY: HistoryRecord[] = [
-  {
-    id: 'RX-9041',
-    patientName: 'Robert Vance',
-    age: 58,
-    gender: 'Male',
-    disease: 'Hypertension & Type 2 Diabetes',
-    medCount: 4,
-    safetyScore: 65,
-    risk: 'MODERATE CAUTION',
-    color: '#FFB703',
-    date: '2026-09-16 10:30 AM'
-  },
-  {
-    id: 'RX-9040',
-    patientName: 'Eleanor Vance',
-    age: 62,
-    gender: 'Female',
-    disease: 'Acute Bronchitis & Hypertension',
-    medCount: 3,
-    safetyScore: 98,
-    risk: 'OPTIMAL / LOW RISK',
-    color: '#00C9A7',
-    date: '2026-09-15 04:15 PM'
-  },
-  {
-    id: 'RX-9039',
-    patientName: 'Marcus Miller',
-    age: 71,
-    gender: 'Male',
-    disease: 'Hyperlipidemia & Arthritis',
-    medCount: 5,
-    safetyScore: 45,
-    risk: 'HIGH RISK ALERT',
-    color: '#FF4D6D',
-    date: '2026-09-14 11:00 AM'
-  }
-];
+import { useAppDispatch } from '../redux/hooks';
+import { removeHistoryRecord, setHistoryList } from '../redux/slices/clinicalSlice';
 
 interface HistoryTableProps {
   historyList?: HistoryRecord[];
   onLoadRecord?: (record: HistoryRecord) => void;
   onAskAi?: (record: HistoryRecord) => void;
+  refreshTrigger?: number;
 }
 
-export default function HistoryTable({ historyList, onLoadRecord, onAskAi }: HistoryTableProps) {
+export default function HistoryTable({
+  historyList,
+  onLoadRecord,
+  onAskAi,
+  refreshTrigger
+}: HistoryTableProps) {
   const router = useRouter();
-  const [search, setSearch] = useState<string>('');
+  const dispatch = useAppDispatch();
 
-  const records = historyList && historyList.length > 0 ? historyList : INITIAL_HISTORY;
+  // Search state with debounce
+  const [searchInput, setSearchInput] = useState<string>('');
+  const [debouncedSearch, setDebouncedSearch] = useState<string>('');
+  const [isSearching, setIsSearching] = useState<boolean>(false);
 
-  const filteredHistory = records.filter(
-    h => h.patientName.toLowerCase().includes(search.toLowerCase()) ||
-      h.disease.toLowerCase().includes(search.toLowerCase()) ||
-      h.id.toLowerCase().includes(search.toLowerCase())
-  );
+  // Pagination state (5 items per page)
+  const ROWS_PER_PAGE = 5;
+  const [page, setPage] = useState<number>(0); // MUI 0-indexed page
+  const [totalRecords, setTotalRecords] = useState<number>(0);
+  const [records, setRecords] = useState<HistoryRecord[]>(historyList || []);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  // Delete Confirmation Dialog state
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState<boolean>(false);
+  const [recordToDelete, setRecordToDelete] = useState<HistoryRecord | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+
+  // ─── DEBOUNCE EFFECT FOR SEARCH (350ms) ───────────────────────────────────
+  useEffect(() => {
+    setIsSearching(true);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchInput.trim());
+      setPage(0); // Reset to first page on search query change
+      setIsSearching(false);
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  // ─── FETCH PRESCRIPTION HISTORY FROM API WITH PAGINATION & SEARCH ────────
+  const fetchHistory = async (targetPage: number = page, searchQuery: string = debouncedSearch) => {
+    setLoading(true);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('arpan_auth_token') : '';
+      const apiPage = targetPage + 1; // 1-indexed for backend API
+      const queryParams = new URLSearchParams({
+        page: apiPage.toString(),
+        limit: ROWS_PER_PAGE.toString(),
+      });
+
+      if (searchQuery) {
+        queryParams.set('search', searchQuery);
+      }
+
+      const res = await fetch(`/api/history?${queryParams.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${token || ''}`,
+        },
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        if (res.status === 401 && typeof window !== 'undefined') {
+          localStorage.removeItem('arpan_auth_token');
+          localStorage.removeItem('arpan_auth_user');
+          window.dispatchEvent(
+            new CustomEvent('session-terminated-by-other-device', {
+              detail: {
+                loggedOutByOtherDevice: !!errorData.loggedOutByOtherDevice,
+                message: errorData.message || 'Authentication required to view prescription history.',
+              },
+            })
+          );
+        }
+        throw new Error(errorData.message || 'Failed to fetch history records');
+      }
+
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        setRecords(json.data);
+        setTotalRecords(json.pagination?.totalRecords ?? json.data.length);
+
+        // Synchronize Redux store with latest loaded records
+        if (!searchQuery && targetPage === 0) {
+          dispatch(setHistoryList(json.data));
+        }
+      }
+    } catch (err: any) {
+      console.error('Error fetching prescription history:', err);
+      // Fallback to local historyList if API fails
+      if (historyList && historyList.length > 0) {
+        setRecords(historyList);
+        setTotalRecords(historyList.length);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Re-fetch when page, debounced search, or refreshTrigger changes
+  useEffect(() => {
+    fetchHistory(page, debouncedSearch);
+  }, [page, debouncedSearch, refreshTrigger]);
+
+  // ─── PAGINATION HANDLER ──────────────────────────────────────────────────
+  const handleChangePage = (_: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  // ─── DELETE RECORD HANDLERS ──────────────────────────────────────────────
+  const handleOpenDeleteConfirm = (record: HistoryRecord) => {
+    setRecordToDelete(record);
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleCloseDeleteConfirm = () => {
+    setDeleteConfirmOpen(false);
+    setRecordToDelete(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!recordToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('arpan_auth_token') : '';
+      const targetId = recordToDelete.id;
+      const res = await fetch(`/api/history/${targetId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token || ''}`,
+        },
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        if (res.status === 401 && typeof window !== 'undefined') {
+          localStorage.removeItem('arpan_auth_token');
+          localStorage.removeItem('arpan_auth_user');
+          window.dispatchEvent(
+            new CustomEvent('session-terminated-by-other-device', {
+              detail: {
+                loggedOutByOtherDevice: !!errorData.loggedOutByOtherDevice,
+                message: errorData.message || 'Authentication required to delete prescription record.',
+              },
+            })
+          );
+        }
+        throw new Error(errorData.message || 'Failed to delete record');
+      }
+
+      toast.success(`Prescription record ${targetId} for ${recordToDelete.patientName} deleted successfully.`);
+
+      // Update Redux state
+      dispatch(removeHistoryRecord(targetId));
+
+      handleCloseDeleteConfirm();
+
+      // If last item on current page was deleted, adjust page backwards if needed
+      const remainingOnPage = records.length - 1;
+      const nextTargetPage = remainingOnPage === 0 && page > 0 ? page - 1 : page;
+      if (nextTargetPage !== page) {
+        setPage(nextTargetPage);
+      } else {
+        fetchHistory(nextTargetPage, debouncedSearch);
+      }
+    } catch (err: any) {
+      console.error('Error deleting prescription record:', err);
+      toast.error(err.message || 'Failed to delete prescription history record.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
-    <Card sx={{ borderRadius: 1, mt: 4 }}>
+    <Card sx={{ borderRadius: 1, mt: 4, position: 'relative' }}>
+      {loading && (
+        <LinearProgress
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            zIndex: 2,
+            bgcolor: 'rgba(0, 201, 167, 0.2)',
+            '& .MuiLinearProgress-bar': { bgcolor: '#00C9A7' }
+          }}
+        />
+      )}
+
       <CardContent sx={{ p: { xs: 2.5, md: 3.5 } }}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={2} mb={3}>
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          justifyContent="space-between"
+          alignItems={{ xs: 'flex-start', sm: 'center' }}
+          spacing={2}
+          mb={3}
+        >
           <Stack direction="row" alignItems="center" spacing={1}>
             <History sx={{ color: '#00C9A7', fontSize: 28 }} />
             <Box>
@@ -92,28 +255,53 @@ export default function HistoryTable({ historyList, onLoadRecord, onAskAi }: His
                 Recent Patient Prescription Analysis History
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Search past clinical analyses, reload full patient dashboards, or consult with AI Copilot on analyzed records.
+                Paginated MongoDB archive (5 records/page) &bull; Max 100 latest consultations retained automatically.
               </Typography>
             </Box>
           </Stack>
 
-          <TextField
-            size="small"
-            placeholder="Search patient, disease..."
-            value={search}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search fontSize="small" />
-                </InputAdornment>
-              ),
-            }}
-            sx={{ minWidth: 260 }}
-          />
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ width: { xs: '100%', sm: 'auto' } }}>
+            <TextField
+              size="small"
+              placeholder="Search patient, disease, Rx ID..."
+              value={searchInput}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchInput(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    {isSearching ? (
+                      <CircularProgress size={16} sx={{ color: '#00C9A7' }} />
+                    ) : (
+                      <Search fontSize="small" />
+                    )}
+                  </InputAdornment>
+                ),
+              }}
+              sx={{ minWidth: { xs: '100%', sm: 280 } }}
+            />
+
+            <Tooltip title="Refresh History" arrow>
+              <IconButton
+                size="small"
+                onClick={() => fetchHistory(page, debouncedSearch)}
+                sx={{
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  borderRadius: 1,
+                  p: 0.8,
+                  '&:hover': { bgcolor: 'rgba(0, 201, 167, 0.1)', color: '#00C9A7' }
+                }}
+              >
+                <Refresh fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Stack>
         </Stack>
 
-        <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 1, borderColor: 'rgba(255, 255, 255, 0.08)' }}>
+        <TableContainer
+          component={Paper}
+          variant="outlined"
+          sx={{ borderRadius: 1, borderColor: 'rgba(255, 255, 255, 0.08)' }}
+        >
           <Table>
             <TableHead sx={{ bgcolor: 'rgba(255, 255, 255, 0.03)' }}>
               <TableRow>
@@ -124,92 +312,230 @@ export default function HistoryTable({ historyList, onLoadRecord, onAskAi }: His
                 <TableCell sx={{ fontWeight: 800 }}>Rx Count</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>Safety Score</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>Date</TableCell>
-                <TableCell sx={{ fontWeight: 800, whiteSpace: 'nowrap', width: '1%' }} align="center">Actions</TableCell>
+                <TableCell sx={{ fontWeight: 800, whiteSpace: 'nowrap', width: '1%' }} align="center">
+                  Actions
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredHistory.map((row) => (
-                <TableRow key={row.id} hover>
-                  <TableCell sx={{ fontWeight: 700, color: '#00C9A7', whiteSpace: 'nowrap' }}>{row.id}</TableCell>
-                  <TableCell sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{row.patientName}</TableCell>
-                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{row.age} Y / {row.gender}</TableCell>
-                  <TableCell>{row.disease}</TableCell>
-                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{row.medCount} Drugs</TableCell>
-                  <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                    <Chip
-                      label={`${row.safetyScore}/100 - ${row.risk}`}
-                      size="small"
-                      sx={{ bgcolor: row.color, color: '#FFF', fontWeight: 800, fontSize: '0.7rem' }}
-                    />
-                  </TableCell>
-                  <TableCell sx={{ fontSize: '0.8rem', color: 'text.secondary', whiteSpace: 'nowrap' }}>{row.date}</TableCell>
-                  <TableCell align="center" sx={{ whiteSpace: 'nowrap', width: '1%' }}>
-                    <Stack direction="row" spacing={1} justifyContent="center" alignItems="center" sx={{ flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
-                      <Tooltip title={`Consult AI Doctor regarding ${row.patientName}'s analyzed profile (Quick Drawer)`} arrow>
-                        <Button
-                          variant="contained"
-                          size="small"
-                          startIcon={<Psychology fontSize="small" />}
-                          onClick={() => onAskAi && onAskAi(row)}
-                          sx={{
-                            background: 'linear-gradient(135deg, #6C5CE7 0%, #4834D4 100%)',
-                            color: '#FFF',
-                            fontWeight: 700,
-                            fontSize: '0.75rem',
-                            textTransform: 'none',
-                            px: 1.5,
-                            whiteSpace: 'nowrap',
-                            flexShrink: 0,
-                            boxShadow: '0 2px 8px rgba(108, 92, 231, 0.3)',
-                            '&:hover': {
-                              background: 'linear-gradient(135deg, #5a4bd1 0%, #3b28b8 100%)',
-                            }
-                          }}
-                        >
-                          Ask AI
-                        </Button>
-                      </Tooltip>
+              {records.length > 0 ? (
+                records.map((row) => (
+                  <TableRow key={row.id} hover>
+                    <TableCell sx={{ fontWeight: 700, color: '#00C9A7', whiteSpace: 'nowrap' }}>
+                      {row.id}
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
+                      {row.patientName}
+                    </TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                      {row.age} Y / {row.gender}
+                    </TableCell>
+                    <TableCell sx={{ maxWidth: 220 }}>
+                      <Typography variant="body2" noWrap title={row.disease}>
+                        {row.disease}
+                      </Typography>
+                    </TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                      {row.medCount} Drugs
+                    </TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                      <Chip
+                        label={`${row.safetyScore}/100 - ${row.risk}`}
+                        size="small"
+                        sx={{ bgcolor: row.color, color: '#FFF', fontWeight: 800, fontSize: '0.7rem' }}
+                      />
+                    </TableCell>
+                    <TableCell sx={{ fontSize: '0.8rem', color: 'text.secondary', whiteSpace: 'nowrap' }}>
+                      {row.date}
+                    </TableCell>
+                    <TableCell align="center" sx={{ whiteSpace: 'nowrap', width: '1%' }}>
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        justifyContent="center"
+                        alignItems="center"
+                        sx={{ flexWrap: 'nowrap', whiteSpace: 'nowrap' }}
+                      >
+                        {/* Ask AI Copilot button */}
+                        <Tooltip title={`Consult AI Doctor regarding ${row.patientName}'s analyzed profile (Quick Drawer)`} arrow>
+                          <Button
+                            variant="contained"
+                            size="small"
+                            startIcon={<Psychology fontSize="small" />}
+                            onClick={() => onAskAi && onAskAi(row)}
+                            sx={{
+                              background: 'linear-gradient(135deg, #6C5CE7 0%, #4834D4 100%)',
+                              color: '#FFF',
+                              fontWeight: 700,
+                              fontSize: '0.75rem',
+                              textTransform: 'none',
+                              px: 1.5,
+                              whiteSpace: 'nowrap',
+                              flexShrink: 0,
+                              boxShadow: '0 2px 8px rgba(108, 92, 231, 0.3)',
+                              '&:hover': {
+                                background: 'linear-gradient(135deg, #5a4bd1 0%, #3b28b8 100%)',
+                              }
+                            }}
+                          >
+                            Ask AI
+                          </Button>
+                        </Tooltip>
 
-                      <Tooltip title={`Open ${row.patientName} in Full-Page Clinical AI Workspace`} arrow>
-                        <IconButton
-                          size="small"
-                          onClick={() => router.push(`/ai-chat?patient=${row.id}`)}
-                          sx={{
-                            color: '#6C5CE7',
-                            border: '1px solid rgba(108, 92, 231, 0.3)',
-                            borderRadius: 1,
-                            p: 0.6,
-                            flexShrink: 0,
-                            '&:hover': {
-                              bgcolor: 'rgba(108, 92, 231, 0.1)',
-                              borderColor: '#6C5CE7',
-                            }
-                          }}
-                        >
-                          <OpenInNew fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                        {/* Full-Page AI Workspace */}
+                        <Tooltip title={`Open ${row.patientName} in Full-Page Clinical AI Workspace`} arrow>
+                          <IconButton
+                            size="small"
+                            onClick={() => router.push(`/ai-chat?patient=${row.id}`)}
+                            sx={{
+                              color: '#6C5CE7',
+                              border: '1px solid rgba(108, 92, 231, 0.3)',
+                              borderRadius: 1,
+                              p: 0.6,
+                              flexShrink: 0,
+                              '&:hover': {
+                                bgcolor: 'rgba(108, 92, 231, 0.1)',
+                                borderColor: '#6C5CE7',
+                              }
+                            }}
+                          >
+                            <OpenInNew fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
 
-                      <Tooltip title="Reload full analysis dashboard for this patient" arrow>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          color="primary"
-                          startIcon={<PlayArrow fontSize="small" />}
-                          onClick={() => onLoadRecord && onLoadRecord(row)}
-                          sx={{ textTransform: 'none', fontSize: '0.75rem', fontWeight: 700, px: 1.5, whiteSpace: 'nowrap', flexShrink: 0 }}
-                        >
-                          Reload
-                        </Button>
-                      </Tooltip>
-                    </Stack>
+                        {/* Reload Full Analysis */}
+                        <Tooltip title="Reload full analysis dashboard for this patient" arrow>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            color="primary"
+                            startIcon={<PlayArrow fontSize="small" />}
+                            onClick={() => onLoadRecord && onLoadRecord(row)}
+                            sx={{
+                              textTransform: 'none',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              px: 1.5,
+                              whiteSpace: 'nowrap',
+                              flexShrink: 0
+                            }}
+                          >
+                            Reload
+                          </Button>
+                        </Tooltip>
+
+                        {/* Delete Record Button */}
+                        <Tooltip title={`Delete ${row.id} from database archive`} arrow>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => handleOpenDeleteConfirm(row)}
+                            sx={{
+                              border: '1px solid rgba(255, 77, 109, 0.3)',
+                              borderRadius: 1,
+                              p: 0.6,
+                              color: '#FF4D6D',
+                              flexShrink: 0,
+                              '&:hover': {
+                                bgcolor: 'rgba(255, 77, 109, 0.1)',
+                                borderColor: '#FF4D6D',
+                              }
+                            }}
+                          >
+                            <DeleteOutline fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
+                    <Typography variant="body1" color="text.secondary">
+                      {loading
+                        ? 'Loading prescription analysis records...'
+                        : debouncedSearch
+                        ? `No prescription records found matching "${debouncedSearch}".`
+                        : 'No prescription analysis records found in MongoDB.'}
+                    </Typography>
                   </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </TableContainer>
+
+        {/* ─── MUI PAGINATION (5 DATA PER PAGE) ─────────────────────────── */}
+        <TablePagination
+          component="div"
+          count={totalRecords}
+          page={page}
+          onPageChange={handleChangePage}
+          rowsPerPage={ROWS_PER_PAGE}
+          rowsPerPageOptions={[5]}
+          labelRowsPerPage="Per page:"
+          sx={{
+            mt: 1,
+            borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+            '.MuiTablePagination-toolbar': { px: { xs: 1, sm: 2 } },
+            '.MuiTablePagination-selectLabel, .MuiTablePagination-displayedRows': {
+              fontWeight: 600,
+              fontSize: '0.85rem'
+            }
+          }}
+        />
       </CardContent>
+
+      {/* ─── DELETE CONFIRMATION DIALOG ──────────────────────────────────── */}
+      <Dialog
+        open={deleteConfirmOpen}
+        onClose={handleCloseDeleteConfirm}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            p: 1,
+            bgcolor: '#1E293B',
+            border: '1px solid rgba(255, 77, 109, 0.3)'
+          }
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 800, color: '#FF4D6D', pb: 1 }}>
+          Delete Prescription Analysis Record?
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ color: 'text.secondary' }}>
+            Are you sure you want to permanently delete record{' '}
+            <strong style={{ color: '#00C9A7' }}>{recordToDelete?.id}</strong> for patient{' '}
+            <strong style={{ color: '#FFF' }}>{recordToDelete?.patientName}</strong>?
+            This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={handleCloseDeleteConfirm}
+            disabled={isDeleting}
+            sx={{ color: 'text.secondary', textTransform: 'none', fontWeight: 600 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirmDelete}
+            color="error"
+            variant="contained"
+            disabled={isDeleting}
+            startIcon={isDeleting ? <CircularProgress size={16} color="inherit" /> : <DeleteOutline />}
+            sx={{
+              bgcolor: '#FF4D6D',
+              '&:hover': { bgcolor: '#e03a5b' },
+              textTransform: 'none',
+              fontWeight: 700
+            }}
+          >
+            {isDeleting ? 'Deleting...' : 'Delete Record'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   );
 }

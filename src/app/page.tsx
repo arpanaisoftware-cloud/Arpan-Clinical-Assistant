@@ -74,6 +74,7 @@ export default function Home() {
   const [printModalOpen, setPrintModalOpen] = useState<boolean>(false);
   const [copilotOpen, setCopilotOpen] = useState<boolean>(false);
   const [selectedCopilotPatient, setSelectedCopilotPatient] = useState<HistoryRecord | null>(null);
+  const [historyRefreshKey, setHistoryRefreshKey] = useState<number>(0);
 
   // Prevent hydration mismatch: only render client-specific content after mount
   const [mounted, setMounted] = useState<boolean>(false);
@@ -171,8 +172,7 @@ export default function Home() {
       const result = await response.json();
       setAnalysisResult(result);
 
-      // Record consultation into dynamic Redux state
-      dispatch(addHistoryRecord({
+      const newRecord: HistoryRecord = {
         id: `RX-${Math.floor(1000 + Math.random() * 9000)}`,
         patientName: formData.patientName || 'Consultation Patient',
         age: Number(formData.age) || 45,
@@ -185,7 +185,25 @@ export default function Home() {
         date: new Date().toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' }),
         analysisResult: result,
         patientInput: formData
-      }));
+      };
+
+      // Record consultation into dynamic Redux state
+      dispatch(addHistoryRecord(newRecord));
+
+      // Persist to MongoDB archive via /api/history (auto prunes to latest 100 records)
+      try {
+        await fetch('/api/history', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token || ''}`,
+          },
+          body: JSON.stringify(newRecord)
+        });
+        setHistoryRefreshKey((prev) => prev + 1);
+      } catch (saveErr) {
+        console.warn('Failed to save consultation history to MongoDB:', saveErr);
+      }
 
       toast.success('AI Prescription Analysis Complete! View breakdown below.');
 
@@ -237,8 +255,7 @@ export default function Home() {
       const result = await response.json();
       setAnalysisResult(result);
 
-      // Record consultation into dynamic Redux state
-      dispatch(addHistoryRecord({
+      const newRecord: HistoryRecord = {
         id: `RX-${Math.floor(1000 + Math.random() * 9000)}`,
         patientName: result.patientInfo?.patientName || 'Prescription Patient',
         age: Number(result.patientInfo?.age) || 0,
@@ -251,7 +268,25 @@ export default function Home() {
         date: new Date().toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' }),
         analysisResult: result,
         patientInput: result.patientInfo
-      }));
+      };
+
+      // Record consultation into dynamic Redux state
+      dispatch(addHistoryRecord(newRecord));
+
+      // Persist to MongoDB archive via /api/history (auto prunes to latest 100 records)
+      try {
+        await fetch('/api/history', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token || ''}`,
+          },
+          body: JSON.stringify(newRecord)
+        });
+        setHistoryRefreshKey((prev) => prev + 1);
+      } catch (saveErr) {
+        console.warn('Failed to save prescription document history to MongoDB:', saveErr);
+      }
 
       toast.success('AI Prescription Analysis Complete! Full details extracted from document.');
 
@@ -601,6 +636,7 @@ export default function Home() {
                     historyList={historyList}
                     onLoadRecord={handleLoadHistoryRecord}
                     onAskAi={handleAskAiForPatient}
+                    refreshTrigger={historyRefreshKey}
                   />
                 </>
               ) : (

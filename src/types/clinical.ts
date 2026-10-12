@@ -227,11 +227,13 @@ export interface AuthUser {
 }
 
 export type RiskCategoryType =
-  | 'cardiovascular'
+  | 'heartAttack'
+  | 'stroke'
   | 'retinopathy'
   | 'nephropathy'
   | 'neuropathy'
-  | 'footRisk';
+  | 'footRisk'
+  | 'cardiovascular';
 
 export interface RiskAssessmentItem {
   id: RiskCategoryType;
