@@ -61,7 +61,12 @@ Return ONLY raw JSON (no markdown, no code fences) matching this schema:
       "sodium": "string e.g. Strict Salt Control (< 1,500 mg/day) - Avoid pickles, papad, namkeen & extra table salt",
       "potassium": "string e.g. Balanced Potassium - Enjoy fresh coconut water, amla, and bottle gourd in moderation",
       "phosphorus": "string e.g. Kidney-Safe Phosphorus - Light yellow moong dal, avoid heavy processed snacks",
-      "calcium": "string e.g. Strong Bones Calcium - 1 bowl low-fat curd and 1 glass skimmed milk daily"
+      "calcium": "string e.g. Strong Bones Calcium - 1 bowl low-fat curd and 1 glass skimmed milk daily",
+      "magnesium": "string e.g. Muscle & Nerve Magnesium - Pumpkin seeds, almonds, steamed spinach & soaked methi for relaxation",
+      "iron": "string e.g. Haemoglobin Booster Iron - Steamed palak dal, roasted chana, beetroot & amla with Vitamin C",
+      "vitaminD": "string e.g. Bone & Immunity Vitamin D - 15 mins gentle morning sun exposure, fortified curd/milk & mushrooms",
+      "vitaminB12": "string e.g. Nerve & Energy Vitamin B12 - Low-fat paneer, curd, fortified milk, or clinical supplement",
+      "uricAcid": "string e.g. Purine & Uric Acid Control - Drink 2.5-3L water, avoid sugary sodas & purine-heavy foods, enjoy amla & cherries"
     },
     "recommendedFoods": [
       "string - Indian food name followed by simple 1-line reason, minimum 8 foods"
@@ -110,6 +115,8 @@ async function callGeminiVision(imageBase64: string, mimeType: string, customPre
     langNote = "\n\nTARGET OUTPUT LANGUAGE: HINDI (हिंदी भाषा). Generate the dietPlan text (summary, meals, benefits, advice, foods) in clear, everyday Hindi in Devanagari script.";
   } else if (language && language.toLowerCase().includes("hinglish")) {
     langNote = "\n\nTARGET OUTPUT LANGUAGE: HINGLISH. Generate the dietPlan in conversational Hinglish.";
+  } else {
+    langNote = "\n\nTARGET OUTPUT LANGUAGE: ENGLISH. Generate the dietPlan text strictly in clear, simple English (using authentic Indian food terms like dal, sabzi, roti in English alphabet). Absolutely DO NOT output Devanagari script.";
   }
 
   const body = {
@@ -200,7 +207,24 @@ function buildClinicalIndianFallbackDiet(info: Record<string, any>, language?: s
       phosphorus: isCKD
         ? "Kidney-Safe Phosphorus — Light yellow moong dal, avoid heavy processed cheeses and colas"
         : "Safe Phosphorus Range — Balanced naturally through fresh homemade dals and curd",
-      calcium: "Strong Bones Calcium — 1 bowl low-fat curd and 1 glass skimmed milk or ragi porridge daily"
+      calcium: isHindi
+        ? "मजबूत हड्डियों के लिए कैल्शियम — 1 कटोरी लो-फैट दही और 1 गिलास मलाई रहित दूध या रागी दलिया रोज़ लें"
+        : "Strong Bones Calcium — 1 bowl low-fat curd and 1 glass skimmed milk or ragi porridge daily",
+      magnesium: isHindi
+        ? "मांसपेशियों और नसों के लिए मैग्नीशियम — कद्दू के बीज, बादाम, पालक और रातभर भीगी मेथी लें"
+        : "Relaxing Magnesium — Pumpkin seeds, almonds, steamed spinach, and soaked methi for nerve & muscle support",
+      iron: isHindi
+        ? "खून और हीमोग्लोबिन के लिए आयरन — पालक दाल, भुना चना, चुकंदर और ताज़ा आंवला"
+        : "Blood Health Iron — Steamed palak dal, roasted chana, beetroot & amla with natural Vitamin C",
+      vitaminD: isHindi
+        ? "हड्डियों और इम्युनिटी के लिए विटामिन D — सुबह 15 मिनट धूप, फोर्टिफाइड दूध/दही और मशरूम"
+        : "Sunlight & Bone Vitamin D — 15 mins morning sunlight, fortified curd/milk, and mushrooms",
+      vitaminB12: isHindi
+        ? "ऊर्जा और नसों के लिए विटामिन B12 — ताज़ा पनीर, दही या डॉक्टर की सलाह से बी12 सप्लीमेंट"
+        : "Nerve & Energy Vitamin B12 — Low-fat paneer, fermented curd, fortified foods, or clinical supplement",
+      uricAcid: isHindi
+        ? "यूरिक एसिड नियंत्रण — भरपूर पानी (2.5-3 लीटर), तली चीजें और मीठे शरबत बंद, आंवला और चेरी खाएं"
+        : "Purine & Uric Acid Control — Drink 2.5-3L water daily, avoid purine-heavy foods/sugary sodas, enjoy amla & cherries"
     },
     recommendedFoods: [
       "Yellow Moong Dal (Very light on the stomach, high in clean protein, and easy to digest)",

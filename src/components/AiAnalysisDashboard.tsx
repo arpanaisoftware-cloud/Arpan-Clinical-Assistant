@@ -743,7 +743,7 @@ export default function AiAnalysisDashboard({
               <Typography variant="h6" sx={{ fontWeight: 700 }}>Prescription Suitability Analysis</Typography>
             </Stack>
             <Typography variant="body2" color="text.secondary" mb={3}>
-              Per-drug AI review: indication appropriateness, patient-specific suitability (renal, hepatic, age, CV) and dose/frequency checks.
+              Per-drug AI review: indication appropriateness, patient-specific suitability (renal, hepatic, age, CV, cognitive function, sexual dysfunction) and dose/frequency checks.
             </Typography>
 
             {/* A. Drug→Indication + Patient Suitability Cards */}
@@ -767,28 +767,40 @@ export default function AiAnalysisDashboard({
                       </Stack>
                     </Stack>
                     <Grid container spacing={1.5}>
-                      <Grid item xs={12} sm={6} md={3}>
+                      <Grid item xs={12} sm={6} md={4}>
                         <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 1, height: '100%' }}>
                           <Typography variant="caption" sx={{ fontWeight: 800, color: '#6C5CE7', textTransform: 'uppercase', fontSize: '0.68rem', display: 'block', mb: 0.5 }}>Renal</Typography>
-                          <Typography variant="body2" sx={{ fontSize: '0.82rem' }}>{drug.renalSuitability}</Typography>
+                          <Typography variant="body2" sx={{ fontSize: '0.82rem' }}>{drug.renalSuitability || 'Safe; monitor standard renal markers.'}</Typography>
                         </Paper>
                       </Grid>
-                      <Grid item xs={12} sm={6} md={3}>
+                      <Grid item xs={12} sm={6} md={4}>
                         <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 1, height: '100%' }}>
                           <Typography variant="caption" sx={{ fontWeight: 800, color: '#FFB703', textTransform: 'uppercase', fontSize: '0.68rem', display: 'block', mb: 0.5 }}>Hepatic</Typography>
-                          <Typography variant="body2" sx={{ fontSize: '0.82rem' }}>{drug.hepaticSuitability}</Typography>
+                          <Typography variant="body2" sx={{ fontSize: '0.82rem' }}>{drug.hepaticSuitability || 'No significant hepatic contraindications.'}</Typography>
                         </Paper>
                       </Grid>
-                      <Grid item xs={12} sm={6} md={3}>
+                      <Grid item xs={12} sm={6} md={4}>
                         <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 1, height: '100%' }}>
                           <Typography variant="caption" sx={{ fontWeight: 800, color: '#00B4D8', textTransform: 'uppercase', fontSize: '0.68rem', display: 'block', mb: 0.5 }}>Age</Typography>
-                          <Typography variant="body2" sx={{ fontSize: '0.82rem' }}>{drug.ageConsideration}</Typography>
+                          <Typography variant="body2" sx={{ fontSize: '0.82rem' }}>{drug.ageConsideration || 'Suitable for adult demographic.'}</Typography>
                         </Paper>
                       </Grid>
-                      <Grid item xs={12} sm={6} md={3}>
+                      <Grid item xs={12} sm={6} md={4}>
                         <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 1, height: '100%' }}>
                           <Typography variant="caption" sx={{ fontWeight: 800, color: '#FF4D6D', textTransform: 'uppercase', fontSize: '0.68rem', display: 'block', mb: 0.5 }}>Cardiovascular</Typography>
-                          <Typography variant="body2" sx={{ fontSize: '0.82rem' }}>{drug.cardiovascularConsideration}</Typography>
+                          <Typography variant="body2" sx={{ fontSize: '0.82rem' }}>{drug.cardiovascularConsideration || 'No direct cardiovascular contraindications.'}</Typography>
+                        </Paper>
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={4}>
+                        <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 1, height: '100%' }}>
+                          <Typography variant="caption" sx={{ fontWeight: 800, color: '#845EC2', textTransform: 'uppercase', fontSize: '0.68rem', display: 'block', mb: 0.5 }}>Cognitive Function</Typography>
+                          <Typography variant="body2" sx={{ fontSize: '0.82rem' }}>{drug.cognitiveFunction || 'No significant adverse cognitive or psychomotor effects noted.'}</Typography>
+                        </Paper>
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={4}>
+                        <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 1, height: '100%' }}>
+                          <Typography variant="caption" sx={{ fontWeight: 800, color: '#FF6F91', textTransform: 'uppercase', fontSize: '0.68rem', display: 'block', mb: 0.5 }}>Sexual Dysfunction</Typography>
+                          <Typography variant="body2" sx={{ fontSize: '0.82rem' }}>{drug.sexualDysfunction || 'No documented risk of sexual dysfunction or endocrine disruption.'}</Typography>
                         </Paper>
                       </Grid>
                     </Grid>

@@ -19,12 +19,14 @@ export async function POST(req: Request) {
     const cleanEmail = email.trim().toLowerCase();
     const cleanStaffId = staffId.trim().toUpperCase();
 
-    const existingUser = await User.findOne({
-      $or: [{ email: cleanEmail }, { staffId: cleanStaffId }]
-    });
+    const existingEmail = await User.findOne({ email: cleanEmail });
+    if (existingEmail) {
+      return NextResponse.json({ message: `Email "${cleanEmail}" is already registered. Please use a different email.` }, { status: 400 });
+    }
 
-    if (existingUser) {
-      return NextResponse.json({ message: 'A staff member with this email or staff ID already exists' }, { status: 400 });
+    const existingStaff = await User.findOne({ staffId: cleanStaffId });
+    if (existingStaff) {
+      return NextResponse.json({ message: `Staff ID "${cleanStaffId}" is already assigned. Please use a different Staff ID.` }, { status: 400 });
     }
 
     const totalUsersCount = await User.countDocuments();

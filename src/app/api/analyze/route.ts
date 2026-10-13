@@ -99,6 +99,8 @@ Return a raw JSON object (without markdown code blocks, without any surrounding 
       "hepaticSuitability": "string",
       "ageConsideration": "string",
       "cardiovascularConsideration": "string",
+      "cognitiveFunction": "string (impact/suitability for cognitive health, alertness, memory, CNS)",
+      "sexualDysfunction": "string (impact/risk of sexual side effects, libido, ED, or sexual health considerations)",
       "overallSuitability": "Safe"
     }
   ],

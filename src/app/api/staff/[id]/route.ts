@@ -29,17 +29,20 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     const cleanStaffId = body.staffId !== undefined ? body.staffId.trim().toUpperCase() : undefined;
 
     // Check for conflicting duplicate email or staffId in another document
-    const duplicateQuery: any[] = [];
-    if (cleanEmail) duplicateQuery.push({ email: cleanEmail });
-    if (cleanStaffId) duplicateQuery.push({ staffId: cleanStaffId });
-    if (duplicateQuery.length > 0) {
-      const conflict = await User.findOne({
-        _id: { $ne: user._id },
-        $or: duplicateQuery
-      });
-      if (conflict) {
+    if (cleanEmail) {
+      const emailConflict = await User.findOne({ _id: { $ne: user._id }, email: cleanEmail });
+      if (emailConflict) {
         return NextResponse.json(
-          { success: false, message: 'A staff member with this email or staff ID already exists.' },
+          { success: false, message: `Email "${cleanEmail}" is already registered to another staff member. Please use a different email.` },
+          { status: 400 }
+        );
+      }
+    }
+    if (cleanStaffId) {
+      const idConflict = await User.findOne({ _id: { $ne: user._id }, staffId: cleanStaffId });
+      if (idConflict) {
+        return NextResponse.json(
+          { success: false, message: `Staff ID "${cleanStaffId}" is already assigned to ${idConflict.name}. Please enter a unique Staff ID.` },
           { status: 400 }
         );
       }

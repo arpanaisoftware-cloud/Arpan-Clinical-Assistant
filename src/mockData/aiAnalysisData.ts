@@ -391,6 +391,8 @@ export function analyzePrescription(patientData: PatientInput, medications: Medi
     let hepaticSuitability = 'No significant hepatic contraindications known.';
     let ageConsideration = 'Suitable for adult use.';
     let cardiovascularConsideration = 'No direct cardiovascular contraindications.';
+    let cognitiveFunction = 'No significant adverse cognitive or psychomotor effects noted.';
+    let sexualDysfunction = 'No documented risk of sexual dysfunction or endocrine disruption.';
     let overallSuitability: 'Safe' | 'Caution' | 'Avoid' = 'Safe';
 
     if (nameLow.includes('metformin')) {
@@ -399,6 +401,8 @@ export function analyzePrescription(patientData: PatientInput, medications: Medi
       hepaticSuitability = 'Avoid in severe hepatic impairment due to lactic acidosis risk.';
       ageConsideration = 'Use with caution in elderly (>75 yrs); increase monitoring frequency.';
       cardiovascularConsideration = 'Beneficial — associated with reduced CV events in T2DM.';
+      cognitiveFunction = 'Neuroprotective potential; improves cerebral glucose metabolism, low cognitive risk.';
+      sexualDysfunction = 'Does not impair sexual function; may improve endothelial erectile health in T2DM.';
       overallSuitability = 'Safe';
     } else if (nameLow.includes('lisinopril') || nameLow.includes('ramipril') || nameLow.includes('ace')) {
       indication = 'ACE inhibitor — first-line antihypertensive; also reduces diabetic nephropathy progression.';
@@ -406,6 +410,8 @@ export function analyzePrescription(patientData: PatientInput, medications: Medi
       hepaticSuitability = 'No dose adjustment needed in mild-moderate hepatic impairment.';
       ageConsideration = 'Preferred in elderly hypertensives with diabetes or CKD.';
       cardiovascularConsideration = 'Cardioprotective — reduces cardiac remodelling post-MI.';
+      cognitiveFunction = 'Safe; central ACE inhibition associated with reduced rate of cognitive decline.';
+      sexualDysfunction = 'Low risk of erectile dysfunction compared to older antihypertensives; sexually neutral.';
       overallSuitability = 'Safe';
     } else if (nameLow.includes('ibuprofen') || nameLow.includes('nsaid') || nameLow.includes('diclofenac')) {
       indication = 'NSAID — anti-inflammatory and analgesic for musculoskeletal pain management.';
@@ -414,6 +420,8 @@ export function analyzePrescription(patientData: PatientInput, medications: Medi
       hepaticSuitability = 'Hepatotoxic risk with prolonged use; monitor LFTs.';
       ageConsideration = 'HIGH RISK in elderly — increased GI bleeding, renal impairment, CV events.';
       cardiovascularConsideration = 'Increases CV risk (MI, stroke) especially in patients with existing hypertension.';
+      cognitiveFunction = 'Rare CNS effects: headache, dizziness, or confusion in vulnerable elderly patients.';
+      sexualDysfunction = 'Generally low acute risk; prolonged high doses may suppress testosterone synthesis.';
       overallSuitability = 'Caution';
     } else if (nameLow.includes('atorvastatin') || nameLow.includes('statin') || nameLow.includes('rosuvastatin')) {
       indication = 'HMG-CoA reductase inhibitor — lowers LDL cholesterol; reduces CV event risk.';
@@ -421,6 +429,8 @@ export function analyzePrescription(patientData: PatientInput, medications: Medi
       hepaticSuitability = 'CONTRAINDICATED in active liver disease or unexplained elevated transaminases (>3x ULN).';
       ageConsideration = 'Beneficial in older adults with established CVD or high CV risk.';
       cardiovascularConsideration = 'Primary & secondary CV prevention — reduces MI and stroke mortality.';
+      cognitiveFunction = 'Clinical trials demonstrate no persistent adverse memory effects; supports vascular brain health.';
+      sexualDysfunction = 'Generally safe; rare reports of transient libido reduction or erectile changes.';
       overallSuitability = 'Safe';
     } else if (nameLow.includes('insulin') || nameLow.includes('glipizide') || nameLow.includes('glimepiride') || nameLow.includes('sulfonylurea')) {
       indication = 'Insulin secretagogue / exogenous insulin — lowers blood glucose in T2DM.';
@@ -428,6 +438,8 @@ export function analyzePrescription(patientData: PatientInput, medications: Medi
       hepaticSuitability = 'Use with caution in hepatic impairment — altered glucose metabolism.';
       ageConsideration = 'Hypoglycemia risk significantly higher in elderly; prefer lower doses.';
       cardiovascularConsideration = 'Hypoglycemia episodes can trigger arrhythmias; monitor carefully.';
+      cognitiveFunction = 'Alertness precaution: hypoglycemic episodes can trigger acute disorientation and confusion.';
+      sexualDysfunction = 'Preserves long-term microvascular and autonomic nerve function critical for sexual health.';
       overallSuitability = 'Caution';
     }
 
@@ -436,7 +448,19 @@ export function analyzePrescription(patientData: PatientInput, medications: Medi
       indicationStatus = 'Inappropriate';
     }
 
-    return { drugName: name, dosage: med.dosage || '', indication, indicationStatus, renalSuitability, hepaticSuitability, ageConsideration, cardiovascularConsideration, overallSuitability };
+    return {
+      drugName: name,
+      dosage: med.dosage || '',
+      indication,
+      indicationStatus,
+      renalSuitability,
+      hepaticSuitability,
+      ageConsideration,
+      cardiovascularConsideration,
+      cognitiveFunction,
+      sexualDysfunction,
+      overallSuitability
+    };
   });
 
   // Generate Dose & Frequency analysis

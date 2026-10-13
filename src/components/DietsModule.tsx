@@ -41,7 +41,17 @@ interface AIDietPlan {
   targetCalories: number;
   summary: string;
   macroBreakdown: { carbs: string; protein: string; fats: string; fiber: string };
-  electrolyteLimits: { sodium: string; potassium: string; phosphorus: string; calcium: string };
+  electrolyteLimits: {
+    sodium: string;
+    potassium: string;
+    phosphorus: string;
+    calcium: string;
+    magnesium?: string;
+    iron?: string;
+    vitaminD?: string;
+    vitaminB12?: string;
+    uricAcid?: string;
+  };
   recommendedFoods: string[];
   foodsToAvoid: string[];
   hydrationGuidance: string;
@@ -61,6 +71,7 @@ interface PatientFormData {
   disease: string;
   dietaryPreference: string;
   language: string;
+  customCalories: string;
   allergies: string;
   comorbidities: string;
   bpSystolic: string;
@@ -83,6 +94,7 @@ const EMPTY_FORM: PatientFormData = {
   disease: "",
   dietaryPreference: "Vegetarian (Shakahari)",
   language: "Hindi",
+  customCalories: "",
   allergies: "",
   comorbidities: "",
   bpSystolic: "",
@@ -201,6 +213,44 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
   // Editable Meal Schedule Popup State
   const [editMealsOpen, setEditMealsOpen] = useState(false);
   const [tempMealSchedule, setTempMealSchedule] = useState<EditableMealSlot[]>([]);
+
+  // Editable Overview (Plan Name, Daily Target Calories, Summary)
+  const [editOverviewOpen, setEditOverviewOpen] = useState(false);
+  const [tempOverview, setTempOverview] = useState({ planName: "", targetCalories: 1750, summary: "" });
+
+  // Editable Electrolytes & Organ Safety (9 items)
+  const [editElectrolytesOpen, setEditElectrolytesOpen] = useState(false);
+  const [tempElectrolytes, setTempElectrolytes] = useState({
+    sodium: "",
+    potassium: "",
+    phosphorus: "",
+    calcium: "",
+    magnesium: "",
+    iron: "",
+    vitaminD: "",
+    vitaminB12: "",
+    uricAcid: ""
+  });
+
+  // Editable Recommended Foods
+  const [editRecFoodsOpen, setEditRecFoodsOpen] = useState(false);
+  const [tempRecFoods, setTempRecFoods] = useState<string[]>([]);
+
+  // Editable Foods to Avoid
+  const [editAvoidFoodsOpen, setEditAvoidFoodsOpen] = useState(false);
+  const [tempAvoidFoods, setTempAvoidFoods] = useState<string[]>([]);
+
+  // Editable Crucial Safety Alerts
+  const [editAlertsOpen, setEditAlertsOpen] = useState(false);
+  const [tempAlerts, setTempAlerts] = useState<string[]>([]);
+
+  // Editable Guidance & Habits (Hydration, Lifestyle Advice, Follow-Up)
+  const [editGuidanceOpen, setEditGuidanceOpen] = useState(false);
+  const [tempGuidance, setTempGuidance] = useState({
+    hydrationGuidance: "",
+    lifestyleAdvice: [] as string[],
+    followUpNote: ""
+  });
 
   // Filter history records
   const filteredHistory = useMemo(() => {
@@ -371,7 +421,8 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
       egfr: String(pi.egfr || ""),
       sodiumNa: String(pi.sodiumNa || ""),
       potassiumK: String(pi.potassiumK || ""),
-      totalCholesterol: String(pi.totalCholesterol || "")
+      totalCholesterol: String(pi.totalCholesterol || ""),
+      customCalories: form.customCalories || ""
     });
     confetti({ particleCount: 35, spread: 50, origin: { y: 0.5 } });
     toast.success(`Loaded: ${record.patientName} (${record.id})`);
@@ -393,6 +444,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
       disease: pi.disease || "",
       dietaryPreference: "Vegetarian (Shakahari)",
       language: form.language || "Hindi",
+      customCalories: form.customCalories || "",
       allergies: pi.allergies || "",
       comorbidities: pi.comorbidities || "",
       bpSystolic: String(pi.bpSystolic || ""),
@@ -602,6 +654,151 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
       mealSchedule: updated
     });
     toast.info("Meal slot removed.");
+  };
+
+  // 1. Overview Edit Handlers
+  const handleOpenEditOverview = () => {
+    if (!aiDietPlan) return;
+    setTempOverview({
+      planName: aiDietPlan.planName || "",
+      targetCalories: aiDietPlan.targetCalories || 1750,
+      summary: aiDietPlan.summary || ""
+    });
+    setEditOverviewOpen(true);
+  };
+
+  const handleSaveOverview = () => {
+    if (!aiDietPlan) return;
+    setAiDietPlan({
+      ...aiDietPlan,
+      planName: tempOverview.planName.trim() || aiDietPlan.planName,
+      targetCalories: Number(tempOverview.targetCalories) || aiDietPlan.targetCalories,
+      summary: tempOverview.summary.trim() || aiDietPlan.summary
+    });
+    setEditOverviewOpen(false);
+    confetti({ particleCount: 35, spread: 50, origin: { y: 0.5 } });
+    toast.success("Diet plan overview updated!");
+  };
+
+  // 2. Electrolyte & Safety Check Edit Handlers
+  const handleOpenEditElectrolytes = () => {
+    if (!aiDietPlan) return;
+    const limits = aiDietPlan.electrolyteLimits || ({} as any);
+    setTempElectrolytes({
+      sodium: limits.sodium || "",
+      potassium: limits.potassium || "",
+      phosphorus: limits.phosphorus || "",
+      calcium: limits.calcium || "",
+      magnesium: limits.magnesium || "",
+      iron: limits.iron || "",
+      vitaminD: limits.vitaminD || "",
+      vitaminB12: limits.vitaminB12 || "",
+      uricAcid: limits.uricAcid || ""
+    });
+    setEditElectrolytesOpen(true);
+  };
+
+  const handleSaveElectrolytes = () => {
+    if (!aiDietPlan) return;
+    setAiDietPlan({
+      ...aiDietPlan,
+      electrolyteLimits: {
+        ...aiDietPlan.electrolyteLimits,
+        sodium: tempElectrolytes.sodium.trim(),
+        potassium: tempElectrolytes.potassium.trim(),
+        phosphorus: tempElectrolytes.phosphorus.trim(),
+        calcium: tempElectrolytes.calcium.trim(),
+        magnesium: tempElectrolytes.magnesium.trim(),
+        iron: tempElectrolytes.iron.trim(),
+        vitaminD: tempElectrolytes.vitaminD.trim(),
+        vitaminB12: tempElectrolytes.vitaminB12.trim(),
+        uricAcid: tempElectrolytes.uricAcid.trim()
+      }
+    });
+    setEditElectrolytesOpen(false);
+    confetti({ particleCount: 40, spread: 60, origin: { y: 0.5 } });
+    toast.success("Electrolyte & mineral safety limits updated!");
+  };
+
+  // 3. Recommended Foods Edit Handlers
+  const handleOpenEditRecFoods = () => {
+    if (!aiDietPlan) return;
+    setTempRecFoods([...(aiDietPlan.recommendedFoods || [])]);
+    setEditRecFoodsOpen(true);
+  };
+
+  const handleSaveRecFoods = () => {
+    if (!aiDietPlan) return;
+    const cleaned = tempRecFoods.map((f) => f.trim()).filter(Boolean);
+    if (cleaned.length === 0) {
+      toast.warning("Keep at least one recommended food item.");
+      return;
+    }
+    setAiDietPlan({
+      ...aiDietPlan,
+      recommendedFoods: cleaned
+    });
+    setEditRecFoodsOpen(false);
+    toast.success("Recommended foods list updated!");
+  };
+
+  // 4. Foods to Avoid Edit Handlers
+  const handleOpenEditAvoidFoods = () => {
+    if (!aiDietPlan) return;
+    setTempAvoidFoods([...(aiDietPlan.foodsToAvoid || [])]);
+    setEditAvoidFoodsOpen(true);
+  };
+
+  const handleSaveAvoidFoods = () => {
+    if (!aiDietPlan) return;
+    const cleaned = tempAvoidFoods.map((f) => f.trim()).filter(Boolean);
+    setAiDietPlan({
+      ...aiDietPlan,
+      foodsToAvoid: cleaned
+    });
+    setEditAvoidFoodsOpen(false);
+    toast.success("Foods to avoid list updated!");
+  };
+
+  // 5. Crucial Safety Alerts Edit Handlers
+  const handleOpenEditAlerts = () => {
+    if (!aiDietPlan) return;
+    setTempAlerts([...(aiDietPlan.avoidanceAlerts || [])]);
+    setEditAlertsOpen(true);
+  };
+
+  const handleSaveAlerts = () => {
+    if (!aiDietPlan) return;
+    const cleaned = tempAlerts.map((a) => a.trim()).filter(Boolean);
+    setAiDietPlan({
+      ...aiDietPlan,
+      avoidanceAlerts: cleaned
+    });
+    setEditAlertsOpen(false);
+    toast.success("Safety alerts updated!");
+  };
+
+  // 6. Guidance & Habits Edit Handlers (Hydration, Lifestyle, Follow-Up)
+  const handleOpenEditGuidance = () => {
+    if (!aiDietPlan) return;
+    setTempGuidance({
+      hydrationGuidance: aiDietPlan.hydrationGuidance || "",
+      lifestyleAdvice: [...(aiDietPlan.lifestyleAdvice || [])],
+      followUpNote: aiDietPlan.followUpNote || ""
+    });
+    setEditGuidanceOpen(true);
+  };
+
+  const handleSaveGuidance = () => {
+    if (!aiDietPlan) return;
+    setAiDietPlan({
+      ...aiDietPlan,
+      hydrationGuidance: tempGuidance.hydrationGuidance.trim() || aiDietPlan.hydrationGuidance,
+      lifestyleAdvice: tempGuidance.lifestyleAdvice.map((t) => t.trim()).filter(Boolean),
+      followUpNote: tempGuidance.followUpNote.trim() || aiDietPlan.followUpNote
+    });
+    setEditGuidanceOpen(false);
+    toast.success("Hydration, habits & follow-up updated!");
   };
 
   const handleResetAll = () => {
@@ -850,7 +1047,8 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                     egfr: "54",
                     sodiumNa: "139",
                     potassiumK: "4.3",
-                    totalCholesterol: "218"
+                    totalCholesterol: "218",
+                    customCalories: ""
                   });
                   toast.info("Demo patient 'Sandeep' loaded.");
                 }}
@@ -966,7 +1164,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12} sm={4}>
                 <TextField
                   fullWidth
                   size="small"
@@ -976,7 +1174,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                   placeholder="e.g. Peanuts, Milk/Lactose, Gluten"
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12} sm={4}>
                 <TextField
                   fullWidth
                   size="small"
@@ -984,6 +1182,21 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                   value={form.comorbidities}
                   onChange={(e) => updateForm("comorbidities", e.target.value)}
                   placeholder="e.g. Fatty liver, high uric acid, acidity"
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  type="number"
+                  label="Target Calories / Day (Dietitian Target)"
+                  value={form.customCalories}
+                  onChange={(e) => updateForm("customCalories", e.target.value)}
+                  placeholder="e.g. 1600 or 1800 (Auto AI if blank)"
+                  helperText="Optional: Set custom daily calorie goal"
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">kcal</InputAdornment>
+                  }}
                 />
               </Grid>
             </Grid>
@@ -1197,10 +1410,10 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
               )}
             </Box>
 
-            {/* Diet Plan Language & Dietary Preference Selector */}
-            <Box sx={{ maxWidth: 620, mx: "auto", mt: 2.5, mb: 1.5 }}>
+            {/* Diet Plan Language, Dietary Preference & Target Calories Selector */}
+            <Box sx={{ maxWidth: 750, mx: "auto", mt: 2.5, mb: 1.5 }}>
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
+                <Grid item xs={12} sm={4}>
                   <FormControl fullWidth size="small">
                     <InputLabel id="rx-diet-lang-label" sx={{ fontWeight: 600 }}>
                       Diet Plan Language / भाषा
@@ -1224,14 +1437,14 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid item xs={12} sm={4}>
                   <FormControl fullWidth size="small">
                     <InputLabel id="rx-diet-pref-label" sx={{ fontWeight: 600 }}>
-                      Dietary Preference / भोजन का प्रकार
+                      Dietary Preference / भोजन
                     </InputLabel>
                     <Select
                       labelId="rx-diet-pref-label"
-                      label="Dietary Preference / भोजन का प्रकार"
+                      label="Dietary Preference / भोजन"
                       value={form.dietaryPreference}
                       onChange={(e) => updateForm("dietaryPreference", e.target.value)}
                       sx={{
@@ -1246,6 +1459,24 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                       ))}
                     </Select>
                   </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    type="number"
+                    label="Calories / Day (Optional)"
+                    value={form.customCalories}
+                    onChange={(e) => updateForm("customCalories", e.target.value)}
+                    placeholder="e.g. 1600 (Auto if blank)"
+                    InputProps={{
+                      endAdornment: <InputAdornment position="end">kcal</InputAdornment>
+                    }}
+                    sx={{
+                      borderRadius: 2,
+                      bgcolor: isDark ? "rgba(255,255,255,0.03)" : "#FFFFFF"
+                    }}
+                  />
                 </Grid>
               </Grid>
             </Box>
@@ -1817,12 +2048,10 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
 
                   <Divider sx={{ my: 2, borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)" }} />
 
-                  {/* Clean 2-Column Diet Preferences & Language Form (Zero Overlap) */}
+                  {/* Clean 3-Column Diet Preferences, Language & Target Calories Form */}
                   <Box>
-
-
                     <Grid container spacing={2}>
-                      <Grid item xs={12} md={7}>
+                      <Grid item xs={12} md={5}>
                         <FormControl fullWidth size="small">
                           <InputLabel id="history-diet-pref-label" sx={{ fontWeight: 600 }}>
                             Dietary Preference / भोजन का प्रकार
@@ -1846,7 +2075,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                         </FormControl>
                       </Grid>
 
-                      <Grid item xs={12} md={5}>
+                      <Grid item xs={12} md={4}>
                         <FormControl fullWidth size="small">
                           <InputLabel id="history-diet-lang-label" sx={{ fontWeight: 600 }}>
                             Diet Plan Language / भाषा
@@ -1869,6 +2098,25 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                             ))}
                           </Select>
                         </FormControl>
+                      </Grid>
+
+                      <Grid item xs={12} md={3}>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          type="number"
+                          label="Calories / Day"
+                          value={form.customCalories}
+                          onChange={(e) => updateForm("customCalories", e.target.value)}
+                          placeholder="e.g. 1600 (Auto AI)"
+                          InputProps={{
+                            endAdornment: <InputAdornment position="end">kcal</InputAdornment>
+                          }}
+                          sx={{
+                            borderRadius: 1.5,
+                            bgcolor: isDark ? "rgba(255,255,255,0.03)" : "#FFFFFF"
+                          }}
+                        />
                       </Grid>
                     </Grid>
                   </Box>
@@ -2016,36 +2264,70 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                   </Stack>
                 </Box>
 
-                {/* Calorie Goal Visual Circle/Card */}
-                <Paper
-                  elevation={0}
-                  sx={{
-                    px: 3.5,
-                    py: 2,
-                    borderRadius: 3,
-                    bgcolor: "#00C9A7",
-                    color: "#FFF",
-                    textAlign: "center",
-                    flexShrink: 0,
-                    boxShadow: "0 8px 24px rgba(0,201,167,0.4)"
-                  }}
-                >
-                  <Typography variant="caption" sx={{ textTransform: "uppercase", fontWeight: 800, letterSpacing: 1.5, opacity: 0.9 }}>
-                    Daily Energy Goal
-                  </Typography>
-                  <Typography variant="h3" sx={{ fontWeight: 900, my: 0.2 }}>
-                    {aiDietPlan.targetCalories}
-                  </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 800, opacity: 0.95 }}>
-                    Calories / Day
-                  </Typography>
-                </Paper>
+                {/* Calorie Goal Visual Circle/Card with Edit Overview Button */}
+                <Stack spacing={1} alignItems="center">
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      px: 3.5,
+                      py: 2,
+                      borderRadius: 3,
+                      bgcolor: "#00C9A7",
+                      color: "#FFF",
+                      textAlign: "center",
+                      flexShrink: 0,
+                      boxShadow: "0 8px 24px rgba(0,201,167,0.4)"
+                    }}
+                  >
+                    <Typography variant="caption" sx={{ textTransform: "uppercase", fontWeight: 800, letterSpacing: 1.5, opacity: 0.9 }}>
+                      Daily Energy Goal
+                    </Typography>
+                    <Typography variant="h3" sx={{ fontWeight: 900, my: 0.2 }}>
+                      {aiDietPlan.targetCalories}
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 800, opacity: 0.95 }}>
+                      Calories / Day
+                    </Typography>
+                  </Paper>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<Edit fontSize="small" />}
+                    onClick={handleOpenEditOverview}
+                    sx={{
+                      borderRadius: 2,
+                      fontWeight: 800,
+                      fontSize: "0.75rem",
+                      borderColor: isDark ? "rgba(0,201,167,0.4)" : "#00C9A7",
+                      color: isDark ? "#26e7c6" : "#007A65",
+                      bgcolor: isDark ? "rgba(0,201,167,0.08)" : "rgba(0,201,167,0.06)",
+                      "&:hover": { bgcolor: "rgba(0,201,167,0.15)" }
+                    }}
+                  >
+                    Edit Overview
+                  </Button>
+                </Stack>
               </Stack>
             </Paper>
 
             {/* Crucial Safety Alert (if any) */}
             {aiDietPlan.avoidanceAlerts?.length > 0 && (
-              <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }} icon={<Warning />}>
+              <Alert
+                severity="error"
+                sx={{ mb: 3, borderRadius: 2 }}
+                icon={<Warning />}
+                action={
+                  <Button
+                    color="inherit"
+                    size="small"
+                    startIcon={<Edit fontSize="small" />}
+                    onClick={handleOpenEditAlerts}
+                    sx={{ fontWeight: 800, fontSize: "0.75rem" }}
+                  >
+                    Edit Alerts
+                  </Button>
+                }
+              >
                 <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 0.5 }}>
                   Crucial Safety Alerts:
                 </Typography>
@@ -2282,11 +2564,29 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
 
             {/* 3. VISUAL ELECTROLYTE TRAFFIC LIGHT WATCH */}
             <Paper variant="outlined" sx={{ p: 2.8, mb: 3, borderRadius: 2.5, bgcolor: paperBg }}>
-              <Stack direction="row" alignItems="center" spacing={1} mb={2}>
-                <MonitorHeart sx={{ color: "#FFB703" }} />
-                <Typography variant="subtitle1" sx={{ fontWeight: 900 }}>
-                  Electrolyte & Organ Safety Check (Salt, Potassium & Minerals)
-                </Typography>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1} mb={2}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <MonitorHeart sx={{ color: "#FFB703" }} />
+                  <Typography variant="subtitle1" sx={{ fontWeight: 900 }}>
+                    Electrolyte & Organ Safety Check (Salt, Potassium & Minerals)
+                  </Typography>
+                </Stack>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<Edit fontSize="small" />}
+                  onClick={handleOpenEditElectrolytes}
+                  sx={{
+                    fontWeight: 800,
+                    borderRadius: 2,
+                    fontSize: "0.78rem",
+                    borderColor: "#FFB703",
+                    color: "#FFB703",
+                    "&:hover": { borderColor: "#E5A500", bgcolor: "rgba(255,183,3,0.08)" }
+                  }}
+                >
+                  Edit Safety Check
+                </Button>
               </Stack>
               <Grid container spacing={2}>
                 {[
@@ -2295,7 +2595,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                     badge: "Strict Salt Control",
                     statusColor: "#FFB703",
                     icon: "🧂",
-                    text: aiDietPlan.electrolyteLimits.sodium,
+                    text: aiDietPlan.electrolyteLimits.sodium || "Strict Salt Control (< 1,500 mg/day) - Avoid pickles, papad & table salt",
                     simpleRule: "Zero pickles, zero papad, no extra table salt"
                   },
                   {
@@ -2303,7 +2603,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                     badge: "Heart & Kidney Balance",
                     statusColor: "#00B4D8",
                     icon: "🍌",
-                    text: aiDietPlan.electrolyteLimits.potassium,
+                    text: aiDietPlan.electrolyteLimits.potassium || "Balanced Potassium - Enjoy fresh coconut water, amla & bottle gourd in moderation",
                     simpleRule: "Moderate tender coconut water, amla & bottle gourd"
                   },
                   {
@@ -2311,7 +2611,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                     badge: "Kidney Safe",
                     statusColor: "#6C5CE7",
                     icon: "⚡",
-                    text: aiDietPlan.electrolyteLimits.phosphorus,
+                    text: aiDietPlan.electrolyteLimits.phosphorus || "Kidney-Safe Phosphorus - Light yellow dals, avoid heavily processed snacks",
                     simpleRule: "Light yellow dals, avoid heavily processed cheeses"
                   },
                   {
@@ -2319,11 +2619,51 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                     badge: "Strong Bones",
                     statusColor: "#00C9A7",
                     icon: "🥛",
-                    text: aiDietPlan.electrolyteLimits.calcium,
+                    text: aiDietPlan.electrolyteLimits.calcium || "Strong Bones Calcium - 1 bowl low-fat curd and 1 glass skimmed milk daily",
                     simpleRule: "1 bowl fresh curd and 1 cup skimmed milk daily"
+                  },
+                  {
+                    mineral: "Magnesium (Mg)",
+                    badge: "Muscle & Nerve Calm",
+                    statusColor: "#10B981",
+                    icon: "🥑",
+                    text: aiDietPlan.electrolyteLimits.magnesium || "Relaxing Magnesium - Pumpkin seeds, almonds, steamed spinach & soaked methi for muscle relaxation",
+                    simpleRule: "Pumpkin seeds, almonds, steamed spinach & soaked methi"
+                  },
+                  {
+                    mineral: "Iron (Fe)",
+                    badge: "Haemoglobin & Blood",
+                    statusColor: "#EF4444",
+                    icon: "🩸",
+                    text: aiDietPlan.electrolyteLimits.iron || "Haemoglobin Booster Iron - Steamed palak dal, roasted chana, beetroot & amla with Vitamin C",
+                    simpleRule: "Palak, beetroot, roasted chana paired with lemon juice"
+                  },
+                  {
+                    mineral: "Vitamin D",
+                    badge: "Sunlight & Immunity",
+                    statusColor: "#F59E0B",
+                    icon: "☀️",
+                    text: aiDietPlan.electrolyteLimits.vitaminD || "Sunlight & Bone Vitamin D - 15 mins gentle morning sun exposure, fortified dairy & mushrooms",
+                    simpleRule: "15 mins morning sunlight & fortified milk/curd"
+                  },
+                  {
+                    mineral: "Vitamin B12",
+                    badge: "Nerve & Energy",
+                    statusColor: "#8B5CF6",
+                    icon: "🧬",
+                    text: aiDietPlan.electrolyteLimits.vitaminB12 || "Nerve & Energy Vitamin B12 - Low-fat paneer, fermented curd, fortified foods, or clinical supplement",
+                    simpleRule: "Daily curd/paneer or clinical supplement for vegetarians"
+                  },
+                  {
+                    mineral: "Uric Acid Watch",
+                    badge: "Joint & Kidney Safety",
+                    statusColor: "#EC4899",
+                    icon: "🧪",
+                    text: aiDietPlan.electrolyteLimits.uricAcid || "Purine & Uric Acid Control - Drink 2.5-3L water, avoid sugary drinks & purine-heavy foods, enjoy amla",
+                    simpleRule: "Drink 2.5-3L water, avoid sugary drinks & high-purine foods"
                   }
                 ].map((el) => (
-                  <Grid item xs={12} sm={6} md={3} key={el.mineral}>
+                  <Grid item xs={12} sm={6} md={4} key={el.mineral}>
                     <Paper
                       variant="outlined"
                       sx={{
@@ -2377,18 +2717,36 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                     height: "100%"
                   }}
                 >
-                  <Stack direction="row" alignItems="center" spacing={1} mb={2}>
-                    <Box sx={{ bgcolor: "rgba(0, 201, 167, 0.15)", p: 0.8, borderRadius: 1.5 }}>
-                      <CheckCircle sx={{ color: "#00C9A7" }} />
-                    </Box>
-                    <Box>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 900, color: "#00C9A7" }}>
-                        Eat More Of These Wholesome Indian Foods
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Gentle on sugar, blood pressure, and digestion
-                      </Typography>
-                    </Box>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <Box sx={{ bgcolor: "rgba(0, 201, 167, 0.15)", p: 0.8, borderRadius: 1.5 }}>
+                        <CheckCircle sx={{ color: "#00C9A7" }} />
+                      </Box>
+                      <Box>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 900, color: "#00C9A7" }}>
+                          Eat More Of These Wholesome Indian Foods
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Gentle on sugar, blood pressure, and digestion
+                        </Typography>
+                      </Box>
+                    </Stack>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={<Edit fontSize="small" />}
+                      onClick={handleOpenEditRecFoods}
+                      sx={{
+                        fontWeight: 800,
+                        borderRadius: 2,
+                        fontSize: "0.75rem",
+                        borderColor: "#00C9A7",
+                        color: "#00C9A7",
+                        "&:hover": { borderColor: "#00967D", bgcolor: "rgba(0,201,167,0.08)" }
+                      }}
+                    >
+                      Edit Foods
+                    </Button>
                   </Stack>
 
                   <Stack spacing={1.2}>
@@ -2428,18 +2786,36 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                     height: "100%"
                   }}
                 >
-                  <Stack direction="row" alignItems="center" spacing={1} mb={2}>
-                    <Box sx={{ bgcolor: "rgba(255, 77, 109, 0.15)", p: 0.8, borderRadius: 1.5 }}>
-                      <Warning sx={{ color: "#FF4D6D" }} />
-                    </Box>
-                    <Box>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 900, color: "#FF4D6D" }}>
-                        Foods to Avoid Or Strictly Limit
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        High salt, deep-fried oil, or instant sugar spikes
-                      </Typography>
-                    </Box>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <Box sx={{ bgcolor: "rgba(255, 77, 109, 0.15)", p: 0.8, borderRadius: 1.5 }}>
+                        <Warning sx={{ color: "#FF4D6D" }} />
+                      </Box>
+                      <Box>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 900, color: "#FF4D6D" }}>
+                          Foods to Avoid Or Strictly Limit
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          High salt, deep-fried oil, or instant sugar spikes
+                        </Typography>
+                      </Box>
+                    </Stack>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={<Edit fontSize="small" />}
+                      onClick={handleOpenEditAvoidFoods}
+                      sx={{
+                        fontWeight: 800,
+                        borderRadius: 2,
+                        fontSize: "0.75rem",
+                        borderColor: "#FF4D6D",
+                        color: "#FF4D6D",
+                        "&:hover": { borderColor: "#E03E5D", bgcolor: "rgba(255,77,109,0.08)" }
+                      }}
+                    >
+                      Edit Avoid List
+                    </Button>
                   </Stack>
 
                   <Stack spacing={1.2}>
@@ -2521,105 +2897,128 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
             )}
 
             {/* 7. HYDRATION, LIFESTYLE & FOLLOW-UP CARDS */}
-            <Grid container spacing={2.5}>
-              <Grid item xs={12} sm={4}>
-                <Paper
+            <Paper variant="outlined" sx={{ p: 2.8, mb: 3, borderRadius: 2.5, bgcolor: paperBg }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1} mb={2}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 900, color: isDark ? "#A5B4FC" : "#4338CA" }}>
+                  Hydration, Healthy Daily Habits & Clinical Follow-Up Guidance
+                </Typography>
+                <Button
+                  size="small"
                   variant="outlined"
+                  startIcon={<Edit fontSize="small" />}
+                  onClick={handleOpenEditGuidance}
                   sx={{
-                    p: 2.5,
-                    borderRadius: 2.5,
-                    bgcolor: paperBg,
-                    borderColor: "rgba(0,180,216,0.3)",
-                    height: "100%"
+                    fontWeight: 800,
+                    borderRadius: 2,
+                    fontSize: "0.78rem",
+                    borderColor: "#6C5CE7",
+                    color: "#6C5CE7",
+                    "&:hover": { borderColor: "#5a4bd1", bgcolor: "rgba(108,92,231,0.08)" }
                   }}
                 >
-                  <Stack direction="row" alignItems="center" spacing={1} mb={1.5}>
-                    <WaterDrop sx={{ color: "#00B4D8" }} />
-                    <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#00B4D8" }}>
-                      Hydration & Healthy Fluids
+                  Edit Guidance & Habits
+                </Button>
+              </Stack>
+              <Grid container spacing={2.5}>
+                <Grid item xs={12} sm={4}>
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 2.5,
+                      borderRadius: 2.5,
+                      bgcolor: isDark ? "rgba(0,180,216,0.05)" : "rgba(0,180,216,0.03)",
+                      borderColor: "rgba(0,180,216,0.3)",
+                      height: "100%"
+                    }}
+                  >
+                    <Stack direction="row" alignItems="center" spacing={1} mb={1.5}>
+                      <WaterDrop sx={{ color: "#00B4D8" }} />
+                      <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#00B4D8" }}>
+                        Hydration & Healthy Fluids
+                      </Typography>
+                    </Stack>
+                    <Typography variant="body2" sx={{ fontSize: "0.88rem", lineHeight: 1.6 }}>
+                      {aiDietPlan.hydrationGuidance}
                     </Typography>
-                  </Stack>
-                  <Typography variant="body2" sx={{ fontSize: "0.88rem", lineHeight: 1.6 }}>
-                    {aiDietPlan.hydrationGuidance}
-                  </Typography>
-                  <Stack direction="row" spacing={0.5} mt={2}>
-                    {Array.from({ length: 8 }).map((_, i) => (
-                      <Box
-                        key={i}
-                        sx={{
-                          width: 22,
-                          height: 30,
-                          borderRadius: 1,
-                          bgcolor: "rgba(0, 180, 216, 0.2)",
-                          border: "1.5px solid #00B4D8",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "10px",
-                          color: "#00B4D8",
-                          fontWeight: 800
-                        }}
-                      >
-                        💧
-                      </Box>
-                    ))}
-                  </Stack>
-                </Paper>
-              </Grid>
+                    <Stack direction="row" spacing={0.5} mt={2}>
+                      {Array.from({ length: 8 }).map((_, i) => (
+                        <Box
+                          key={i}
+                          sx={{
+                            width: 22,
+                            height: 30,
+                            borderRadius: 1,
+                            bgcolor: "rgba(0, 180, 216, 0.2)",
+                            border: "1.5px solid #00B4D8",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "10px",
+                            color: "#00B4D8",
+                            fontWeight: 800
+                          }}
+                        >
+                          💧
+                        </Box>
+                      ))}
+                    </Stack>
+                  </Paper>
+                </Grid>
 
-              <Grid item xs={12} sm={5}>
-                <Paper
-                  variant="outlined"
-                  sx={{
-                    p: 2.5,
-                    borderRadius: 2.5,
-                    bgcolor: paperBg,
-                    borderColor: "rgba(6,214,160,0.3)",
-                    height: "100%"
-                  }}
-                >
-                  <Stack direction="row" alignItems="center" spacing={1} mb={1.5}>
-                    <FitnessCenter sx={{ color: "#06D6A0", fontSize: 20 }} />
-                    <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#06D6A0" }}>
-                      Healthy Daily Habits
-                    </Typography>
-                  </Stack>
-                  <Stack spacing={0.8}>
-                    {aiDietPlan.lifestyleAdvice?.map((tip, i) => (
-                      <Stack key={i} direction="row" alignItems="flex-start" spacing={1}>
-                        <CheckCircle sx={{ color: "#06D6A0", fontSize: 16, mt: 0.3, flexShrink: 0 }} />
-                        <Typography variant="body2" sx={{ fontSize: "0.82rem", lineHeight: 1.4 }}>
-                          {tip}
-                        </Typography>
-                      </Stack>
-                    ))}
-                  </Stack>
-                </Paper>
-              </Grid>
+                <Grid item xs={12} sm={5}>
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 2.5,
+                      borderRadius: 2.5,
+                      bgcolor: isDark ? "rgba(6,214,160,0.05)" : "rgba(6,214,160,0.03)",
+                      borderColor: "rgba(6,214,160,0.3)",
+                      height: "100%"
+                    }}
+                  >
+                    <Stack direction="row" alignItems="center" spacing={1} mb={1.5}>
+                      <FitnessCenter sx={{ color: "#06D6A0", fontSize: 20 }} />
+                      <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#06D6A0" }}>
+                        Healthy Daily Habits
+                      </Typography>
+                    </Stack>
+                    <Stack spacing={0.8}>
+                      {aiDietPlan.lifestyleAdvice?.map((tip, i) => (
+                        <Stack key={i} direction="row" alignItems="flex-start" spacing={1}>
+                          <CheckCircle sx={{ color: "#06D6A0", fontSize: 16, mt: 0.3, flexShrink: 0 }} />
+                          <Typography variant="body2" sx={{ fontSize: "0.82rem", lineHeight: 1.4 }}>
+                            {tip}
+                          </Typography>
+                        </Stack>
+                      ))}
+                    </Stack>
+                  </Paper>
+                </Grid>
 
-              <Grid item xs={12} sm={3}>
-                <Paper
-                  variant="outlined"
-                  sx={{
-                    p: 2.5,
-                    borderRadius: 2.5,
-                    bgcolor: paperBg,
-                    borderColor: "rgba(108,92,231,0.3)",
-                    height: "100%"
-                  }}
-                >
-                  <Stack direction="row" alignItems="center" spacing={1} mb={1.5}>
-                    <MonitorHeart sx={{ color: "#6C5CE7", fontSize: 20 }} />
-                    <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#6C5CE7" }}>
-                      Doctor Follow-Up
+                <Grid item xs={12} sm={3}>
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 2.5,
+                      borderRadius: 2.5,
+                      bgcolor: isDark ? "rgba(108,92,231,0.05)" : "rgba(108,92,231,0.03)",
+                      borderColor: "rgba(108,92,231,0.3)",
+                      height: "100%"
+                    }}
+                  >
+                    <Stack direction="row" alignItems="center" spacing={1} mb={1.5}>
+                      <MonitorHeart sx={{ color: "#6C5CE7", fontSize: 20 }} />
+                      <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#6C5CE7" }}>
+                        Doctor Follow-Up
+                      </Typography>
+                    </Stack>
+                    <Typography variant="body2" sx={{ fontSize: "0.85rem", fontStyle: "italic", color: "text.secondary", lineHeight: 1.5 }}>
+                      {aiDietPlan.followUpNote}
                     </Typography>
-                  </Stack>
-                  <Typography variant="body2" sx={{ fontSize: "0.85rem", fontStyle: "italic", color: "text.secondary", lineHeight: 1.5 }}>
-                    {aiDietPlan.followUpNote}
-                  </Typography>
-                </Paper>
+                  </Paper>
+                </Grid>
               </Grid>
-            </Grid>
+            </Paper>
 
             {/* Bottom Actions */}
             <Box textAlign="center" mt={3.5}>
@@ -2640,6 +3039,9 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
       {/* =========================================================================
           POPUP MODAL: EDIT DAILY INDIAN MEAL SCHEDULE & PORTIONS
          ========================================================================= */}
+      {/* =========================================================================
+          POPUP MODAL: EDIT DAILY INDIAN MEAL SCHEDULE & PORTIONS
+         ========================================================================= */}
       <Dialog
         open={editMealsOpen}
         onClose={() => setEditMealsOpen(false)}
@@ -2648,7 +3050,10 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
         PaperProps={{
           sx: {
             borderRadius: 2.5,
-            p: 1,
+            p: { xs: 0.5, sm: 1 },
+            m: { xs: 1, sm: 2 },
+            width: { xs: "calc(100% - 16px)", sm: "auto" },
+            maxHeight: { xs: "calc(100% - 24px)", sm: "calc(100% - 48px)" },
             bgcolor: isDark ? "#1E293B" : "#FFFFFF",
             backgroundImage: "none"
           }
@@ -2658,31 +3063,31 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
           sx={{
             display: "flex",
             justifyContent: "space-between",
-            alignItems: "center",
-            pb: 1,
+            alignItems: "flex-start",
+            pb: 1.5,
+            gap: 1.5,
             borderBottom: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid #E2E8F0"
           }}
         >
-          <Stack direction="row" alignItems="center" spacing={1.5}>
-            <Box sx={{ bgcolor: "rgba(108,92,231,0.15)", p: 0.8, borderRadius: 1.5 }}>
+          <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0, flex: 1 }}>
+            <Box sx={{ bgcolor: "rgba(108,92,231,0.15)", p: 0.8, borderRadius: 1.5, flexShrink: 0 }}>
               <Edit sx={{ color: "#6C5CE7" }} />
             </Box>
-            <Box>
-              <Typography variant="h6" sx={{ fontWeight: 900 }}>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="h6" sx={{ fontWeight: 900, fontSize: { xs: "1rem", sm: "1.2rem" }, lineHeight: 1.3 }}>
                 Customize Daily Indian Meal Schedule & Portions
               </Typography>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.3, fontSize: { xs: "0.75rem", sm: "0.82rem" } }}>
                 Change timings, food items, portions, or add and delete meal slots
               </Typography>
             </Box>
           </Stack>
-          <IconButton onClick={() => setEditMealsOpen(false)} size="small">
+          <IconButton onClick={() => setEditMealsOpen(false)} size="small" sx={{ flexShrink: 0 }}>
             <Close />
           </IconButton>
         </DialogTitle>
 
-        <DialogContent sx={{ my: 2.5 }}>
-
+        <DialogContent dividers sx={{ p: { xs: 1.5, sm: 2.5 }, overflowY: "auto" }}>
           <Stack spacing={2.5}>
             {tempMealSchedule.map((meal, index) => {
               const isCustom = meal.slotType === "Custom";
@@ -2698,14 +3103,14 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                   key={index}
                   variant="outlined"
                   sx={{
-                    p: 2.2,
+                    p: { xs: 1.8, sm: 2.2 },
                     borderRadius: 2,
                     bgcolor: isDark ? "rgba(255,255,255,0.02)" : "#F8FAFC",
                     borderColor: isDark ? "rgba(255,255,255,0.08)" : "#E2E8F0",
                     position: "relative"
                   }}
                 >
-                  <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5} flexWrap="wrap" gap={1}>
                     <Chip
                       label={`Meal Slot #${index + 1}: ${displayTitle}`}
                       color="secondary"
@@ -2732,7 +3137,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                   </Stack>
 
                   <Grid container spacing={1.5}>
-                    <Grid item xs={12} sm={3}>
+                    <Grid item xs={12} sm={4}>
                       <TextField
                         fullWidth
                         size="small"
@@ -2742,7 +3147,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                         onChange={(e) => handleUpdateTempMeal(index, "time", e.target.value)}
                       />
                     </Grid>
-                    <Grid item xs={12} sm={isCustom ? 4.5 : 5}>
+                    <Grid item xs={12} sm={isCustom ? 4 : 4}>
                       <TextField
                         select
                         fullWidth
@@ -2764,15 +3169,15 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                     </Grid>
 
                     {isCustom && (
-                      <Grid item xs={12} sm={4.5}>
+                      <Grid item xs={12} sm={4}>
                         <TextField
                           fullWidth
                           size="small"
                           label="Custom Meal Slot Name"
-                          placeholder="e.g. Post-Workout Snack, Mid-Afternoon Tea"
+                          placeholder="e.g. Post-Workout Snack"
                           value={meal.customMealName ?? ""}
                           onChange={(e) => handleCustomMealNameChange(index, e.target.value)}
-                          helperText="Type any custom name for this slot"
+                          helperText="Custom name"
                           sx={{
                             bgcolor: isDark ? "rgba(108,92,231,0.08)" : "rgba(108,92,231,0.04)",
                             borderRadius: 1
@@ -2841,9 +3246,10 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
 
         <DialogActions
           sx={{
-            px: 3,
-            py: 2,
+            px: { xs: 2, sm: 3 },
+            py: { xs: 1.5, sm: 2 },
             borderTop: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid #E2E8F0",
+            flexWrap: "wrap",
             gap: 1
           }}
         >
@@ -2872,6 +3278,672 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
         </DialogActions>
       </Dialog>
 
+      {/* =========================================================================
+          POPUP MODAL: EDIT PLAN OVERVIEW (NAME, CALORIES, SUMMARY)
+         ========================================================================= */}
+      <Dialog
+        open={editOverviewOpen}
+        onClose={() => setEditOverviewOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2.5,
+            p: { xs: 0.5, sm: 1 },
+            m: { xs: 1, sm: 2 },
+            width: { xs: "calc(100% - 16px)", sm: "auto" },
+            maxHeight: { xs: "calc(100% - 24px)", sm: "calc(100% - 48px)" },
+            bgcolor: isDark ? "#1E293B" : "#FFFFFF",
+            backgroundImage: "none"
+          }
+        }}
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            pb: 1.5,
+            gap: 1.5,
+            borderBottom: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid #E2E8F0"
+          }}
+        >
+          <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0, flex: 1 }}>
+            <Box sx={{ bgcolor: "rgba(0,201,167,0.15)", p: 0.8, borderRadius: 1.5, flexShrink: 0 }}>
+              <Edit sx={{ color: "#00C9A7" }} />
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="h6" sx={{ fontWeight: 900, fontSize: { xs: "1rem", sm: "1.2rem" }, lineHeight: 1.3 }}>
+                Edit Diet Plan Overview
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.3, fontSize: { xs: "0.75rem", sm: "0.82rem" } }}>
+                Customize protocol name, daily energy target, and patient summary
+              </Typography>
+            </Box>
+          </Stack>
+          <IconButton onClick={() => setEditOverviewOpen(false)} size="small" sx={{ flexShrink: 0 }}>
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: { xs: 2, sm: 2.5 }, overflowY: "auto" }}>
+          <Stack spacing={2.5}>
+            <TextField
+              fullWidth
+              label="Plan Protocol Name"
+              value={tempOverview.planName}
+              onChange={(e) => setTempOverview({ ...tempOverview, planName: e.target.value })}
+              placeholder="e.g. Indian Diabetes & Heart Wellness Diet Plan"
+            />
+            <TextField
+              fullWidth
+              type="number"
+              label="Daily Target Calories (kcal/day)"
+              value={tempOverview.targetCalories}
+              onChange={(e) => setTempOverview({ ...tempOverview, targetCalories: Number(e.target.value) || 0 })}
+              InputProps={{
+                endAdornment: <InputAdornment position="end">kcal/day</InputAdornment>
+              }}
+            />
+            <TextField
+              fullWidth
+              multiline
+              rows={3}
+              label="Patient Summary"
+              value={tempOverview.summary}
+              onChange={(e) => setTempOverview({ ...tempOverview, summary: e.target.value })}
+              placeholder="Reassuring clinical summary for the patient..."
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions
+          sx={{
+            px: { xs: 2, sm: 3 },
+            py: { xs: 1.5, sm: 2 },
+            borderTop: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid #E2E8F0",
+            flexWrap: "wrap",
+            gap: 1
+          }}
+        >
+          <Button onClick={() => setEditOverviewOpen(false)} sx={{ color: "text.secondary", fontWeight: 700 }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<CheckCircle />}
+            onClick={handleSaveOverview}
+            sx={{ fontWeight: 800, borderRadius: 2, px: 3, bgcolor: "#00C9A7", "&:hover": { bgcolor: "#00967D" } }}
+          >
+            Save Overview
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* =========================================================================
+          POPUP MODAL: EDIT CRUCIAL SAFETY ALERTS
+         ========================================================================= */}
+      <Dialog
+        open={editAlertsOpen}
+        onClose={() => setEditAlertsOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2.5,
+            p: { xs: 0.5, sm: 1 },
+            m: { xs: 1, sm: 2 },
+            width: { xs: "calc(100% - 16px)", sm: "auto" },
+            maxHeight: { xs: "calc(100% - 24px)", sm: "calc(100% - 48px)" },
+            bgcolor: isDark ? "#1E293B" : "#FFFFFF",
+            backgroundImage: "none"
+          }
+        }}
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            pb: 1.5,
+            gap: 1.5,
+            borderBottom: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid #E2E8F0"
+          }}
+        >
+          <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0, flex: 1 }}>
+            <Box sx={{ bgcolor: "rgba(255,77,109,0.15)", p: 0.8, borderRadius: 1.5, flexShrink: 0 }}>
+              <Warning sx={{ color: "#FF4D6D" }} />
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="h6" sx={{ fontWeight: 900, fontSize: { xs: "1rem", sm: "1.2rem" }, lineHeight: 1.3 }}>
+                Edit Crucial Safety Alerts
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.3, fontSize: { xs: "0.75rem", sm: "0.82rem" } }}>
+                Vital dietary safety warnings for diabetes, BP, and kidney health
+              </Typography>
+            </Box>
+          </Stack>
+          <IconButton onClick={() => setEditAlertsOpen(false)} size="small" sx={{ flexShrink: 0 }}>
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: { xs: 2, sm: 2.5 }, overflowY: "auto" }}>
+          <Stack spacing={1.5}>
+            {tempAlerts.map((alert, idx) => (
+              <Stack key={idx} direction="row" spacing={1} alignItems="center">
+                <TextField
+                  fullWidth
+                  size="small"
+                  label={`Alert #${idx + 1}`}
+                  value={alert}
+                  onChange={(e) => {
+                    const copy = [...tempAlerts];
+                    copy[idx] = e.target.value;
+                    setTempAlerts(copy);
+                  }}
+                />
+                <IconButton
+                  size="small"
+                  color="error"
+                  onClick={() => setTempAlerts(tempAlerts.filter((_, i) => i !== idx))}
+                  sx={{ flexShrink: 0 }}
+                >
+                  <Delete fontSize="small" />
+                </IconButton>
+              </Stack>
+            ))}
+            <Box textAlign="center" mt={1}>
+              <Button
+                variant="outlined"
+                color="error"
+                size="small"
+                startIcon={<Add />}
+                onClick={() => setTempAlerts([...tempAlerts, ""])}
+                sx={{ borderRadius: 2, fontWeight: 700 }}
+              >
+                Add Safety Alert
+              </Button>
+            </Box>
+          </Stack>
+        </DialogContent>
+        <DialogActions
+          sx={{
+            px: { xs: 2, sm: 3 },
+            py: { xs: 1.5, sm: 2 },
+            borderTop: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid #E2E8F0",
+            flexWrap: "wrap",
+            gap: 1
+          }}
+        >
+          <Button onClick={() => setEditAlertsOpen(false)} sx={{ color: "text.secondary", fontWeight: 700 }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            startIcon={<CheckCircle />}
+            onClick={handleSaveAlerts}
+            sx={{ fontWeight: 800, borderRadius: 2, px: 3 }}
+          >
+            Save Alerts
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* =========================================================================
+          POPUP MODAL: EDIT ELECTROLYTE & ORGAN SAFETY CHECK (ALL 9 MINERALS)
+         ========================================================================= */}
+      <Dialog
+        open={editElectrolytesOpen}
+        onClose={() => setEditElectrolytesOpen(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2.5,
+            p: { xs: 0.5, sm: 1 },
+            m: { xs: 1, sm: 2 },
+            width: { xs: "calc(100% - 16px)", sm: "auto" },
+            maxHeight: { xs: "calc(100% - 24px)", sm: "calc(100% - 48px)" },
+            bgcolor: isDark ? "#1E293B" : "#FFFFFF",
+            backgroundImage: "none"
+          }
+        }}
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            pb: 1.5,
+            gap: 1.5,
+            borderBottom: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid #E2E8F0"
+          }}
+        >
+          <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0, flex: 1 }}>
+            <Box sx={{ bgcolor: "rgba(255,183,3,0.15)", p: 0.8, borderRadius: 1.5, flexShrink: 0 }}>
+              <MonitorHeart sx={{ color: "#FFB703" }} />
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="h6" sx={{ fontWeight: 900, fontSize: { xs: "0.95rem", sm: "1.15rem" }, lineHeight: 1.3 }}>
+                Edit Electrolyte &amp; Organ Safety Limits
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.3, fontSize: { xs: "0.72rem", sm: "0.8rem" } }}>
+                Adjust clinical guidelines for all 9 key electrolytes, minerals, vitamins, and uric acid
+              </Typography>
+            </Box>
+          </Stack>
+          <IconButton onClick={() => setEditElectrolytesOpen(false)} size="small" sx={{ flexShrink: 0 }}>
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: { xs: 1.5, sm: 2.5 }, overflowY: "auto" }}>
+          <Grid container spacing={{ xs: 1.5, sm: 2 }}>
+            {[
+              { key: "sodium", label: "🧂 Salt (Sodium Na)", placeholder: "e.g. Strict Salt Control (< 1,500 mg/day) - Avoid pickles, papad" },
+              { key: "potassium", label: "🍌 Potassium (K)", placeholder: "e.g. Balanced Potassium - Moderate coconut water & bottle gourd" },
+              { key: "phosphorus", label: "⚡ Phosphorus (P)", placeholder: "e.g. Kidney-Safe Phosphorus - Light yellow dals, avoid processed snacks" },
+              { key: "calcium", label: "🥛 Calcium (Ca)", placeholder: "e.g. Strong Bones Calcium - 1 bowl curd and 1 glass skimmed milk" },
+              { key: "magnesium", label: "🥑 Magnesium (Mg)", placeholder: "e.g. Relaxing Magnesium - Pumpkin seeds, almonds & spinach" },
+              { key: "iron", label: "🩸 Iron (Fe)", placeholder: "e.g. Haemoglobin Booster - Steamed palak dal, roasted chana & amla" },
+              { key: "vitaminD", label: "☀️ Vitamin D", placeholder: "e.g. Sunlight & Bone Vitamin D - 15 mins morning sun, fortified dairy" },
+              { key: "vitaminB12", label: "🧬 Vitamin B12", placeholder: "e.g. Nerve & Energy B12 - Paneer, curd, fortified foods or supplement" },
+              { key: "uricAcid", label: "🧪 Uric Acid Watch", placeholder: "e.g. Purine & Uric Acid Control - Drink 2.5-3L water, avoid sugary sodas" }
+            ].map((m) => (
+              <Grid item xs={12} sm={6} key={m.key}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label={m.label}
+                  placeholder={m.placeholder}
+                  value={(tempElectrolytes as any)[m.key]}
+                  onChange={(e) => setTempElectrolytes({ ...tempElectrolytes, [m.key]: e.target.value })}
+                />
+              </Grid>
+            ))}
+          </Grid>
+        </DialogContent>
+        <DialogActions
+          sx={{
+            px: { xs: 2, sm: 3 },
+            py: { xs: 1.5, sm: 2 },
+            borderTop: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid #E2E8F0",
+            flexWrap: "wrap",
+            gap: 1
+          }}
+        >
+          <Button onClick={() => setEditElectrolytesOpen(false)} sx={{ color: "text.secondary", fontWeight: 700 }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<CheckCircle />}
+            onClick={handleSaveElectrolytes}
+            sx={{ fontWeight: 800, borderRadius: 2, px: 3, bgcolor: "#00C9A7", "&:hover": { bgcolor: "#00967D" } }}
+          >
+            Save Electrolyte Limits
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* =========================================================================
+          POPUP MODAL: EDIT RECOMMENDED FOODS (EAT THIS)
+         ========================================================================= */}
+      <Dialog
+        open={editRecFoodsOpen}
+        onClose={() => setEditRecFoodsOpen(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2.5,
+            p: { xs: 0.5, sm: 1 },
+            m: { xs: 1, sm: 2 },
+            width: { xs: "calc(100% - 16px)", sm: "auto" },
+            maxHeight: { xs: "calc(100% - 24px)", sm: "calc(100% - 48px)" },
+            bgcolor: isDark ? "#1E293B" : "#FFFFFF",
+            backgroundImage: "none"
+          }
+        }}
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            pb: 1.5,
+            gap: 1.5,
+            borderBottom: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid #E2E8F0"
+          }}
+        >
+          <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0, flex: 1 }}>
+            <Box sx={{ bgcolor: "rgba(0,201,167,0.15)", p: 0.8, borderRadius: 1.5, flexShrink: 0 }}>
+              <CheckCircle sx={{ color: "#00C9A7" }} />
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="h6" sx={{ fontWeight: 900, fontSize: { xs: "1rem", sm: "1.2rem" }, lineHeight: 1.3 }}>
+                Edit Wholesome Recommended Foods
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.3, fontSize: { xs: "0.75rem", sm: "0.82rem" } }}>
+                Add, edit, or remove foods recommended for this patient
+              </Typography>
+            </Box>
+          </Stack>
+          <IconButton onClick={() => setEditRecFoodsOpen(false)} size="small" sx={{ flexShrink: 0 }}>
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: { xs: 2, sm: 2.5 }, overflowY: "auto" }}>
+          <Stack spacing={1.5}>
+            {tempRecFoods.map((food, idx) => (
+              <Stack key={idx} direction="row" spacing={1} alignItems="center">
+                <TextField
+                  fullWidth
+                  size="small"
+                  label={`Recommended Food #${idx + 1}`}
+                  value={food}
+                  onChange={(e) => {
+                    const copy = [...tempRecFoods];
+                    copy[idx] = e.target.value;
+                    setTempRecFoods(copy);
+                  }}
+                />
+                <IconButton
+                  size="small"
+                  color="error"
+                  onClick={() => setTempRecFoods(tempRecFoods.filter((_, i) => i !== idx))}
+                  sx={{ flexShrink: 0 }}
+                >
+                  <Delete fontSize="small" />
+                </IconButton>
+              </Stack>
+            ))}
+            <Box textAlign="center" mt={1}>
+              <Button
+                variant="outlined"
+                color="primary"
+                size="small"
+                startIcon={<Add />}
+                onClick={() => setTempRecFoods([...tempRecFoods, ""])}
+                sx={{ borderRadius: 2, fontWeight: 700 }}
+              >
+                Add Recommended Food
+              </Button>
+            </Box>
+          </Stack>
+        </DialogContent>
+        <DialogActions
+          sx={{
+            px: { xs: 2, sm: 3 },
+            py: { xs: 1.5, sm: 2 },
+            borderTop: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid #E2E8F0",
+            flexWrap: "wrap",
+            gap: 1
+          }}
+        >
+          <Button onClick={() => setEditRecFoodsOpen(false)} sx={{ color: "text.secondary", fontWeight: 700 }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<CheckCircle />}
+            onClick={handleSaveRecFoods}
+            sx={{ fontWeight: 800, borderRadius: 2, px: 3, bgcolor: "#00C9A7", "&:hover": { bgcolor: "#00967D" } }}
+          >
+            Save Foods
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* =========================================================================
+          POPUP MODAL: EDIT FOODS TO AVOID (AVOID THIS)
+         ========================================================================= */}
+      <Dialog
+        open={editAvoidFoodsOpen}
+        onClose={() => setEditAvoidFoodsOpen(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2.5,
+            p: { xs: 0.5, sm: 1 },
+            m: { xs: 1, sm: 2 },
+            width: { xs: "calc(100% - 16px)", sm: "auto" },
+            maxHeight: { xs: "calc(100% - 24px)", sm: "calc(100% - 48px)" },
+            bgcolor: isDark ? "#1E293B" : "#FFFFFF",
+            backgroundImage: "none"
+          }
+        }}
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            pb: 1.5,
+            gap: 1.5,
+            borderBottom: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid #E2E8F0"
+          }}
+        >
+          <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0, flex: 1 }}>
+            <Box sx={{ bgcolor: "rgba(255,77,109,0.15)", p: 0.8, borderRadius: 1.5, flexShrink: 0 }}>
+              <Warning sx={{ color: "#FF4D6D" }} />
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="h6" sx={{ fontWeight: 900, fontSize: { xs: "1rem", sm: "1.2rem" }, lineHeight: 1.3 }}>
+                Edit Foods to Avoid Or Strictly Limit
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.3, fontSize: { xs: "0.75rem", sm: "0.82rem" } }}>
+                Add, edit, or remove items the patient must restrict or eliminate
+              </Typography>
+            </Box>
+          </Stack>
+          <IconButton onClick={() => setEditAvoidFoodsOpen(false)} size="small" sx={{ flexShrink: 0 }}>
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: { xs: 2, sm: 2.5 }, overflowY: "auto" }}>
+          <Stack spacing={1.5}>
+            {tempAvoidFoods.map((item, idx) => (
+              <Stack key={idx} direction="row" spacing={1} alignItems="center">
+                <TextField
+                  fullWidth
+                  size="small"
+                  label={`Food to Avoid #${idx + 1}`}
+                  value={item}
+                  onChange={(e) => {
+                    const copy = [...tempAvoidFoods];
+                    copy[idx] = e.target.value;
+                    setTempAvoidFoods(copy);
+                  }}
+                />
+                <IconButton
+                  size="small"
+                  color="error"
+                  onClick={() => setTempAvoidFoods(tempAvoidFoods.filter((_, i) => i !== idx))}
+                  sx={{ flexShrink: 0 }}
+                >
+                  <Delete fontSize="small" />
+                </IconButton>
+              </Stack>
+            ))}
+            <Box textAlign="center" mt={1}>
+              <Button
+                variant="outlined"
+                color="error"
+                size="small"
+                startIcon={<Add />}
+                onClick={() => setTempAvoidFoods([...tempAvoidFoods, ""])}
+                sx={{ borderRadius: 2, fontWeight: 700 }}
+              >
+                Add Item to Avoid
+              </Button>
+            </Box>
+          </Stack>
+        </DialogContent>
+        <DialogActions
+          sx={{
+            px: { xs: 2, sm: 3 },
+            py: { xs: 1.5, sm: 2 },
+            borderTop: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid #E2E8F0",
+            flexWrap: "wrap",
+            gap: 1
+          }}
+        >
+          <Button onClick={() => setEditAvoidFoodsOpen(false)} sx={{ color: "text.secondary", fontWeight: 700 }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            startIcon={<CheckCircle />}
+            onClick={handleSaveAvoidFoods}
+            sx={{ fontWeight: 800, borderRadius: 2, px: 3 }}
+          >
+            Save Avoid List
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* =========================================================================
+          POPUP MODAL: EDIT GUIDANCE, LIFESTYLE HABITS & DOCTOR FOLLOW-UP
+         ========================================================================= */}
+      <Dialog
+        open={editGuidanceOpen}
+        onClose={() => setEditGuidanceOpen(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2.5,
+            p: { xs: 0.5, sm: 1 },
+            m: { xs: 1, sm: 2 },
+            width: { xs: "calc(100% - 16px)", sm: "auto" },
+            maxHeight: { xs: "calc(100% - 24px)", sm: "calc(100% - 48px)" },
+            bgcolor: isDark ? "#1E293B" : "#FFFFFF",
+            backgroundImage: "none"
+          }
+        }}
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            pb: 1.5,
+            gap: 1.5,
+            borderBottom: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid #E2E8F0"
+          }}
+        >
+          <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0, flex: 1 }}>
+            <Box sx={{ bgcolor: "rgba(108,92,231,0.15)", p: 0.8, borderRadius: 1.5, flexShrink: 0 }}>
+              <FitnessCenter sx={{ color: "#6C5CE7" }} />
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="h6" sx={{ fontWeight: 900, fontSize: { xs: "1rem", sm: "1.2rem" }, lineHeight: 1.3 }}>
+                Edit Hydration, Lifestyle Habits &amp; Doctor Follow-Up
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.3, fontSize: { xs: "0.75rem", sm: "0.82rem" } }}>
+                Customize daily fluids, healthy physical habits, and follow-up timeline
+              </Typography>
+            </Box>
+          </Stack>
+          <IconButton onClick={() => setEditGuidanceOpen(false)} size="small" sx={{ flexShrink: 0 }}>
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: { xs: 2, sm: 2.5 }, overflowY: "auto" }}>
+          <Stack spacing={2.5}>
+            <TextField
+              fullWidth
+              multiline
+              rows={2}
+              label="Hydration & Fluid Guidance"
+              value={tempGuidance.hydrationGuidance}
+              onChange={(e) => setTempGuidance({ ...tempGuidance, hydrationGuidance: e.target.value })}
+              placeholder="e.g. Drink 8-10 glasses water daily, warm jeera water, fresh buttermilk"
+            />
+
+            <Divider />
+            <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+              Healthy Daily Habits & Lifestyle Tips:
+            </Typography>
+            {tempGuidance.lifestyleAdvice.map((tip, idx) => (
+              <Stack key={idx} direction="row" spacing={1} alignItems="center">
+                <TextField
+                  fullWidth
+                  size="small"
+                  label={`Daily Habit #${idx + 1}`}
+                  value={tip}
+                  onChange={(e) => {
+                    const copy = [...tempGuidance.lifestyleAdvice];
+                    copy[idx] = e.target.value;
+                    setTempGuidance({ ...tempGuidance, lifestyleAdvice: copy });
+                  }}
+                />
+                <IconButton
+                  size="small"
+                  color="error"
+                  onClick={() => {
+                    const copy = tempGuidance.lifestyleAdvice.filter((_, i) => i !== idx);
+                    setTempGuidance({ ...tempGuidance, lifestyleAdvice: copy });
+                  }}
+                  sx={{ flexShrink: 0 }}
+                >
+                  <Delete fontSize="small" />
+                </IconButton>
+              </Stack>
+            ))}
+            <Box textAlign="center">
+              <Button
+                variant="outlined"
+                color="secondary"
+                size="small"
+                startIcon={<Add />}
+                onClick={() => setTempGuidance({ ...tempGuidance, lifestyleAdvice: [...tempGuidance.lifestyleAdvice, ""] })}
+                sx={{ borderRadius: 2, fontWeight: 700 }}
+              >
+                Add Daily Habit
+              </Button>
+            </Box>
+
+            <Divider />
+            <TextField
+              fullWidth
+              multiline
+              rows={2}
+              label="Doctor Clinical Follow-Up Note"
+              value={tempGuidance.followUpNote}
+              onChange={(e) => setTempGuidance({ ...tempGuidance, followUpNote: e.target.value })}
+              placeholder="e.g. Check fasting sugar and BP weekly. Follow-up review with doctor in 4 weeks."
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions
+          sx={{
+            px: { xs: 2, sm: 3 },
+            py: { xs: 1.5, sm: 2 },
+            borderTop: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid #E2E8F0",
+            flexWrap: "wrap",
+            gap: 1
+          }}
+        >
+          <Button onClick={() => setEditGuidanceOpen(false)} sx={{ color: "text.secondary", fontWeight: 700 }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<CheckCircle />}
+            onClick={handleSaveGuidance}
+            sx={{ fontWeight: 800, borderRadius: 2, px: 3, bgcolor: "#00C9A7", "&:hover": { bgcolor: "#00967D" } }}
+          >
+            Save Guidance & Habits
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Printable Clinical Diet Prescription Dialog */}
       <Dialog
         open={printOpen}
@@ -2881,6 +3953,9 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
         PaperProps={{
           sx: {
             borderRadius: 2,
+            m: { xs: 1, sm: 2 },
+            width: { xs: "calc(100% - 16px)", sm: "auto" },
+            maxHeight: { xs: "calc(100% - 24px)", sm: "calc(100% - 48px)" },
             bgcolor: "#FFFFFF !important",
             color: "#0F172A !important",
             backgroundImage: "none !important"
@@ -2890,27 +3965,28 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
         <DialogTitle
           sx={{
             m: 0,
-            p: 2,
+            p: { xs: 1.5, sm: 2 },
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            gap: 1,
             bgcolor: "#FFFFFF !important",
             borderBottom: "1px solid #E2E8F0 !important"
           }}
         >
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <LocalHospital sx={{ color: "#00C9A7" }} />
-            <Typography variant="h6" sx={{ fontWeight: 800, color: "#0F172A !important" }}>
+          <Stack direction="row" alignItems="center" spacing={1} sx={{ minWidth: 0, flex: 1 }}>
+            <LocalHospital sx={{ color: "#00C9A7", flexShrink: 0 }} />
+            <Typography variant="h6" sx={{ fontWeight: 800, color: "#0F172A !important", fontSize: { xs: "0.95rem", sm: "1.15rem" } }}>
               Official Indian Clinical Dietary Prescription
             </Typography>
           </Stack>
-          <IconButton onClick={() => setPrintOpen(false)} size="small">
+          <IconButton onClick={() => setPrintOpen(false)} size="small" sx={{ flexShrink: 0 }}>
             <Close />
           </IconButton>
         </DialogTitle>
-        <DialogContent id="printable-diets" sx={{ p: 4, bgcolor: "#FFFFFF !important", color: "#1E293B !important" }}>
-          <Box sx={{ border: "2px solid #00C9A7", borderRadius: 2, p: 3 }}>
-            <Typography variant="h5" sx={{ fontWeight: 900, color: "#00967D !important", mb: 0.5 }}>
+        <DialogContent id="printable-diets" sx={{ p: { xs: 1.5, sm: 3, md: 4 }, overflowY: "auto", overflowX: "hidden", bgcolor: "#FFFFFF !important", color: "#1E293B !important" }}>
+          <Box sx={{ border: "2px solid #00C9A7", borderRadius: 2, p: { xs: 2, sm: 3 } }}>
+            <Typography variant="h5" sx={{ fontWeight: 900, color: "#00967D !important", mb: 0.5, fontSize: { xs: "1.1rem", sm: "1.4rem" } }}>
               ARPAN CLINICAL ASSISTANT — CLINICAL NUTRITION DEPARTMENT
             </Typography>
             <Typography variant="subtitle2" sx={{ color: "#475569 !important", mb: 2 }}>
@@ -2919,7 +3995,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
             <Divider sx={{ mb: 2, borderColor: "#E2E8F0 !important" }} />
             {aiDietPlan && (
               <>
-                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#0F172A !important", mb: 1 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#0F172A !important", mb: 1, fontSize: { xs: "0.85rem", sm: "0.95rem" } }}>
                   Patient: {form.patientName} ({form.age}Y, {form.gender}) | Condition: {form.disease}
                   {form.weightKg ? ` | Weight: ${form.weightKg}kg` : ""}
                   {bmiVal > 0 ? ` | BMI: ${bmi} kg/m²` : ""} | Dietary Preference: {form.dietaryPreference} | Language: {form.language || "Hindi"}
@@ -2944,13 +4020,56 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                 ))}
 
                 <Divider sx={{ my: 2, borderColor: "#E2E8F0 !important" }} />
+                <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 0.5, color: "#00967D !important" }}>
+                  Electrolyte, Mineral & Organ Safety Limits (Salt, Potassium & Minerals):
+                </Typography>
+                <Typography variant="body2" sx={{ color: "#334155 !important", mb: 0.5 }}>
+                  • <strong>Sodium (Salt):</strong> {aiDietPlan.electrolyteLimits.sodium}
+                </Typography>
+                <Typography variant="body2" sx={{ color: "#334155 !important", mb: 0.5 }}>
+                  • <strong>Potassium (K):</strong> {aiDietPlan.electrolyteLimits.potassium}
+                </Typography>
+                <Typography variant="body2" sx={{ color: "#334155 !important", mb: 0.5 }}>
+                  • <strong>Phosphorus (P):</strong> {aiDietPlan.electrolyteLimits.phosphorus}
+                </Typography>
+                <Typography variant="body2" sx={{ color: "#334155 !important", mb: 0.5 }}>
+                  • <strong>Calcium (Ca):</strong> {aiDietPlan.electrolyteLimits.calcium}
+                </Typography>
+                {aiDietPlan.electrolyteLimits.magnesium && (
+                  <Typography variant="body2" sx={{ color: "#334155 !important", mb: 0.5 }}>
+                    • <strong>Magnesium (Mg):</strong> {aiDietPlan.electrolyteLimits.magnesium}
+                  </Typography>
+                )}
+                {aiDietPlan.electrolyteLimits.iron && (
+                  <Typography variant="body2" sx={{ color: "#334155 !important", mb: 0.5 }}>
+                    • <strong>Iron (Fe):</strong> {aiDietPlan.electrolyteLimits.iron}
+                  </Typography>
+                )}
+                {aiDietPlan.electrolyteLimits.vitaminD && (
+                  <Typography variant="body2" sx={{ color: "#334155 !important", mb: 0.5 }}>
+                    • <strong>Vitamin D:</strong> {aiDietPlan.electrolyteLimits.vitaminD}
+                  </Typography>
+                )}
+                {aiDietPlan.electrolyteLimits.vitaminB12 && (
+                  <Typography variant="body2" sx={{ color: "#334155 !important", mb: 0.5 }}>
+                    • <strong>Vitamin B12:</strong> {aiDietPlan.electrolyteLimits.vitaminB12}
+                  </Typography>
+                )}
+                {aiDietPlan.electrolyteLimits.uricAcid && (
+                  <Typography variant="body2" sx={{ color: "#334155 !important", mb: 0.5 }}>
+                    • <strong>Uric Acid:</strong> {aiDietPlan.electrolyteLimits.uricAcid}
+                  </Typography>
+                )}
+
+                <Divider sx={{ my: 2, borderColor: "#E2E8F0 !important" }} />
                 <Typography variant="body2" sx={{ color: "#334155 !important", mb: 1 }}>
-                  <strong>Electrolyte Limits:</strong> Sodium: {aiDietPlan.electrolyteLimits.sodium} | Potassium:{" "}
-                  {aiDietPlan.electrolyteLimits.potassium} | Phosphorus: {aiDietPlan.electrolyteLimits.phosphorus}
+                  <strong>Hydration Guidance:</strong> {aiDietPlan.hydrationGuidance}
                 </Typography>
-                <Typography variant="body2" sx={{ color: "#334155 !important", mb: 2 }}>
-                  <strong>Hydration:</strong> {aiDietPlan.hydrationGuidance}
-                </Typography>
+                {aiDietPlan.lifestyleAdvice?.length > 0 && (
+                  <Typography variant="body2" sx={{ color: "#334155 !important", mb: 1 }}>
+                    <strong>Lifestyle Advice:</strong> {aiDietPlan.lifestyleAdvice.join(" · ")}
+                  </Typography>
+                )}
                 <Typography variant="caption" sx={{ color: "#64748B !important", display: "block" }}>
                   Doctor Follow-Up: {aiDietPlan.followUpNote}
                 </Typography>
@@ -2965,7 +4084,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
             </Stack>
           </Box>
         </DialogContent>
-        <DialogActions sx={{ p: 2.5, bgcolor: "#FFFFFF !important", borderTop: "1px solid #E2E8F0 !important" }}>
+        <DialogActions sx={{ p: 2.5, bgcolor: "#FFFFFF !important", borderTop: "1px solid #E2E8F0 !important", flexWrap: "wrap", gap: 1 }}>
           <Button
             onClick={() => setPrintOpen(false)}
             variant="outlined"
