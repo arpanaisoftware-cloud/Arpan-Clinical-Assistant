@@ -27,7 +27,8 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
-  CircularProgress
+  CircularProgress,
+  useTheme
 } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import {
@@ -59,6 +60,8 @@ export default function HistoryTable({
 }: HistoryTableProps) {
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const theme = useTheme();
+  const isDarkMode = theme.palette.mode === 'dark';
 
   // Search state with debounce
   const [searchInput, setSearchInput] = useState<string>('');
@@ -285,7 +288,7 @@ export default function HistoryTable({
                 size="small"
                 onClick={() => fetchHistory(page, debouncedSearch)}
                 sx={{
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  border: isDarkMode ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid rgba(0, 0, 0, 0.12)',
                   borderRadius: 1,
                   p: 0.8,
                   '&:hover': { bgcolor: 'rgba(0, 201, 167, 0.1)', color: '#00C9A7' }
@@ -300,10 +303,10 @@ export default function HistoryTable({
         <TableContainer
           component={Paper}
           variant="outlined"
-          sx={{ borderRadius: 1, borderColor: 'rgba(255, 255, 255, 0.08)' }}
+          sx={{ borderRadius: 1, borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)' }}
         >
           <Table>
-            <TableHead sx={{ bgcolor: 'rgba(255, 255, 255, 0.03)' }}>
+            <TableHead sx={{ bgcolor: isDarkMode ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)' }}>
               <TableRow>
                 <TableCell sx={{ fontWeight: 800 }}>Rx ID</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>Patient Name</TableCell>
@@ -477,7 +480,7 @@ export default function HistoryTable({
           labelRowsPerPage="Per page:"
           sx={{
             mt: 1,
-            borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+            borderTop: isDarkMode ? '1px solid rgba(255, 255, 255, 0.05)' : '1px solid rgba(0, 0, 0, 0.06)',
             '.MuiTablePagination-toolbar': { px: { xs: 1, sm: 2 } },
             '.MuiTablePagination-selectLabel, .MuiTablePagination-displayedRows': {
               fontWeight: 600,
@@ -495,27 +498,42 @@ export default function HistoryTable({
           sx: {
             borderRadius: 2,
             p: 1,
-            bgcolor: '#1E293B',
-            border: '1px solid rgba(255, 77, 109, 0.3)'
+            bgcolor: isDarkMode ? '#1E293B' : '#FFFFFF',
+            color: isDarkMode ? '#F8FAFC' : '#1E293B',
+            backgroundImage: 'none',
+            border: isDarkMode
+              ? '1px solid rgba(255, 77, 109, 0.3)'
+              : '1px solid rgba(255, 77, 109, 0.25)',
+            boxShadow: isDarkMode
+              ? '0 20px 45px rgba(0, 0, 0, 0.5)'
+              : '0 20px 45px rgba(15, 23, 42, 0.12)'
           }
         }}
       >
-        <DialogTitle sx={{ fontWeight: 800, color: '#FF4D6D', pb: 1 }}>
+        <DialogTitle sx={{ fontWeight: 800, color: '#FF4D6D', pb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <DeleteOutline sx={{ color: '#FF4D6D', fontSize: 24 }} />
           Delete Prescription Analysis Record?
         </DialogTitle>
         <DialogContent>
-          <DialogContentText sx={{ color: 'text.secondary' }}>
+          <DialogContentText sx={{ color: isDarkMode ? 'text.secondary' : '#64748B', fontSize: '0.925rem' }}>
             Are you sure you want to permanently delete record{' '}
-            <strong style={{ color: '#00C9A7' }}>{recordToDelete?.id}</strong> for patient{' '}
-            <strong style={{ color: '#FFF' }}>{recordToDelete?.patientName}</strong>?
+            <strong style={{ color: isDarkMode ? '#00C9A7' : '#009688' }}>{recordToDelete?.id}</strong> for patient{' '}
+            <strong style={{ color: isDarkMode ? '#FFFFFF' : '#1E293B' }}>{recordToDelete?.patientName}</strong>?
             This action cannot be undone.
           </DialogContentText>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
+        <DialogActions sx={{ px: 3, pb: 2, pt: 1, gap: 1 }}>
           <Button
             onClick={handleCloseDeleteConfirm}
             disabled={isDeleting}
-            sx={{ color: 'text.secondary', textTransform: 'none', fontWeight: 600 }}
+            sx={{
+              color: isDarkMode ? 'text.secondary' : '#64748B',
+              textTransform: 'none',
+              fontWeight: 600,
+              '&:hover': {
+                bgcolor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)'
+              }
+            }}
           >
             Cancel
           </Button>
@@ -527,9 +545,11 @@ export default function HistoryTable({
             startIcon={isDeleting ? <CircularProgress size={16} color="inherit" /> : <DeleteOutline />}
             sx={{
               bgcolor: '#FF4D6D',
+              color: '#FFFFFF',
               '&:hover': { bgcolor: '#e03a5b' },
               textTransform: 'none',
-              fontWeight: 700
+              fontWeight: 700,
+              boxShadow: '0 4px 14px rgba(255, 77, 109, 0.35)'
             }}
           >
             {isDeleting ? 'Deleting...' : 'Delete Record'}

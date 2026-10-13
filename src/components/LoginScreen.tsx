@@ -97,6 +97,7 @@ export default function LoginScreen({ staffList = [], onLoginSuccess, onUpdatePa
   const [formErrors, setFormErrors] = useState<{ selectedStaffId?: string, password?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [activeSessionError, setActiveSessionError] = useState<boolean>(false);
+  const isLoggingIn = isSubmitting || authLoading;
 
   // Forgot Password / Reset Link Ecosystem Modal States
   const [forgotModalOpen, setForgotModalOpen] = useState<boolean>(false);
@@ -809,10 +810,11 @@ export default function LoginScreen({ staffList = [], onLoginSuccess, onUpdatePa
                         size="small"
                         variant="outlined"
                         onClick={handleForceLogin}
-                        disabled={isSubmitting}
+                        disabled={isLoggingIn}
+                        startIcon={isLoggingIn ? <CircularProgress size={14} color="inherit" /> : undefined}
                         sx={{ fontWeight: 800, textTransform: 'none', whiteSpace: 'nowrap' }}
                       >
-                        Sign In Here
+                        {isLoggingIn ? 'Signing In...' : 'Sign In Here'}
                       </Button>
                     }
                   >
@@ -826,7 +828,9 @@ export default function LoginScreen({ staffList = [], onLoginSuccess, onUpdatePa
                     type="submit"
                     variant="contained"
                     size="large"
-                    endIcon={<ArrowForward />}
+                    disabled={isLoggingIn}
+                    startIcon={isLoggingIn ? <CircularProgress size={20} color="inherit" /> : undefined}
+                    endIcon={!isLoggingIn ? <ArrowForward /> : undefined}
                     sx={{
                       py: 1.6,
                       borderRadius: 2.5,
@@ -849,10 +853,18 @@ export default function LoginScreen({ staffList = [], onLoginSuccess, onUpdatePa
                           ? '0 12px 28px rgba(0, 201, 167, 0.5)'
                           : '0 12px 28px rgba(108, 92, 231, 0.5)',
                         transform: 'translateY(-1px)'
+                      },
+                      '&:disabled': {
+                        color: '#FFFFFF',
+                        opacity: 0.85,
+                        background: isDoctor
+                          ? 'linear-gradient(135deg, #00B395 0%, #007A65 100%)'
+                          : 'linear-gradient(135deg, #5B4BC4 0%, #3B1478 100%)',
+                        boxShadow: 'none'
                       }
                     }}
                   >
-                    Sign In to Arpan Clinical OS
+                    {isLoggingIn ? 'Signing In to Arpan Clinical OS...' : 'Sign In to Arpan Clinical OS'}
                   </Button>
                 </Box>
               </Stack>

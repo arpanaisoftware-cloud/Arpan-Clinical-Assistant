@@ -1,13 +1,13 @@
-﻿'use client';
+'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFormik, FormikProvider, FieldArray, FormikErrors, FormikTouched } from 'formik';
 import * as Yup from 'yup';
 import { toast } from 'react-toastify';
 import {
   Card, CardContent, Typography, Grid, TextField, Button, Box,
   MenuItem, IconButton, Stack, Divider, Paper, Alert, Chip,
-  FormControlLabel, Checkbox
+  FormControlLabel, Checkbox, CircularProgress
 } from '@mui/material';
 import {
   Person, Add, Delete, AutoAwesome, RestartAlt, Biotech,
@@ -56,6 +56,27 @@ const INITIAL_VALUES: PatientInput = {
 };
 
 export default function PatientPrescriptionForm({ onAnalyze, onReset, isAnalyzing }: PatientPrescriptionFormProps) {
+  const [analysisProgress, setAnalysisProgress] = useState<number>(0);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (isAnalyzing) {
+      setAnalysisProgress(10);
+      timer = setInterval(() => {
+        setAnalysisProgress((prev) => {
+          if (prev >= 94) return prev;
+          const inc = Math.floor(Math.random() * 7) + 5;
+          return Math.min(prev + inc, 94);
+        });
+      }, 280);
+    } else {
+      setAnalysisProgress(0);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [isAnalyzing]);
+
   const formik = useFormik<PatientInput>({
     initialValues: INITIAL_VALUES,
     validationSchema: PrescriptionValidationSchema,
@@ -297,9 +318,9 @@ export default function PatientPrescriptionForm({ onAnalyze, onReset, isAnalyzin
               <Button variant="outlined" color="inherit" startIcon={<RestartAlt />} onClick={() => { formik.resetForm(); if (onReset) onReset(); toast.info('Form cleared & analysis reset.'); }}>
                 Reset
               </Button>
-              <Button type="submit" variant="contained" color="primary" size="large" disabled={isAnalyzing} startIcon={<AutoAwesome />}
+              <Button type="submit" variant="contained" color="primary" size="large" disabled={isAnalyzing} startIcon={isAnalyzing ? <CircularProgress size={18} color="inherit" /> : <AutoAwesome />}
                 sx={{ px: 4, py: 1.5, fontSize: '1.05rem', boxShadow: '0 6px 20px rgba(0, 201, 167, 0.4)' }}>
-                {isAnalyzing ? 'Analyzing AI Engine...' : 'Analyze'}
+                {isAnalyzing ? `Analyzing AI Engine... ${analysisProgress}%` : 'Analyze'}
               </Button>
             </Stack>
           </form>

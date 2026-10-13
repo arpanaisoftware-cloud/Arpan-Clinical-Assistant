@@ -702,9 +702,9 @@ export default function Home() {
             <Box sx={{ mt: 2 }}>
               {canAccessDiets ? (
                 <DietsModule
-                  patientName={analysisResult?.patientInfo?.patientName || 'Robert Vance'}
-                  patientAge={analysisResult?.patientInfo?.age || 58}
-                  patientDisease={analysisResult?.patientInfo?.disease || 'Essential Hypertension, Type 2 Diabetes'}
+                  patientName={analysisResult?.patientInfo?.patientName || ''}
+                  patientAge={analysisResult?.patientInfo?.age || ''}
+                  patientDisease={analysisResult?.patientInfo?.disease || ''}
                 />
               ) : (
                 <Paper variant="outlined" sx={{ p: 5, borderRadius: 1, textAlign: 'center', bgcolor: 'rgba(255, 77, 109, 0.04)', borderColor: 'rgba(255, 77, 109, 0.3)', my: 4 }}>

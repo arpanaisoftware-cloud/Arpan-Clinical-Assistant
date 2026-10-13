@@ -11,7 +11,8 @@ import {
   Paper,
   Button,
   IconButton,
-  Chip
+  Chip,
+  CircularProgress
 } from '@mui/material';
 import {
   CloudUpload,
@@ -37,6 +38,26 @@ export default function PrescriptionUploader({
 }: PrescriptionUploaderProps) {
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [file, setFile] = useState<File | null>(null);
+  const [analysisProgress, setAnalysisProgress] = useState<number>(0);
+
+  React.useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (isAnalyzing) {
+      setAnalysisProgress(12);
+      timer = setInterval(() => {
+        setAnalysisProgress((prev) => {
+          if (prev >= 94) return prev;
+          const inc = Math.floor(Math.random() * 7) + 5;
+          return Math.min(prev + inc, 94);
+        });
+      }, 280);
+    } else {
+      setAnalysisProgress(0);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [isAnalyzing]);
 
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -167,10 +188,20 @@ export default function PrescriptionUploader({
 
           {isAnalyzing && (
             <Box sx={{ width: '100%', mt: 2 }}>
-              <Typography variant="caption" color="secondary" sx={{ fontWeight: 800, display: 'block', mb: 0.5 }}>
-                ⚡ Sending prescription directly to Gemini AI for full analysis...
-              </Typography>
-              <LinearProgress color="secondary" />
+              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={0.5}>
+                <Typography variant="caption" color="secondary" sx={{ fontWeight: 800 }}>
+                  ⚡ Analyzing prescription with Gemini AI...
+                </Typography>
+                <Typography variant="caption" color="secondary" sx={{ fontWeight: 900 }}>
+                  {analysisProgress}%
+                </Typography>
+              </Stack>
+              <LinearProgress
+                variant="determinate"
+                value={analysisProgress}
+                color="secondary"
+                sx={{ height: 8, borderRadius: 2 }}
+              />
             </Box>
           )}
         </Box>
@@ -203,7 +234,7 @@ export default function PrescriptionUploader({
             size="large"
             disabled={!file || isAnalyzing}
             onClick={handleAnalyzeDocument}
-            startIcon={<AutoAwesome />}
+            startIcon={isAnalyzing ? <CircularProgress size={18} color="inherit" /> : <AutoAwesome />}
             sx={{
               py: 1.3,
               fontWeight: 800,
@@ -216,7 +247,7 @@ export default function PrescriptionUploader({
               }
             }}
           >
-            {isAnalyzing ? 'Analyzing with Gemini AI...' : 'Analyze with AI'}
+            {isAnalyzing ? `Analyzing with Gemini AI... ${analysisProgress}%` : 'Analyze with AI'}
           </Button>
         </Stack>
       </CardContent>
