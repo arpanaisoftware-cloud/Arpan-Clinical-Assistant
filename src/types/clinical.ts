@@ -120,6 +120,8 @@ export interface DrugIndicationItem {
   hepaticSuitability: string;
   ageConsideration: string;
   cardiovascularConsideration: string;
+  cognitiveFunction?: string;
+  sexualDysfunction?: string;
   overallSuitability: 'Safe' | 'Caution' | 'Avoid';
 }
 

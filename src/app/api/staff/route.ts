@@ -90,13 +90,20 @@ export async function POST(req: Request) {
     const cleanEmail = email.trim().toLowerCase();
     const cleanStaffId = staffId.trim().toUpperCase();
 
-    const existingUser = await User.findOne({
-      $or: [{ email: cleanEmail }, { staffId: cleanStaffId }]
-    });
-
-    if (existingUser) {
+    // Check duplicate email
+    const existingEmail = await User.findOne({ email: cleanEmail });
+    if (existingEmail) {
       return NextResponse.json(
-        { success: false, message: 'A staff member with this email or staff ID already exists' },
+        { success: false, message: `Email "${cleanEmail}" is already registered. Please use a different email address.` },
+        { status: 400 }
+      );
+    }
+
+    // Check duplicate staff ID
+    const existingStaffId = await User.findOne({ staffId: cleanStaffId });
+    if (existingStaffId) {
+      return NextResponse.json(
+        { success: false, message: `Staff ID "${cleanStaffId}" is already assigned to ${existingStaffId.name}. Please enter a unique Staff ID.` },
         { status: 400 }
       );
     }
@@ -138,8 +145,15 @@ export async function POST(req: Request) {
     );
   } catch (error: any) {
     console.error('Create staff DB warning:', error.message);
+    if (error.code === 11000) {
+      const isEmail = error.message?.includes('email') || (error.keyPattern && error.keyPattern.email);
+      const msg = isEmail
+        ? 'This email address is already registered. Please use a different email.'
+        : 'This Staff ID is already assigned. Please use a different Staff ID.';
+      return NextResponse.json({ success: false, message: msg }, { status: 400 });
+    }
     return NextResponse.json(
-      { success: false, message: 'Server error', error: error.message },
+      { success: false, message: error.message || 'Server error', error: error.message },
       { status: 500 }
     );
   }

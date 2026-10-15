@@ -190,6 +190,46 @@ export default function StaffManagementModule({
       assignedRole === 'Doctor' ? 'Full Access' : (permission as ModulePermission);
     const assignedDept = department.trim();
 
+    const targetEmail = email.trim().toLowerCase();
+    const duplicateEmailMember = staffList.find((u) => {
+      const uEmail = (u.email || '').trim().toLowerCase();
+      if (!uEmail) return false;
+      if (editingUserId) {
+        return (u.id !== editingUserId && (u as any)._id !== editingUserId && u.staffId !== editingUserId) && uEmail === targetEmail;
+      }
+      return uEmail === targetEmail;
+    });
+
+    if (duplicateEmailMember) {
+      setErrors((prev) => ({
+        ...prev,
+        email: `This email is already registered to ${duplicateEmailMember.name} (${duplicateEmailMember.staffId || duplicateEmailMember.role})`
+      }));
+      toast.error(`Email "${email.trim()}" is already in use by ${duplicateEmailMember.name}. Please enter a unique email address.`, {
+        toastId: 'staff-duplicate-email-error'
+      });
+      return;
+    }
+
+    if (staffIdInput.trim()) {
+      const targetId = staffIdInput.trim().toUpperCase();
+      const duplicateIdMember = staffList.find((u) => {
+        const uId = (u.staffId || '').trim().toUpperCase();
+        if (!uId) return false;
+        if (editingUserId) {
+          return (u.id !== editingUserId && (u as any)._id !== editingUserId && u.staffId !== editingUserId) && uId === targetId;
+        }
+        return uId === targetId;
+      });
+
+      if (duplicateIdMember) {
+        toast.error(`Staff ID "${staffIdInput.trim()}" is already assigned to ${duplicateIdMember.name}. Please enter a unique Staff ID.`, {
+          toastId: 'staff-duplicate-id-error'
+        });
+        return;
+      }
+    }
+
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const generatedId = staffIdInput.trim() || `STAFF-${randomSuffix}`;
     const generatedPass = customPassword.trim() || `staff${randomSuffix}`;
@@ -218,7 +258,11 @@ export default function StaffManagementModule({
         setPermission('');
         setErrors({});
       } catch (err: any) {
-        toast.error(err.message || 'Failed to update staff account. Please try again.');
+        const errorMsg = typeof err === 'string' ? err : err?.message || 'Failed to update staff account. Please try again.';
+        if (errorMsg.toLowerCase().includes('email')) {
+          setErrors((prev) => ({ ...prev, email: errorMsg }));
+        }
+        toast.error(errorMsg);
       }
       return;
     } else {
@@ -252,7 +296,11 @@ export default function StaffManagementModule({
         setPermission('');
         setErrors({});
       } catch (err: any) {
-        toast.error(err.message || 'Failed to issue staff account. Please try again.');
+        const errorMsg = typeof err === 'string' ? err : err?.message || 'Failed to issue staff account. Please try again.';
+        if (errorMsg.toLowerCase().includes('email')) {
+          setErrors((prev) => ({ ...prev, email: errorMsg }));
+        }
+        toast.error(errorMsg);
       }
     }
   };
@@ -459,7 +507,10 @@ export default function StaffManagementModule({
                   label="Registered Clinical Email *"
                   placeholder="e.g. alex.rivera@arpanclinical.org"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (errors.email) setErrors((prev) => ({ ...prev, email: undefined }));
+                  }}
                   error={!!errors.email}
                   helperText={errors.email}
                 />
