@@ -22,6 +22,7 @@ import { toast } from "react-toastify";
 import confetti from "canvas-confetti";
 import { useAppSelector } from "../redux/hooks";
 import { HistoryRecord } from "../types/clinical";
+import DietAnalysisLoader from "./DietAnalysisLoader";
 
 interface MealSlot {
   time: string;
@@ -4103,6 +4104,15 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Full Page Analysis Loader for Diet Generation */}
+      <DietAnalysisLoader
+        open={isGenerating || isParsingRx}
+        onFinished={() => {
+          const el = document.getElementById("diet-plan-result");
+          if (el) el.scrollIntoView({ behavior: "smooth" });
+        }}
+      />
     </Card>
   );
 }
