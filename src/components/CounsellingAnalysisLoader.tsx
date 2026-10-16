@@ -8,6 +8,7 @@ import {
   Stack,
   Chip,
   Fade,
+  Modal,
   useTheme
 } from '@mui/material';
 import {
@@ -145,26 +146,30 @@ export default function CounsellingAnalysisLoader({ open, onFinished }: Counsell
   const currentStep = COUNSELLING_STEPS[activeStepIdx];
 
   return (
-    <Fade in={isVisible} timeout={300}>
-      <Box
-        sx={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          width: '100vw',
-          height: '100vh',
-          zIndex: 99999,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: isDark ? 'rgba(10, 15, 29, 0.7)' : 'rgba(244, 247, 251, 0.8)',
-          backdropFilter: 'blur(12px)',
-          p: 2
-        }}
-      >
-        <Paper
+    <Modal
+      open={isVisible}
+      closeAfterTransition
+      disableAutoFocus
+      disableEnforceFocus
+      sx={{
+        zIndex: 999999,
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        bgcolor: isDark ? 'rgba(10, 15, 29, 0.78)' : 'rgba(244, 247, 251, 0.85)',
+        backdropFilter: 'blur(12px)',
+        outline: 'none',
+        p: 2
+      }}
+    >
+      <Fade in={isVisible} timeout={300}>
+        <Box sx={{ outline: 'none', width: '100%', maxWidth: 680, mx: 'auto', my: 'auto' }}>
+          <Paper
           elevation={isDark ? 24 : 12}
           sx={{
             width: '100%',
@@ -406,5 +411,6 @@ export default function CounsellingAnalysisLoader({ open, onFinished }: Counsell
         </Paper>
       </Box>
     </Fade>
-  );
+  </Modal>
+);
 }

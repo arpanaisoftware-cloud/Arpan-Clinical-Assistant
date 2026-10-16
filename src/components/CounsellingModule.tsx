@@ -1,44 +1,43 @@
 'use client';
 
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import * as Yup from 'yup';
-import {
-  Card,
-  CardContent,
-  Typography,
-  Grid,
-  Box,
-  Button,
-  Chip,
-  Stack,
-  Tabs,
-  Tab,
-  Paper,
-  Divider,
-  Alert,
-  AlertTitle,
-  TextField,
-  MenuItem,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  IconButton,
-  Tooltip,
-  useTheme,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  ToggleButton,
-  ToggleButtonGroup,
-  CircularProgress,
-  LinearProgress,
-  InputAdornment,
-  Fade
-} from '@mui/material';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import Typography from '@mui/material/Typography';
+import Grid from '@mui/material/Grid';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Chip from '@mui/material/Chip';
+import Stack from '@mui/material/Stack';
+import Tabs from '@mui/material/Tabs';
+import Tab from '@mui/material/Tab';
+import Paper from '@mui/material/Paper';
+import Divider from '@mui/material/Divider';
+import Alert from '@mui/material/Alert';
+import AlertTitle from '@mui/material/AlertTitle';
+import TextField from '@mui/material/TextField';
+import MenuItem from '@mui/material/MenuItem';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import CircularProgress from '@mui/material/CircularProgress';
+import LinearProgress from '@mui/material/LinearProgress';
+import InputAdornment from '@mui/material/InputAdornment';
+import Fade from '@mui/material/Fade';
+import TablePagination from '@mui/material/TablePagination';
+import { useTheme } from '@mui/material/styles';
 import {
   Favorite,
   Psychology,
@@ -139,6 +138,27 @@ export default function CounsellingModule({
   const [sensationLoss, setSensationLoss] = useState<string>('');
   const [footGrade, setFootGrade] = useState<string>('');
 
+  // Separated Analysed History Patient (does NOT overwrite Manual Entry)
+  interface CounsellingPatientProfile {
+    name: string;
+    age: number | string;
+    gender: string;
+    disease: string;
+    sbp: number | string;
+    dbp: number | string;
+    hba1c: number | string;
+    egfr: number | string;
+    sensationLoss?: string;
+    footGrade?: string;
+  }
+  const [historyPatient, setHistoryPatient] = useState<CounsellingPatientProfile | null>(null);
+
+  // Active Analysed Patient Data for Care Sheet & Report
+  const [counsellingPatient, setCounsellingPatient] = useState<CounsellingPatientProfile | null>(null);
+
+  // Prescription Parsed Patient Data (does NOT overwrite Manual Entry)
+  const [rxParsedPatient, setRxParsedPatient] = useState<CounsellingPatientProfile | null>(null);
+
   // Prescription Upload state
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -151,8 +171,66 @@ export default function CounsellingModule({
   const activeAnalysis = useAppSelector((s: any) => s.clinical.analysisResult);
   const historyList: HistoryRecord[] = useAppSelector((s: any) => s.clinical.historyList) ?? [];
   const [historySearch, setHistorySearch] = useState<string>('');
+  const [debouncedHistorySearch, setDebouncedHistorySearch] = useState<string>('');
   const [selectedHistoryId, setSelectedHistoryId] = useState<string>('');
   const [historyView, setHistoryView] = useState<'cards' | 'table'>('table');
+
+  // Paginated History Patient state (fetches full archive with 5, 10, 15, 20 per page)
+  const [historyPatients, setHistoryPatients] = useState<HistoryRecord[]>(historyList);
+  const [historyTotalRecords, setHistoryTotalRecords] = useState<number>(historyList.length);
+  const [historyPage, setHistoryPage] = useState<number>(0);
+  const [historyRowsPerPage, setHistoryRowsPerPage] = useState<number>(5);
+  const [historyLoading, setHistoryLoading] = useState<boolean>(false);
+
+  // Debounce search input (350ms)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedHistorySearch(historySearch.trim());
+      setHistoryPage(0);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [historySearch]);
+
+  const fetchHistoryPatients = useCallback(async (
+    targetPage: number = historyPage,
+    searchQuery: string = debouncedHistorySearch,
+    currentLimit: number = historyRowsPerPage
+  ) => {
+    setHistoryLoading(true);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('arpan_auth_token') : '';
+      const apiPage = targetPage + 1;
+      const params = new URLSearchParams({
+        page: apiPage.toString(),
+        limit: currentLimit.toString(),
+      });
+      if (searchQuery) params.set('search', searchQuery);
+
+      const res = await fetch(`/api/history?${params.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${token || ''}`,
+        },
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          setHistoryPatients(json.data);
+          setHistoryTotalRecords(json.pagination?.totalRecords ?? json.data.length);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching patients for counselling:', err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [historyPage, debouncedHistorySearch, historyRowsPerPage]);
+
+  useEffect(() => {
+    fetchHistoryPatients(historyPage, debouncedHistorySearch, historyRowsPerPage);
+  }, [historyPage, debouncedHistorySearch, historyRowsPerPage, fetchHistoryPatients]);
+
+  const filteredHistory = historyPatients;
 
   // Dynamic Risk factors from API (defaults to 6 factors from database)
   const [riskFactors, setRiskFactors] = useState<RiskAssessmentItem[]>(COUNSELLING_RISK_DATABASE);
@@ -215,6 +293,19 @@ export default function CounsellingModule({
         setRiskFactors(json.data);
       }
 
+      setCounsellingPatient({
+        name: formData.currPatientName,
+        age: formData.currPatientAge,
+        gender: formData.currPatientGender,
+        disease: formData.currPatientDisease,
+        sbp: formData.sbp,
+        dbp: formData.dbp,
+        hba1c: formData.hba1c,
+        egfr: formData.egfr,
+        sensationLoss: formData.sensationLoss,
+        footGrade: formData.footGrade
+      });
+
       confetti({ particleCount: 70, spread: 80, origin: { y: 0.6 } });
       setSubmitted(true);
       setActiveTab(0);
@@ -267,17 +358,6 @@ export default function CounsellingModule({
     });
   };
 
-  // Filter history records based on search query
-  const filteredHistory = useMemo(() => {
-    if (!historySearch.trim()) return historyList;
-    const q = historySearch.toLowerCase();
-    return historyList.filter(
-      (r) =>
-        r.patientName.toLowerCase().includes(q) ||
-        r.id.toLowerCase().includes(q) ||
-        r.disease.toLowerCase().includes(q)
-    );
-  }, [historyList, historySearch]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -348,15 +428,18 @@ export default function CounsellingModule({
         const parsedHba1c = p.hba1c ? Number(p.hba1c) : 7.5;
         const parsedEgfr = p.egfr ? Number(p.egfr) : 65;
 
-        setCurrPatientName(parsedName);
-        setCurrPatientAge(parsedAge);
-        setCurrPatientGender(parsedGender);
-        setCurrPatientDisease(parsedDisease);
-        setSbp(parsedSbp);
-        setDbp(parsedDbp);
-        setHba1c(parsedHba1c);
-        setEgfr(parsedEgfr);
-        setFormErrors({});
+        setRxParsedPatient({
+          name: parsedName,
+          age: parsedAge,
+          gender: parsedGender,
+          disease: parsedDisease,
+          sbp: parsedSbp,
+          dbp: parsedDbp,
+          hba1c: parsedHba1c,
+          egfr: parsedEgfr,
+          sensationLoss: sensationLoss || 'Mild Loss',
+          footGrade: footGrade || 'Grade 0 (Intact Skin)'
+        });
         setRxParsed(true);
 
         await executeAnalysis({
@@ -392,17 +475,18 @@ export default function CounsellingModule({
       return;
     }
     setSelectedHistoryId(record.id);
-    setCurrPatientName(record.patientName || pi.patientName || '');
-    setCurrPatientAge(record.age || pi.age || '');
-    setCurrPatientGender(record.gender || pi.gender || 'Male');
-    setCurrPatientDisease(record.disease || pi.disease || '');
-    setSbp(pi.bpSystolic || 140);
-    setDbp(pi.bpDiastolic || 90);
-    setHba1c(pi.hba1c || 7.2);
-    setEgfr(pi.egfr || 70);
-    setSensationLoss(sensationLoss || 'Mild Loss');
-    setFootGrade(footGrade || 'Grade 0 (Intact Skin)');
-    setFormErrors({});
+    setHistoryPatient({
+      name: record.patientName || pi.patientName || '',
+      age: record.age || pi.age || '',
+      gender: record.gender || pi.gender || 'Male',
+      disease: record.disease || pi.disease || '',
+      sbp: pi.bpSystolic || 140,
+      dbp: pi.bpDiastolic || 90,
+      hba1c: pi.hba1c || 7.2,
+      egfr: pi.egfr || 70,
+      sensationLoss: 'Mild Loss',
+      footGrade: 'Grade 0 (Intact Skin)'
+    });
     confetti({ particleCount: 35, spread: 50, origin: { y: 0.5 } });
     toast.success(`Loaded patient: ${record.patientName} (${record.id})`);
   };
@@ -414,17 +498,18 @@ export default function CounsellingModule({
     }
     const pi = activeAnalysis.patientInfo;
     setSelectedHistoryId('ACTIVE-SESSION');
-    setCurrPatientName(pi.patientName || '');
-    setCurrPatientAge(pi.age || '');
-    setCurrPatientGender(pi.gender || 'Male');
-    setCurrPatientDisease(pi.disease || '');
-    setSbp(pi.bpSystolic || 140);
-    setDbp(pi.bpDiastolic || 90);
-    setHba1c(pi.hba1c || 7.2);
-    setEgfr(pi.egfr || 70);
-    setSensationLoss(sensationLoss || 'Mild Loss');
-    setFootGrade(footGrade || 'Grade 0 (Intact Skin)');
-    setFormErrors({});
+    setHistoryPatient({
+      name: pi.patientName || '',
+      age: pi.age || '',
+      gender: pi.gender || 'Male',
+      disease: pi.disease || '',
+      sbp: pi.bpSystolic || 140,
+      dbp: pi.bpDiastolic || 90,
+      hba1c: pi.hba1c || 7.2,
+      egfr: pi.egfr || 70,
+      sensationLoss: 'Mild Loss',
+      footGrade: 'Grade 0 (Intact Skin)'
+    });
     confetti({ particleCount: 40, spread: 60, origin: { y: 0.5 } });
     toast.success(`Loaded active patient: ${pi.patientName}`);
   };
@@ -445,7 +530,10 @@ export default function CounsellingModule({
     setIsParsingRx(false);
     setRxParsed(false);
     setRxProgress(0);
+    setRxParsedPatient(null);
     setSelectedHistoryId('');
+    setHistoryPatient(null);
+    setCounsellingPatient(null);
     setHistorySearch('');
     setFormErrors({});
     setSubmitted(false);
@@ -543,20 +631,20 @@ export default function CounsellingModule({
           </Grid>
 
           <Grid item xs={12} md={5} textAlign={{ xs: 'left', md: 'right' }}>
-            <Stack direction="row" spacing={1.5} alignItems="center" justifyContent={{ xs: 'flex-start', md: 'flex-end' }} flexWrap="wrap">
-              <Tooltip title="Generate printable PDF/Paper Patient Education & Care Sheet" arrow placement="top">
-                <Button
-                  variant="contained"
-                  color="secondary"
-                  size="large"
-                  startIcon={<Print />}
-                  onClick={handlePrint}
-                  sx={{ borderRadius: 1.5, px: 3, py: 1.2, fontWeight: 800, width: { xs: '100%', sm: 'auto' } }}
-                >
-                  Print Patient Care Sheet
-                </Button>
-              </Tooltip>
-              {(submitted || currPatientName || uploadedFile || selectedHistoryId) && (
+            {submitted && (
+              <Stack direction="row" spacing={1.5} alignItems="center" justifyContent={{ xs: 'flex-start', md: 'flex-end' }} flexWrap="wrap">
+                <Tooltip title="Generate printable PDF/Paper Patient Education & Care Sheet" arrow placement="top">
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    size="large"
+                    startIcon={<Print />}
+                    onClick={handlePrint}
+                    sx={{ borderRadius: 1.5, px: 3, py: 1.2, fontWeight: 800, width: { xs: '100%', sm: 'auto' } }}
+                  >
+                    Print Patient Care Sheet
+                  </Button>
+                </Tooltip>
                 <Button
                   variant="outlined"
                   color="error"
@@ -574,8 +662,8 @@ export default function CounsellingModule({
                 >
                   Reset
                 </Button>
-              )}
-            </Stack>
+              </Stack>
+            )}
           </Grid>
         </Grid>
 
@@ -897,11 +985,12 @@ export default function CounsellingModule({
               variant="contained"
               color="secondary"
               size="large"
-              startIcon={<Shield />}
+              disabled={isAnalyzing}
+              startIcon={isAnalyzing ? <CircularProgress size={20} color="inherit" /> : <Shield />}
               onClick={handleSubmitForm}
               sx={{ borderRadius: 1, px: 4, py: 1.2, fontWeight: 800, fontSize: '0.95rem' }}
             >
-              Generate Counselling Report
+              {isAnalyzing ? 'Generating Counselling Report...' : 'Generate Counselling Report'}
             </Button>
           </Box>
         </Paper>
@@ -1009,7 +1098,7 @@ export default function CounsellingModule({
                   '&:disabled': { background: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)' }
                 }}
               >
-                {isParsingRx ? `Analysing Prescription... ${rxProgress}%` : 'Extract & Generate Counselling Report'}
+                {isParsingRx ? `Analysing Prescription... ${rxProgress}%` : isAnalyzing ? 'Generating Report...' : 'Extract & Generate Counselling Report'}
               </Button>
               {!uploadedFile && (
                 <Typography variant="caption" color="text.secondary" display="block" mt={1}>
@@ -1050,7 +1139,7 @@ export default function CounsellingModule({
             )}
 
             {/* Extracted Details Summary */}
-            {rxParsed && currPatientName && (
+            {rxParsed && rxParsedPatient && (
               <Fade in>
                 <Paper
                   variant="outlined"
@@ -1065,21 +1154,21 @@ export default function CounsellingModule({
                   <Stack direction="row" alignItems="center" spacing={1} mb={1}>
                     <CheckCircle sx={{ color: '#00C9A7', fontSize: 20 }} />
                     <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#00C9A7' }}>
-                      Extracted Prescription Vitals: {currPatientName} ({currPatientAge}Y, {currPatientGender})
+                      Extracted Prescription Vitals: {rxParsedPatient.name} ({rxParsedPatient.age}Y, {rxParsedPatient.gender})
                     </Typography>
                   </Stack>
                   <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                    Diagnosis: {currPatientDisease}
+                    Diagnosis: {rxParsedPatient.disease}
                   </Typography>
                   <Stack direction="row" spacing={1} flexWrap="wrap" gap={0.5}>
-                    {sbp && dbp && (
-                      <Chip label={`BP: ${sbp}/${dbp} mmHg`} size="small" sx={{ fontWeight: 700 }} />
+                    {rxParsedPatient.sbp && rxParsedPatient.dbp && (
+                      <Chip label={`BP: ${rxParsedPatient.sbp}/${rxParsedPatient.dbp} mmHg`} size="small" sx={{ fontWeight: 700 }} />
                     )}
-                    {hba1c && (
-                      <Chip label={`HbA1c: ${hba1c}%`} size="small" sx={{ fontWeight: 700 }} />
+                    {rxParsedPatient.hba1c && (
+                      <Chip label={`HbA1c: ${rxParsedPatient.hba1c}%`} size="small" sx={{ fontWeight: 700 }} />
                     )}
-                    {egfr && (
-                      <Chip label={`eGFR: ${egfr} mL/min`} size="small" sx={{ fontWeight: 700 }} />
+                    {rxParsedPatient.egfr && (
+                      <Chip label={`eGFR: ${rxParsedPatient.egfr} mL/min`} size="small" sx={{ fontWeight: 700 }} />
                     )}
                   </Stack>
                 </Paper>
@@ -1114,7 +1203,7 @@ export default function CounsellingModule({
                     Select an Already Analysed Patient
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    {filteredHistory.length} patient records found · Switch between Card and Table view
+                    {historyTotalRecords} patient record{historyTotalRecords === 1 ? '' : 's'} available &bull; Page {historyPage + 1} of {Math.max(1, Math.ceil(historyTotalRecords / historyRowsPerPage))}
                   </Typography>
                 </Box>
               </Stack>
@@ -1432,8 +1521,31 @@ export default function CounsellingModule({
               </TableContainer>
             )}
 
+            {/* Pagination Controls with selectable per-page (5, 10, 15, 20) */}
+            <TablePagination
+              component="div"
+              count={historyTotalRecords}
+              page={historyPage}
+              onPageChange={(_, newPage) => setHistoryPage(newPage)}
+              rowsPerPage={historyRowsPerPage}
+              onRowsPerPageChange={(e) => {
+                setHistoryRowsPerPage(parseInt(e.target.value, 10));
+                setHistoryPage(0);
+              }}
+              rowsPerPageOptions={[5, 10, 15, 20]}
+              labelRowsPerPage="Per page:"
+              sx={{
+                mt: 1,
+                borderTop: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #E2E8F0',
+                '.MuiTablePagination-selectLabel, .MuiTablePagination-displayedRows': {
+                  fontWeight: 600,
+                  fontSize: '0.85rem'
+                }
+              }}
+            />
+
             {/* Loaded Patient Confirmation & Generate Counselling Button */}
-            {selectedHistoryId && (
+            {selectedHistoryId && historyPatient && (
               <Fade in>
                 <Paper
                   elevation={0}
@@ -1503,14 +1615,7 @@ export default function CounsellingModule({
                       variant="text"
                       onClick={() => {
                         setSelectedHistoryId('');
-                        setCurrPatientName('');
-                        setCurrPatientAge('');
-                        setCurrPatientGender('');
-                        setCurrPatientDisease('');
-                        setSbp('');
-                        setDbp('');
-                        setHba1c('');
-                        setEgfr('');
+                        setHistoryPatient(null);
                       }}
                       sx={{
                         color: 'text.secondary',
@@ -1532,22 +1637,22 @@ export default function CounsellingModule({
                       mb={1}
                     >
                       <Typography variant="h6" sx={{ fontWeight: 900, lineHeight: 1.2 }}>
-                        {currPatientName}
+                        {historyPatient.name}
                       </Typography>
                       <Stack direction="row" spacing={0.8} alignItems="center" flexWrap="wrap">
                         <Chip
-                          label={`${currPatientAge} Years`}
+                          label={`${historyPatient.age} Years`}
                           size="small"
                           sx={{ fontWeight: 800, height: 24, fontSize: '0.75rem' }}
                         />
                         <Chip
-                          label={currPatientGender}
+                          label={historyPatient.gender}
                           size="small"
                           variant="outlined"
                           sx={{ fontWeight: 700, height: 24, fontSize: '0.75rem' }}
                         />
                         <Chip
-                          label={currPatientDisease}
+                          label={historyPatient.disease}
                           size="small"
                           color="secondary"
                           sx={{ fontWeight: 800, height: 24, fontSize: '0.75rem' }}
@@ -1556,14 +1661,14 @@ export default function CounsellingModule({
                     </Stack>
 
                     <Stack direction="row" spacing={1} flexWrap="wrap" gap={0.5} mt={1}>
-                      {sbp && dbp && (
-                        <Chip label={`BP: ${sbp}/${dbp} mmHg`} size="small" sx={{ fontWeight: 700, bgcolor: 'rgba(108, 92, 231, 0.12)' }} />
+                      {historyPatient.sbp && historyPatient.dbp && (
+                        <Chip label={`BP: ${historyPatient.sbp}/${historyPatient.dbp} mmHg`} size="small" sx={{ fontWeight: 700, bgcolor: 'rgba(108, 92, 231, 0.12)' }} />
                       )}
-                      {hba1c && (
-                        <Chip label={`HbA1c: ${hba1c}%`} size="small" sx={{ fontWeight: 700, bgcolor: 'rgba(255, 183, 3, 0.12)' }} />
+                      {historyPatient.hba1c && (
+                        <Chip label={`HbA1c: ${historyPatient.hba1c}%`} size="small" sx={{ fontWeight: 700, bgcolor: 'rgba(255, 183, 3, 0.12)' }} />
                       )}
-                      {egfr && (
-                        <Chip label={`eGFR: ${egfr} mL/min`} size="small" sx={{ fontWeight: 700, bgcolor: 'rgba(0, 201, 167, 0.12)' }} />
+                      {historyPatient.egfr && (
+                        <Chip label={`eGFR: ${historyPatient.egfr} mL/min`} size="small" sx={{ fontWeight: 700, bgcolor: 'rgba(0, 201, 167, 0.12)' }} />
                       )}
                     </Stack>
                   </Box>
@@ -1572,21 +1677,22 @@ export default function CounsellingModule({
                     <Button
                       variant="contained"
                       size="large"
+                      disabled={isAnalyzing || !historyPatient}
                       onClick={() =>
                         executeAnalysis({
-                          currPatientName,
-                          currPatientAge,
-                          currPatientGender,
-                          currPatientDisease,
-                          sbp: sbp || 140,
-                          dbp: dbp || 90,
-                          hba1c: hba1c || 7.2,
-                          egfr: egfr || 70,
-                          sensationLoss: sensationLoss || 'Mild Loss',
-                          footGrade: footGrade || 'Grade 0 (Intact Skin)'
+                          currPatientName: historyPatient.name,
+                          currPatientAge: historyPatient.age,
+                          currPatientGender: historyPatient.gender,
+                          currPatientDisease: historyPatient.disease,
+                          sbp: historyPatient.sbp || 140,
+                          dbp: historyPatient.dbp || 90,
+                          hba1c: historyPatient.hba1c || 7.2,
+                          egfr: historyPatient.egfr || 70,
+                          sensationLoss: historyPatient.sensationLoss || 'Mild Loss',
+                          footGrade: historyPatient.footGrade || 'Grade 0 (Intact Skin)'
                         })
                       }
-                      startIcon={<Shield />}
+                      startIcon={isAnalyzing ? <CircularProgress size={20} color="inherit" /> : <Shield />}
                       sx={{
                         borderRadius: '50px',
                         px: { xs: 4, sm: 6 },
@@ -1598,7 +1704,7 @@ export default function CounsellingModule({
                         '&:hover': { background: 'linear-gradient(135deg, #00B395 0%, #5a4bd1 100%)' }
                       }}
                     >
-                      Generate Counselling Report
+                      {isAnalyzing ? 'Generating Counselling Report...' : 'Generate Counselling Report'}
                     </Button>
                   </Box>
                 </Paper>
@@ -1863,7 +1969,7 @@ export default function CounsellingModule({
             {/* Patient Header */}
             <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: '#F8FAFC !important', borderColor: '#E2E8F0 !important', borderRadius: 1 }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#0F172A !important' }}>
-                Patient: {currPatientName} ({currPatientAge} Y, {currPatientGender}) • Diagnosis: {currPatientDisease}{sbp && dbp ? ` • BP: ${sbp}/${dbp} mmHg` : ''}
+                Patient: {counsellingPatient?.name || currPatientName} ({counsellingPatient?.age || currPatientAge} Y, {counsellingPatient?.gender || currPatientGender}) • Diagnosis: {counsellingPatient?.disease || currPatientDisease}{(counsellingPatient?.sbp || sbp) && (counsellingPatient?.dbp || dbp) ? ` • BP: ${counsellingPatient?.sbp || sbp}/${counsellingPatient?.dbp || dbp} mmHg` : ''}
               </Typography>
               <Typography variant="caption" sx={{ color: '#475569 !important' }}>
                 Comprehensive 6-Point Diabetic, Coronary &amp; Hypertensive Risk Evaluation

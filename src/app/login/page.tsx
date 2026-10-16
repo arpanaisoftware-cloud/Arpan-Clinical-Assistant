@@ -6,7 +6,8 @@ import LoginScreen from '../../components/LoginScreen';
 import { useAuth } from '../../context/AuthContext';
 import { AuthUser } from '../../types/clinical';
 import { toast } from 'react-toastify';
-import { Box, CircularProgress } from '@mui/material';
+import Box from '@mui/material/Box';
+import CircularProgress from '@mui/material/CircularProgress';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -24,9 +25,6 @@ export default function LoginPage() {
 
   const handleLoginSuccess = (user: AuthUser) => {
     login(user);
-    toast.success(`Welcome back, ${user.name}! (${user.modulePermissions})`, {
-      toastId: 'login-welcome',
-    });
     router.push('/');
   };
 

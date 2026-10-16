@@ -234,7 +234,7 @@ export default function LoginScreen({ staffList = [], onLoginSuccess, onUpdatePa
       );
 
       if (loginUser.fulfilled.match(resultAction)) {
-        toast.success(`Welcome back, ${resultAction.payload.user.name}!`);
+        toast.success(`Welcome back, ${resultAction.payload.user.name}!`, { toastId: 'login-welcome' });
         setActiveSessionError(false);
         onLoginSuccess(resultAction.payload.user);
         return;
@@ -269,7 +269,7 @@ export default function LoginScreen({ staffList = [], onLoginSuccess, onUpdatePa
         })
       );
       if (loginUser.fulfilled.match(resultAction)) {
-        toast.success(`Welcome back, ${resultAction.payload.user.name}! (Previous session ended)`);
+        toast.success(`Welcome back, ${resultAction.payload.user.name}! (Previous session ended)`, { toastId: 'login-welcome' });
         setActiveSessionError(false);
         onLoginSuccess(resultAction.payload.user);
       } else {

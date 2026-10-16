@@ -1,14 +1,42 @@
 "use client";
 
-import React, { useState, useRef, useCallback, useMemo } from "react";
-import {
-  Card, CardContent, Typography, Grid, Box, Button, Chip, Stack, Paper,
-  Divider, Alert, TextField, MenuItem, Dialog, DialogTitle, DialogContent,
-  DialogActions, IconButton, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, useTheme, CircularProgress, LinearProgress, Fade,
-  InputAdornment, ToggleButton, ToggleButtonGroup, Tooltip,
-  FormControl, InputLabel, Select
-} from "@mui/material";
+import React, { useState, useRef, useCallback, useMemo, useEffect } from "react";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import Typography from "@mui/material/Typography";
+import Grid from "@mui/material/Grid";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
+import Stack from "@mui/material/Stack";
+import Paper from "@mui/material/Paper";
+import Divider from "@mui/material/Divider";
+import Alert from "@mui/material/Alert";
+import TextField from "@mui/material/TextField";
+import MenuItem from "@mui/material/MenuItem";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import IconButton from "@mui/material/IconButton";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
+import CircularProgress from "@mui/material/CircularProgress";
+import LinearProgress from "@mui/material/LinearProgress";
+import Fade from "@mui/material/Fade";
+import InputAdornment from "@mui/material/InputAdornment";
+import ToggleButton from "@mui/material/ToggleButton";
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
+import Tooltip from "@mui/material/Tooltip";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
+import Select from "@mui/material/Select";
+import TablePagination from "@mui/material/TablePagination";
+import { useTheme } from "@mui/material/styles";
 import {
   Restaurant, Scale, Print, CheckCircle, Warning, Info, Schedule, Close,
   Verified, LocalHospital, Delete, Edit, Add,
@@ -185,6 +213,19 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
   const updateForm = (field: keyof PatientFormData, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
+  // Separate History Analysed Patient Form State (does NOT overwrite Manual Entry)
+  const [historyForm, setHistoryForm] = useState<PatientFormData | null>(null);
+
+  const updateHistoryForm = (field: keyof PatientFormData, value: string) =>
+    setHistoryForm((prev) => (prev ? { ...prev, [field]: value } : null));
+
+  // Separate Prescription Upload Preferences State (does NOT overwrite Manual Entry)
+  const [rxFormPreferences, setRxFormPreferences] = useState({
+    dietaryPreference: "Vegetarian (Shakahari)",
+    language: "Hindi",
+    customCalories: ""
+  });
+
   // Prescription Upload state
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -197,7 +238,63 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
   const historyList: HistoryRecord[] = useAppSelector((s: any) => s.clinical.historyList) ?? [];
 
   const [historySearch, setHistorySearch] = useState("");
+  const [debouncedHistorySearch, setDebouncedHistorySearch] = useState("");
   const [selectedHistoryId, setSelectedHistoryId] = useState<string>("");
+
+  // Paginated History Patient state (fetches full archive with 5, 10, 15, 20 per page)
+  const [historyPatients, setHistoryPatients] = useState<HistoryRecord[]>(historyList);
+  const [historyTotalRecords, setHistoryTotalRecords] = useState<number>(historyList.length);
+  const [historyPage, setHistoryPage] = useState<number>(0);
+  const [historyRowsPerPage, setHistoryRowsPerPage] = useState<number>(5);
+  const [historyLoading, setHistoryLoading] = useState<boolean>(false);
+
+  // Debounce search input (350ms)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedHistorySearch(historySearch.trim());
+      setHistoryPage(0);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [historySearch]);
+
+  const fetchHistoryPatients = useCallback(async (
+    targetPage: number = historyPage,
+    searchQuery: string = debouncedHistorySearch,
+    currentLimit: number = historyRowsPerPage
+  ) => {
+    setHistoryLoading(true);
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("arpan_auth_token") : "";
+      const apiPage = targetPage + 1;
+      const params = new URLSearchParams({
+        page: apiPage.toString(),
+        limit: currentLimit.toString(),
+      });
+      if (searchQuery) params.set("search", searchQuery);
+
+      const res = await fetch(`/api/history?${params.toString()}`, {
+        headers: {
+          Authorization: `Bearer ${token || ""}`,
+        },
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          setHistoryPatients(json.data);
+          setHistoryTotalRecords(json.pagination?.totalRecords ?? json.data.length);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching patients for diets:", err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [historyPage, debouncedHistorySearch, historyRowsPerPage]);
+
+  useEffect(() => {
+    fetchHistoryPatients(historyPage, debouncedHistorySearch, historyRowsPerPage);
+  }, [historyPage, debouncedHistorySearch, historyRowsPerPage, fetchHistoryPatients]);
 
   // Visual View toggle for meal schedule
   const [mealScheduleView, setMealScheduleView] = useState<"cards" | "table">("cards");
@@ -254,16 +351,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
   });
 
   // Filter history records
-  const filteredHistory = useMemo(() => {
-    if (!historySearch.trim()) return historyList;
-    const q = historySearch.toLowerCase();
-    return historyList.filter(
-      (r) =>
-        r.patientName.toLowerCase().includes(q) ||
-        r.id.toLowerCase().includes(q) ||
-        r.disease.toLowerCase().includes(q)
-    );
-  }, [historyList, historySearch]);
+  const filteredHistory = historyPatients;
 
   // BMI Calculation
   const w = Number(form.weightKg) || 0;
@@ -335,8 +423,9 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
           body: JSON.stringify({
             imageBase64: base64,
             mimeType: uploadedFile.type,
-            dietaryPreference: form.dietaryPreference,
-            language: form.language || "Hindi"
+            dietaryPreference: rxFormPreferences.dietaryPreference,
+            language: rxFormPreferences.language || "Hindi",
+            customCalories: rxFormPreferences.customCalories
           })
         });
         const json = await res.json();
@@ -348,27 +437,6 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
           return;
         }
         const d = json.data;
-        const p = d.patientInfo || d;
-        setForm((prev) => ({
-          ...prev,
-          patientName: p.patientName ?? prev.patientName,
-          age: p.age ? String(p.age) : prev.age,
-          gender: p.gender ?? prev.gender,
-          weightKg: p.weightKg ? String(p.weightKg) : prev.weightKg,
-          heightCm: p.heightCm ? String(p.heightCm) : prev.heightCm,
-          disease: p.disease ?? prev.disease,
-          allergies: p.allergies ?? prev.allergies,
-          comorbidities: p.comorbidities ?? prev.comorbidities,
-          bpSystolic: p.bpSystolic ? String(p.bpSystolic) : prev.bpSystolic,
-          bpDiastolic: p.bpDiastolic ? String(p.bpDiastolic) : prev.bpDiastolic,
-          hba1c: p.hba1c ? String(p.hba1c) : prev.hba1c,
-          fastingGlucose: p.fastingGlucose ? String(p.fastingGlucose) : prev.fastingGlucose,
-          creatinine: p.creatinine ? String(p.creatinine) : prev.creatinine,
-          egfr: p.egfr ? String(p.egfr) : prev.egfr,
-          sodiumNa: p.sodiumNa ? String(p.sodiumNa) : prev.sodiumNa,
-          potassiumK: p.potassiumK ? String(p.potassiumK) : prev.potassiumK,
-          totalCholesterol: p.totalCholesterol ? String(p.totalCholesterol) : prev.totalCholesterol
-        }));
         if (d.dietPlan) {
           setAiDietPlan(d.dietPlan);
           confetti({ particleCount: 80, spread: 90, origin: { y: 0.5 } });
@@ -403,7 +471,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
       return;
     }
     setSelectedHistoryId(record.id);
-    setForm({
+    setHistoryForm({
       patientName: record.patientName || pi.patientName || "",
       age: String(record.age || pi.age || ""),
       gender: record.gender || pi.gender || "Male",
@@ -411,7 +479,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
       heightCm: "",
       disease: record.disease || pi.disease || "",
       dietaryPreference: "Vegetarian (Shakahari)",
-      language: form.language || "Hindi",
+      language: "Hindi",
       allergies: pi.allergies || "",
       comorbidities: pi.comorbidities || "",
       bpSystolic: String(pi.bpSystolic || ""),
@@ -423,7 +491,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
       sodiumNa: String(pi.sodiumNa || ""),
       potassiumK: String(pi.potassiumK || ""),
       totalCholesterol: String(pi.totalCholesterol || ""),
-      customCalories: form.customCalories || ""
+      customCalories: ""
     });
     confetti({ particleCount: 35, spread: 50, origin: { y: 0.5 } });
     toast.success(`Loaded: ${record.patientName} (${record.id})`);
@@ -436,7 +504,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
     }
     const pi = activeAnalysis.patientInfo;
     setSelectedHistoryId("ACTIVE-SESSION");
-    setForm({
+    setHistoryForm({
       patientName: pi.patientName || "",
       age: String(pi.age || ""),
       gender: pi.gender || "Male",
@@ -444,8 +512,8 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
       heightCm: "",
       disease: pi.disease || "",
       dietaryPreference: "Vegetarian (Shakahari)",
-      language: form.language || "Hindi",
-      customCalories: form.customCalories || "",
+      language: "Hindi",
+      customCalories: "",
       allergies: pi.allergies || "",
       comorbidities: pi.comorbidities || "",
       bpSystolic: String(pi.bpSystolic || ""),
@@ -463,8 +531,9 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
   };
 
   const handleGenerateDiet = async () => {
-    if (!form.patientName || !form.age || !form.gender || !form.disease) {
-      toast.error("Please enter Patient Name, Age, Gender, and Medical Condition.");
+    const activeForm = inputMode === "history" ? historyForm : form;
+    if (!activeForm || !activeForm.patientName || !activeForm.age || !activeForm.gender || !activeForm.disease) {
+      toast.error(inputMode === "history" ? "Please select a patient from analysed records first." : "Please enter Patient Name, Age, Gender, and Medical Condition.");
       return;
     }
     setIsGenerating(true);
@@ -479,11 +548,13 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
 
     setAiDietPlan(null);
     try {
-      const calculatedBmi = h > 0 ? parseFloat(bmi) : undefined;
+      const activeWeight = Number(activeForm.weightKg) || 0;
+      const activeHeight = Number(activeForm.heightCm) / 100 || 0;
+      const calculatedBmi = activeHeight > 0 && activeWeight > 0 ? (activeWeight / (activeHeight * activeHeight)).toFixed(1) : undefined;
       const res = await fetch("/api/diet/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
-        body: JSON.stringify({ ...form, bmi: calculatedBmi })
+        body: JSON.stringify({ ...activeForm, bmi: calculatedBmi ? parseFloat(calculatedBmi) : undefined })
       });
       const json = await res.json();
       clearInterval(progressTimer);
@@ -810,6 +881,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
       age: patientAge ? String(patientAge) : "",
       disease: patientDisease || ""
     });
+    setHistoryForm(null);
     setUploadedFile(null);
     setUploadedPreviewUrl(null);
     setRxParsed(false);
@@ -916,8 +988,8 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
             </Stack>
 
           </Box>
-          <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
-            {aiDietPlan && (
+          {aiDietPlan && (
+            <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
               <Button
                 variant="contained"
                 color="primary"
@@ -934,8 +1006,6 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
               >
                 Print Patient Diet Sheet
               </Button>
-            )}
-            {(aiDietPlan || form.patientName || uploadedFile || selectedHistoryId) && (
               <Button
                 variant="outlined"
                 color="error"
@@ -953,8 +1023,8 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
               >
                 Reset
               </Button>
-            )}
-          </Stack>
+            </Stack>
+          )}
         </Stack>
 
         {/* 3 Source Selection Cards */}
@@ -1422,8 +1492,8 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                     <Select
                       labelId="rx-diet-lang-label"
                       label="Diet Plan Language / भाषा"
-                      value={form.language}
-                      onChange={(e) => updateForm("language", e.target.value)}
+                      value={rxFormPreferences.language}
+                      onChange={(e) => setRxFormPreferences((p) => ({ ...p, language: e.target.value }))}
                       sx={{
                         borderRadius: 2,
                         bgcolor: isDark ? "rgba(255,255,255,0.03)" : "#FFFFFF"
@@ -1446,8 +1516,8 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                     <Select
                       labelId="rx-diet-pref-label"
                       label="Dietary Preference / भोजन"
-                      value={form.dietaryPreference}
-                      onChange={(e) => updateForm("dietaryPreference", e.target.value)}
+                      value={rxFormPreferences.dietaryPreference}
+                      onChange={(e) => setRxFormPreferences((p) => ({ ...p, dietaryPreference: e.target.value }))}
                       sx={{
                         borderRadius: 2,
                         bgcolor: isDark ? "rgba(255,255,255,0.03)" : "#FFFFFF"
@@ -1466,12 +1536,16 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                     fullWidth
                     size="small"
                     type="number"
-                    label="Calories / Day (Optional)"
-                    value={form.customCalories}
-                    onChange={(e) => updateForm("customCalories", e.target.value)}
-                    placeholder="e.g. 1600 (Auto if blank)"
+                    label="Calories / Day "
+                    value={rxFormPreferences.customCalories}
+                    onChange={(e) => setRxFormPreferences((p) => ({ ...p, customCalories: e.target.value }))}
+                    placeholder="e.g. 1600"
+                    helperText="Optional: Auto AI if blank"
                     InputProps={{
                       endAdornment: <InputAdornment position="end">kcal</InputAdornment>
+                    }}
+                    inputProps={{
+                      sx: { pr: 0.5 }
                     }}
                     sx={{
                       borderRadius: 2,
@@ -1510,37 +1584,6 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                 </Typography>
               )}
             </Box>
-
-            {/* Progress Bar during Analysis */}
-            {isParsingRx && (
-              <Box sx={{ width: "100%", maxWidth: 640, mx: "auto", mt: 2 }}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={0.5}>
-                  <Typography variant="caption" sx={{ fontWeight: 800, color: "#6C5CE7" }}>
-                    {rxProgress < 40
-                      ? "Reading prescription text & medications..."
-                      : rxProgress < 75
-                        ? "Extracting vital parameters & clinical details..."
-                        : "Generating personalized Indian diet & electrolyte plan..."}
-                  </Typography>
-                  <Typography variant="caption" sx={{ fontWeight: 900, color: "#6C5CE7" }}>
-                    {rxProgress}%
-                  </Typography>
-                </Stack>
-                <LinearProgress
-                  variant="determinate"
-                  value={rxProgress}
-                  sx={{
-                    height: 9,
-                    borderRadius: 2,
-                    bgcolor: isDark ? "rgba(108,92,231,0.2)" : "#EDE9FE",
-                    "& .MuiLinearProgress-bar": {
-                      borderRadius: 2,
-                      background: "linear-gradient(90deg, #6C5CE7 0%, #00C9A7 100%)"
-                    }
-                  }}
-                />
-              </Box>
-            )}
           </Paper>
         )}
 
@@ -1570,7 +1613,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                     Select an Already Analysed Patient
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    {filteredHistory.length} patient records found · Switch between Card and Table view
+                    {historyTotalRecords} patient record{historyTotalRecords === 1 ? "" : "s"} available &bull; Page {historyPage + 1} of {Math.max(1, Math.ceil(historyTotalRecords / historyRowsPerPage))}
                   </Typography>
                 </Box>
               </Stack>
@@ -1886,7 +1929,30 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
               </TableContainer>
             )}
 
-            {selectedHistoryId && (
+            {/* Pagination Controls with selectable per-page (5, 10, 15, 20) */}
+            <TablePagination
+              component="div"
+              count={historyTotalRecords}
+              page={historyPage}
+              onPageChange={(_, newPage) => setHistoryPage(newPage)}
+              rowsPerPage={historyRowsPerPage}
+              onRowsPerPageChange={(e) => {
+                setHistoryRowsPerPage(parseInt(e.target.value, 10));
+                setHistoryPage(0);
+              }}
+              rowsPerPageOptions={[5, 10, 15, 20]}
+              labelRowsPerPage="Per page:"
+              sx={{
+                mt: 1,
+                borderTop: isDark ? "1px solid rgba(255, 255, 255, 0.08)" : "1px solid #E2E8F0",
+                ".MuiTablePagination-selectLabel, .MuiTablePagination-displayedRows": {
+                  fontWeight: 600,
+                  fontSize: "0.85rem"
+                }
+              }}
+            />
+
+            {selectedHistoryId && historyForm && (
               <Fade in>
                 <Paper
                   elevation={0}
@@ -1957,7 +2023,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                       variant="text"
                       onClick={() => {
                         setSelectedHistoryId("");
-                        setForm(EMPTY_FORM);
+                        setHistoryForm(null);
                       }}
                       sx={{
                         color: "text.secondary",
@@ -1980,23 +2046,23 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                       mb={1}
                     >
                       <Typography variant="h6" sx={{ fontWeight: 900, lineHeight: 1.2 }}>
-                        {form.patientName}
+                        {historyForm.patientName}
                       </Typography>
                       <Stack direction="row" spacing={0.8} alignItems="center" flexWrap="wrap">
                         <Chip
-                          label={`${form.age} Years`}
+                          label={`${historyForm.age} Years`}
                           size="small"
                           sx={{ fontWeight: 800, height: 24, fontSize: "0.75rem" }}
                         />
                         <Chip
-                          label={form.gender}
+                          label={historyForm.gender}
                           size="small"
                           sx={{ fontWeight: 800, height: 24, fontSize: "0.75rem" }}
                         />
-                        {form.weightKg && (
+                        {historyForm.weightKg && (
                           <Chip
                             icon={<Scale sx={{ fontSize: "14px !important" }} />}
-                            label={`${form.weightKg} kg`}
+                            label={`${historyForm.weightKg} kg`}
                             size="small"
                             sx={{ fontWeight: 700, height: 24, fontSize: "0.75rem" }}
                           />
@@ -2005,39 +2071,39 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                     </Stack>
 
                     <Typography variant="body2" sx={{ fontWeight: 600, color: "text.secondary", mb: 1 }}>
-                      <strong>Primary Diagnosis:</strong> {form.disease}
+                      <strong>Primary Diagnosis:</strong> {historyForm.disease}
                     </Typography>
 
                     {/* Vitals quick badges if present */}
-                    {(form.bpSystolic || form.hba1c || form.creatinine || form.fastingGlucose) && (
+                    {(historyForm.bpSystolic || historyForm.hba1c || historyForm.creatinine || historyForm.fastingGlucose) && (
                       <Stack direction="row" spacing={1} flexWrap="wrap" gap={0.5} mt={1}>
-                        {form.bpSystolic && (
+                        {historyForm.bpSystolic && (
                           <Chip
-                            label={`BP: ${form.bpSystolic}/${form.bpDiastolic || "80"} mmHg`}
+                            label={`BP: ${historyForm.bpSystolic}/${historyForm.bpDiastolic || "80"} mmHg`}
                             size="small"
                             variant="outlined"
                             sx={{ fontWeight: 700, fontSize: "0.72rem", height: 22 }}
                           />
                         )}
-                        {form.hba1c && (
+                        {historyForm.hba1c && (
                           <Chip
-                            label={`HbA1c: ${form.hba1c}%`}
+                            label={`HbA1c: ${historyForm.hba1c}%`}
                             size="small"
                             variant="outlined"
                             sx={{ fontWeight: 700, fontSize: "0.72rem", height: 22 }}
                           />
                         )}
-                        {form.fastingGlucose && (
+                        {historyForm.fastingGlucose && (
                           <Chip
-                            label={`Fasting Sugar: ${form.fastingGlucose} mg/dL`}
+                            label={`Fasting Sugar: ${historyForm.fastingGlucose} mg/dL`}
                             size="small"
                             variant="outlined"
                             sx={{ fontWeight: 700, fontSize: "0.72rem", height: 22 }}
                           />
                         )}
-                        {form.creatinine && (
+                        {historyForm.creatinine && (
                           <Chip
-                            label={`Creatinine: ${form.creatinine} mg/dL`}
+                            label={`Creatinine: ${historyForm.creatinine} mg/dL`}
                             size="small"
                             variant="outlined"
                             sx={{ fontWeight: 700, fontSize: "0.72rem", height: 22 }}
@@ -2060,8 +2126,8 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                           <Select
                             labelId="history-diet-pref-label"
                             label="Dietary Preference / भोजन का प्रकार"
-                            value={form.dietaryPreference}
-                            onChange={(e) => updateForm("dietaryPreference", e.target.value)}
+                            value={historyForm.dietaryPreference}
+                            onChange={(e) => updateHistoryForm("dietaryPreference", e.target.value)}
                             sx={{
                               borderRadius: 1.5,
                               bgcolor: isDark ? "rgba(255,255,255,0.03)" : "#FFFFFF"
@@ -2084,8 +2150,8 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                           <Select
                             labelId="history-diet-lang-label"
                             label="Diet Plan Language / भाषा"
-                            value={form.language}
-                            onChange={(e) => updateForm("language", e.target.value)}
+                            value={historyForm.language}
+                            onChange={(e) => updateHistoryForm("language", e.target.value)}
                             sx={{
                               borderRadius: 1.5,
                               bgcolor: isDark ? "rgba(255,255,255,0.03)" : "#FFFFFF"
@@ -2107,11 +2173,15 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                           size="small"
                           type="number"
                           label="Calories / Day"
-                          value={form.customCalories}
-                          onChange={(e) => updateForm("customCalories", e.target.value)}
-                          placeholder="e.g. 1600 (Auto AI)"
+                          value={historyForm.customCalories}
+                          onChange={(e) => updateHistoryForm("customCalories", e.target.value)}
+                          placeholder="e.g. 1600"
+                          helperText="Optional (Auto AI)"
                           InputProps={{
                             endAdornment: <InputAdornment position="end">kcal</InputAdornment>
+                          }}
+                          inputProps={{
+                            sx: { pr: 0.5 }
                           }}
                           sx={{
                             borderRadius: 1.5,
@@ -2127,70 +2197,42 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
           </Paper>
         )}
 
-
-
         {/* Generate Button Section (For Manual Entry & Selected Patient) */}
-        {inputMode !== "prescription" && (
-          <Box sx={{ textAlign: "center", my: 3.5 }}>
-            <Button
-              variant="contained"
-              size="large"
-              onClick={handleGenerateDiet}
-              disabled={isGenerating || !form.patientName || !form.age || !form.gender || !form.disease}
-              startIcon={isGenerating ? <CircularProgress size={20} color="inherit" /> : <AutoAwesome />}
-              sx={{
-                borderRadius: "50px",
-                px: { xs: 4, sm: 6 },
-                py: 1.8,
-                fontSize: { xs: "0.95rem", sm: "1.05rem" },
-                fontWeight: 900,
-                background: "linear-gradient(135deg, #00C9A7 0%, #6C5CE7 100%)",
-                boxShadow: "0 8px 32px rgba(0,201,167,0.35)",
-                "&:hover": { background: "linear-gradient(135deg, #00B395 0%, #5a4bd1 100%)" },
-                "&:disabled": { background: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)" }
-              }}
-            >
-              {isGenerating ? `Analysing Clinical Profile... ${genProgress}%` : "Generate Indian Diet Plan"}
-            </Button>
-            {(!form.patientName || !form.age || !form.gender || !form.disease) && (
-              <Typography variant="caption" color="text.secondary" display="block" mt={1}>
-                * Patient Name, Age, Gender, and Medical Condition required
-              </Typography>
-            )}
-          </Box>
-        )}
-
-        {isGenerating && (
-          <Box sx={{ mb: 3, maxWidth: 640, mx: "auto" }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={0.75}>
-              <Typography variant="caption" sx={{ fontWeight: 800, color: "#00C9A7" }}>
-                {genProgress < 30
-                  ? "Assessing kidney function, blood sugar & clinical health..."
-                  : genProgress < 65
-                    ? "Structuring authentic Indian meal timings & portion sizes..."
-                    : genProgress < 90
-                      ? "Balancing potassium, sodium & daily hydration needs..."
-                      : "Finalizing patient-friendly Indian diet chart..."}
-              </Typography>
-              <Typography variant="caption" sx={{ fontWeight: 900, color: "#00C9A7" }}>
-                {genProgress}%
-              </Typography>
-            </Stack>
-            <LinearProgress
-              variant="determinate"
-              value={genProgress}
-              sx={{
-                height: 10,
-                borderRadius: 2,
-                bgcolor: isDark ? "rgba(0,201,167,0.15)" : "#E6FAF6",
-                "& .MuiLinearProgress-bar": {
-                  borderRadius: 2,
-                  background: "linear-gradient(90deg, #00C9A7, #6C5CE7)"
-                }
-              }}
-            />
-          </Box>
-        )}
+        {inputMode !== "prescription" && (() => {
+          const activeForm = inputMode === "history" ? historyForm : form;
+          const isGenDisabled = isGenerating || !activeForm || !activeForm.patientName || !activeForm.age || !activeForm.gender || !activeForm.disease;
+          return (
+            <Box sx={{ textAlign: "center", my: 3.5 }}>
+              <Button
+                variant="contained"
+                size="large"
+                onClick={handleGenerateDiet}
+                disabled={isGenDisabled}
+                startIcon={isGenerating ? <CircularProgress size={20} color="inherit" /> : <AutoAwesome />}
+                sx={{
+                  borderRadius: "50px",
+                  px: { xs: 4, sm: 6 },
+                  py: 1.8,
+                  fontSize: { xs: "0.95rem", sm: "1.05rem" },
+                  fontWeight: 900,
+                  background: "linear-gradient(135deg, #00C9A7 0%, #6C5CE7 100%)",
+                  boxShadow: "0 8px 32px rgba(0,201,167,0.35)",
+                  "&:hover": { background: "linear-gradient(135deg, #00B395 0%, #5a4bd1 100%)" },
+                  "&:disabled": { background: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)" }
+                }}
+              >
+                {isGenerating ? `Analysing Clinical Profile... ${genProgress}%` : "Generate Indian Diet Plan"}
+              </Button>
+              {(!activeForm || !activeForm.patientName || !activeForm.age || !activeForm.gender || !activeForm.disease) && (
+                <Typography variant="caption" color="text.secondary" display="block" mt={1}>
+                  {inputMode === "history"
+                    ? "* Please select an analysed patient above to generate diet plan"
+                    : "* Patient Name, Age, Gender, and Medical Condition required"}
+                </Typography>
+              )}
+            </Box>
+          );
+        })()}
 
         {/* =========================================================================
             VISUAL & SIMPLE DIET PLAN RESULTS SECTION
@@ -3554,6 +3596,9 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                 <TextField
                   fullWidth
                   size="small"
+                  multiline
+                  minRows={2}
+                  maxRows={4}
                   label={m.label}
                   placeholder={m.placeholder}
                   value={(tempElectrolytes as any)[m.key]}
@@ -3590,6 +3635,8 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
       {/* =========================================================================
           POPUP MODAL: EDIT RECOMMENDED FOODS (EAT THIS)
          ========================================================================= */}
+
+
       <Dialog
         open={editRecFoodsOpen}
         onClose={() => setEditRecFoodsOpen(false)}
@@ -3637,10 +3684,13 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
         <DialogContent dividers sx={{ p: { xs: 2, sm: 2.5 }, overflowY: "auto" }}>
           <Stack spacing={1.5}>
             {tempRecFoods.map((food, idx) => (
-              <Stack key={idx} direction="row" spacing={1} alignItems="center">
+              <Stack key={idx} direction="row" spacing={1} alignItems="flex-start">
                 <TextField
                   fullWidth
                   size="small"
+                  multiline
+                  minRows={2}
+                  maxRows={4}
                   label={`Recommended Food #${idx + 1}`}
                   value={food}
                   onChange={(e) => {
@@ -3653,7 +3703,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                   size="small"
                   color="error"
                   onClick={() => setTempRecFoods(tempRecFoods.filter((_, i) => i !== idx))}
-                  sx={{ flexShrink: 0 }}
+                  sx={{ flexShrink: 0, mt: 0.5 }}
                 >
                   <Delete fontSize="small" />
                 </IconButton>
@@ -3747,10 +3797,13 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
         <DialogContent dividers sx={{ p: { xs: 2, sm: 2.5 }, overflowY: "auto" }}>
           <Stack spacing={1.5}>
             {tempAvoidFoods.map((item, idx) => (
-              <Stack key={idx} direction="row" spacing={1} alignItems="center">
+              <Stack key={idx} direction="row" spacing={1} alignItems="flex-start">
                 <TextField
                   fullWidth
                   size="small"
+                  multiline
+                  minRows={2}
+                  maxRows={4}
                   label={`Food to Avoid #${idx + 1}`}
                   value={item}
                   onChange={(e) => {
@@ -3763,7 +3816,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                   size="small"
                   color="error"
                   onClick={() => setTempAvoidFoods(tempAvoidFoods.filter((_, i) => i !== idx))}
-                  sx={{ flexShrink: 0 }}
+                  sx={{ flexShrink: 0, mt: 0.5 }}
                 >
                   <Delete fontSize="small" />
                 </IconButton>
@@ -3871,10 +3924,13 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
               Healthy Daily Habits & Lifestyle Tips:
             </Typography>
             {tempGuidance.lifestyleAdvice.map((tip, idx) => (
-              <Stack key={idx} direction="row" spacing={1} alignItems="center">
+              <Stack key={idx} direction="row" spacing={1} alignItems="flex-start">
                 <TextField
                   fullWidth
                   size="small"
+                  multiline
+                  minRows={2}
+                  maxRows={4}
                   label={`Daily Habit #${idx + 1}`}
                   value={tip}
                   onChange={(e) => {
@@ -3890,7 +3946,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                     const copy = tempGuidance.lifestyleAdvice.filter((_, i) => i !== idx);
                     setTempGuidance({ ...tempGuidance, lifestyleAdvice: copy });
                   }}
-                  sx={{ flexShrink: 0 }}
+                  sx={{ flexShrink: 0, mt: 0.5 }}
                 >
                   <Delete fontSize="small" />
                 </IconButton>

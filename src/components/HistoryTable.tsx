@@ -1,35 +1,33 @@
 'use client';
 
 import React, { useState, useEffect, useRef, ChangeEvent } from 'react';
-import {
-  Card,
-  CardContent,
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Chip,
-  Button,
-  TextField,
-  InputAdornment,
-  Stack,
-  Box,
-  Tooltip,
-  IconButton,
-  TablePagination,
-  LinearProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
-  CircularProgress,
-  useTheme
-} from '@mui/material';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import Typography from '@mui/material/Typography';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import Paper from '@mui/material/Paper';
+import Chip from '@mui/material/Chip';
+import Button from '@mui/material/Button';
+import TextField from '@mui/material/TextField';
+import InputAdornment from '@mui/material/InputAdornment';
+import Stack from '@mui/material/Stack';
+import Box from '@mui/material/Box';
+import Tooltip from '@mui/material/Tooltip';
+import IconButton from '@mui/material/IconButton';
+import TablePagination from '@mui/material/TablePagination';
+import LinearProgress from '@mui/material/LinearProgress';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogActions from '@mui/material/DialogActions';
+import CircularProgress from '@mui/material/CircularProgress';
+import { useTheme } from '@mui/material/styles';
 import { useRouter } from 'next/navigation';
 import {
   Search,
@@ -68,8 +66,8 @@ export default function HistoryTable({
   const [debouncedSearch, setDebouncedSearch] = useState<string>('');
   const [isSearching, setIsSearching] = useState<boolean>(false);
 
-  // Pagination state (5 items per page)
-  const ROWS_PER_PAGE = 5;
+  // Pagination state (user selectable: 5, 10, 15, 20 items per page)
+  const [rowsPerPage, setRowsPerPage] = useState<number>(5);
   const [page, setPage] = useState<number>(0); // MUI 0-indexed page
   const [totalRecords, setTotalRecords] = useState<number>(0);
   const [records, setRecords] = useState<HistoryRecord[]>(historyList || []);
@@ -93,14 +91,18 @@ export default function HistoryTable({
   }, [searchInput]);
 
   // ─── FETCH PRESCRIPTION HISTORY FROM API WITH PAGINATION & SEARCH ────────
-  const fetchHistory = async (targetPage: number = page, searchQuery: string = debouncedSearch) => {
+  const fetchHistory = async (
+    targetPage: number = page,
+    searchQuery: string = debouncedSearch,
+    currentRowsPerPage: number = rowsPerPage
+  ) => {
     setLoading(true);
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('arpan_auth_token') : '';
       const apiPage = targetPage + 1; // 1-indexed for backend API
       const queryParams = new URLSearchParams({
         page: apiPage.toString(),
-        limit: ROWS_PER_PAGE.toString(),
+        limit: currentRowsPerPage.toString(),
       });
 
       if (searchQuery) {
@@ -152,14 +154,20 @@ export default function HistoryTable({
     }
   };
 
-  // Re-fetch when page, debounced search, or refreshTrigger changes
+  // Re-fetch when page, debounced search, rowsPerPage, or refreshTrigger changes
   useEffect(() => {
-    fetchHistory(page, debouncedSearch);
-  }, [page, debouncedSearch, refreshTrigger]);
+    fetchHistory(page, debouncedSearch, rowsPerPage);
+  }, [page, debouncedSearch, rowsPerPage, refreshTrigger]);
 
-  // ─── PAGINATION HANDLER ──────────────────────────────────────────────────
+  // ─── PAGINATION HANDLERS ──────────────────────────────────────────────────
   const handleChangePage = (_: unknown, newPage: number) => {
     setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const newRows = parseInt(event.target.value, 10);
+    setRowsPerPage(newRows);
+    setPage(0);
   };
 
   // ─── DELETE RECORD HANDLERS ──────────────────────────────────────────────
@@ -217,7 +225,7 @@ export default function HistoryTable({
       if (nextTargetPage !== page) {
         setPage(nextTargetPage);
       } else {
-        fetchHistory(nextTargetPage, debouncedSearch);
+        fetchHistory(nextTargetPage, debouncedSearch, rowsPerPage);
       }
     } catch (err: any) {
       console.error('Error deleting prescription record:', err);
@@ -258,7 +266,7 @@ export default function HistoryTable({
                 Recent Patient Prescription Analysis History
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Paginated MongoDB archive (5 records/page) &bull; Max 100 latest consultations retained automatically.
+                Paginated MongoDB archive ({rowsPerPage} records/page) &bull; Max 100 latest consultations retained automatically.
               </Typography>
             </Box>
           </Stack>
@@ -469,14 +477,15 @@ export default function HistoryTable({
           </Table>
         </TableContainer>
 
-        {/* ─── MUI PAGINATION (5 DATA PER PAGE) ─────────────────────────── */}
+        {/* ─── MUI PAGINATION (USER SELECTABLE: 5, 10, 15, 20 PER PAGE) ── */}
         <TablePagination
           component="div"
           count={totalRecords}
           page={page}
           onPageChange={handleChangePage}
-          rowsPerPage={ROWS_PER_PAGE}
-          rowsPerPageOptions={[5]}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          rowsPerPageOptions={[5, 10, 15, 20]}
           labelRowsPerPage="Per page:"
           sx={{
             mt: 1,
