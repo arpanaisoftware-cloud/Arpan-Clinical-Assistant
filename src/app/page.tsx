@@ -183,6 +183,7 @@ export default function Home() {
         risk: result.riskCategory || 'OPTIMAL / LOW RISK',
         color: result.statusColor || '#00C9A7',
         date: new Date().toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' }),
+        analysedBy: currentUser?.name || 'Dr. Yashwant Dubey',
         analysisResult: result,
         patientInput: formData
       };
@@ -190,7 +191,7 @@ export default function Home() {
       // Record consultation into dynamic Redux state
       dispatch(addHistoryRecord(newRecord));
 
-      // Persist to MongoDB archive via /api/history (auto prunes to latest 100 records)
+      // Persist to MongoDB archive via /api/history (auto prunes to latest 2000 records)
       try {
         await fetch('/api/history', {
           method: 'POST',
@@ -266,6 +267,7 @@ export default function Home() {
         risk: result.riskCategory || 'See Analysis',
         color: result.statusColor || '#00C9A7',
         date: new Date().toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' }),
+        analysedBy: currentUser?.name || 'Dr. Yashwant Dubey',
         analysisResult: result,
         patientInput: result.patientInfo
       };
@@ -273,7 +275,7 @@ export default function Home() {
       // Record consultation into dynamic Redux state
       dispatch(addHistoryRecord(newRecord));
 
-      // Persist to MongoDB archive via /api/history (auto prunes to latest 100 records)
+      // Persist to MongoDB archive via /api/history (auto prunes to latest 2000 records)
       try {
         await fetch('/api/history', {
           method: 'POST',

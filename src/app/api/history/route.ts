@@ -35,6 +35,7 @@ export async function GET(req: Request) {
         { patientName: { $regex: regex } },
         { disease: { $regex: regex } },
         { rxId: { $regex: regex } },
+        { analysedBy: { $regex: regex } },
       ];
     }
 
@@ -61,6 +62,7 @@ export async function GET(req: Request) {
       risk: r.risk,
       color: r.color,
       date: r.date,
+      analysedBy: r.analysedBy || (r.createdBy && !r.createdBy.includes('@') ? r.createdBy : 'Dr. Yashwant Dubey'),
       patientInput: r.patientInput,
       analysisResult: r.analysisResult,
       createdAt: r.createdAt,
@@ -93,7 +95,7 @@ export async function GET(req: Request) {
 /**
  * POST /api/history
  * Create new Prescription Analysis History record in MongoDB.
- * Enforces rule: Keep latest 100 data in MongoDB and automatically delete older records.
+ * Enforces rule: Keep latest 2000 data in MongoDB and automatically delete older records.
  */
 export async function POST(req: Request) {
   try {
@@ -125,6 +127,13 @@ export async function POST(req: Request) {
       rxId = `RX-${Math.floor(1000 + Math.random() * 9000)}-${Date.now().toString().slice(-4)}`;
     }
 
+    // Always use the JWT-verified user's name as analysedBy — this is the real logged-in user.
+    // Only fall back to body.analysedBy if JWT user name is not available.
+    const userDisplayName = auth.user?.name
+      ? (auth.user.role === 'Doctor' && !auth.user.name.toLowerCase().startsWith('dr.') ? `Dr. ${auth.user.name}` : auth.user.name)
+      : null;
+    const analysedBy = userDisplayName || body.analysedBy || 'Dr. Yashwant Dubey';
+
     const newRecord = new PrescriptionHistory({
       rxId,
       patientName: body.patientName.trim(),
@@ -139,11 +148,12 @@ export async function POST(req: Request) {
       patientInput: body.patientInput || null,
       analysisResult: body.analysisResult || null,
       createdBy: body.createdBy || auth.user?.email || auth.user?.id || null,
+      analysedBy,
     });
 
     await newRecord.save();
 
-    // Enforce keeping maximum 100 latest data in MongoDB and automatically delete older records
+    // Enforce keeping maximum 2000 latest data in MongoDB and automatically delete older records
     await pruneOldPrescriptionHistory();
 
     const formattedData = {
@@ -159,6 +169,7 @@ export async function POST(req: Request) {
       risk: newRecord.risk,
       color: newRecord.color,
       date: newRecord.date,
+      analysedBy: newRecord.analysedBy,
       patientInput: newRecord.patientInput,
       analysisResult: newRecord.analysisResult,
       createdAt: newRecord.createdAt,

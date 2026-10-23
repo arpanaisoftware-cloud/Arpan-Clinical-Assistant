@@ -9,6 +9,7 @@ export interface DecodedAuthToken {
   id: string;
   role: string;
   email: string;
+  name?: string;
   staffId?: string;
   sessionId?: string;
 }
@@ -68,7 +69,7 @@ export async function verifyAuthToken(req: Request): Promise<AuthVerificationRes
   // Enforce Single Active Session in Database
   try {
     await connectDB();
-    const user = await User.findById(decoded.id).select('active activeSessionId');
+    const user = await User.findById(decoded.id).select('name role email staffId active activeSessionId');
     if (!user) {
       return {
         errorResponse: NextResponse.json(
@@ -117,7 +118,15 @@ export async function verifyAuthToken(req: Request): Promise<AuthVerificationRes
       };
     }
 
-    return { user: decoded };
+    return {
+      user: {
+        ...decoded,
+        name: user.name || (decoded as any).name,
+        role: user.role || decoded.role,
+        email: user.email || decoded.email,
+        staffId: user.staffId || decoded.staffId,
+      },
+    };
   } catch (dbErr: any) {
     console.error('verifyAuthToken DB error:', dbErr.message);
     return { user: decoded };

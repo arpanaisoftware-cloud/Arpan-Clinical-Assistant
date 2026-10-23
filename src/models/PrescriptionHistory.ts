@@ -15,6 +15,7 @@ export interface IPrescriptionHistory extends Document {
   patientInput?: PatientInput;
   analysisResult?: AnalysisResult;
   createdBy?: string;
+  analysedBy?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -82,6 +83,11 @@ const PrescriptionHistorySchema = new Schema<IPrescriptionHistory>(
       type: String,
       default: null,
     },
+    analysedBy: {
+      type: String,
+      default: 'Dr. Yashwant Dubey',
+      trim: true,
+    },
   },
   {
     timestamps: true,
@@ -92,10 +98,10 @@ const PrescriptionHistorySchema = new Schema<IPrescriptionHistory>(
 PrescriptionHistorySchema.index({ patientName: 'text', disease: 'text', rxId: 'text' });
 
 /**
- * Prune helper: keeps the 100 most recent records and deletes older ones automatically.
+ * Prune helper: keeps the 2000 most recent records and deletes older ones automatically.
  */
 export async function pruneOldPrescriptionHistory() {
-  const MAX_RECORDS = 100;
+  const MAX_RECORDS = 2000;
   try {
     const totalCount = await PrescriptionHistory.countDocuments();
     if (totalCount > MAX_RECORDS) {
@@ -108,7 +114,7 @@ export async function pruneOldPrescriptionHistory() {
       if (recordsToPrune.length > 0) {
         const idsToDelete = recordsToPrune.map((r: any) => r._id);
         const result = await PrescriptionHistory.deleteMany({ _id: { $in: idsToDelete } });
-        console.log(`[MongoDB Maintenance] Automatically pruned ${result.deletedCount} old prescription history records. Kept latest 100.`);
+        console.log(`[MongoDB Maintenance] Automatically pruned ${result.deletedCount} old prescription history records. Kept latest 2000.`);
       }
     }
   } catch (err: any) {

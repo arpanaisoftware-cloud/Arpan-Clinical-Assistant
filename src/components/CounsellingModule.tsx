@@ -69,10 +69,11 @@ import {
   Bolt
 } from '@mui/icons-material';
 import { COUNSELLING_RISK_DATABASE } from '../mockData/clinicalModulesData';
-import { RiskAssessmentItem, RiskCategoryType, HistoryRecord } from '../types/clinical';
+import { RiskAssessmentItem, RiskCategoryType, HistoryRecord, CounsellingHistoryRecord } from '../types/clinical';
 import confetti from 'canvas-confetti';
 import { toast } from 'react-toastify';
 import CounsellingAnalysisLoader from './CounsellingAnalysisLoader';
+import CounsellingHistoryTable from './CounsellingHistoryTable';
 import { useAppSelector } from '../redux/hooks';
 
 // ─── Yup Validation Schema ────────────────────────────────────────────────────
@@ -168,6 +169,7 @@ export default function CounsellingModule({
   const [rxProgress, setRxProgress] = useState<number>(0);
 
   // Redux: Active analysis & History records
+  const authUser = useAppSelector((s: any) => s.auth?.currentUser || s.auth?.user);
   const activeAnalysis = useAppSelector((s: any) => s.clinical.analysisResult);
   const historyList: HistoryRecord[] = useAppSelector((s: any) => s.clinical.historyList) ?? [];
   const [historySearch, setHistorySearch] = useState<string>('');
@@ -238,6 +240,7 @@ export default function CounsellingModule({
 
   // Print modal state
   const [printOpen, setPrintOpen] = useState<boolean>(false);
+  const [counsellingRefreshKey, setCounsellingRefreshKey] = useState<number>(0);
 
   // Controls whether the risk section is visible (only after form submit)
   const [submitted, setSubmitted] = useState<boolean>(false);
@@ -289,6 +292,10 @@ export default function CounsellingModule({
       }
 
       const json = await res.json();
+      const updatedRiskFactors = (json.success && Array.isArray(json.data) && json.data.length > 0)
+        ? json.data
+        : riskFactors;
+
       if (json.success && Array.isArray(json.data) && json.data.length > 0) {
         setRiskFactors(json.data);
       }
@@ -311,6 +318,34 @@ export default function CounsellingModule({
       setActiveTab(0);
       toast.success('Patient Chronic Risk Counselling Report Generated Successfully!');
 
+      // Persist to MongoDB archive via /api/counselling/history (auto prunes to latest 2000 records)
+      try {
+        await fetch('/api/counselling/history', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token || ''}`,
+          },
+          body: JSON.stringify({
+            patientName: formData.currPatientName,
+            age: formData.currPatientAge,
+            gender: formData.currPatientGender,
+            disease: formData.currPatientDisease,
+            sbp: formData.sbp,
+            dbp: formData.dbp,
+            hba1c: formData.hba1c,
+            egfr: formData.egfr,
+            sensationLoss: formData.sensationLoss,
+            footGrade: formData.footGrade,
+            riskFactors: updatedRiskFactors,
+            analysedBy: authUser?.name || 'Dr. Yashwant Dubey',
+          })
+        });
+        setCounsellingRefreshKey((prev) => prev + 1);
+      } catch (saveErr) {
+        console.warn('Failed to save counselling history to MongoDB:', saveErr);
+      }
+
       setTimeout(() => {
         const el = document.getElementById('counselling-risk-section');
         if (el) el.scrollIntoView({ behavior: 'smooth' });
@@ -323,6 +358,62 @@ export default function CounsellingModule({
     } finally {
       setIsAnalyzing(false);
     }
+  };
+
+  // Load full counselling report from MongoDB history table
+  const handleLoadCounsellingRecord = (record: CounsellingHistoryRecord) => {
+    setCounsellingPatient({
+      name: record.patientName,
+      age: record.age,
+      gender: record.gender,
+      disease: record.disease,
+      sbp: record.sbp || '',
+      dbp: record.dbp || '',
+      hba1c: record.hba1c || '',
+      egfr: record.egfr || '',
+      sensationLoss: record.sensationLoss || 'no',
+      footGrade: record.footGrade || 'grade_0'
+    });
+    setCurrPatientName(record.patientName);
+    setCurrPatientAge(record.age);
+    setCurrPatientGender(record.gender);
+    setCurrPatientDisease(record.disease);
+    setSbp(record.sbp ? String(record.sbp) : '');
+    setDbp(record.dbp ? String(record.dbp) : '');
+    setHba1c(record.hba1c ? String(record.hba1c) : '');
+    setEgfr(record.egfr ? String(record.egfr) : '');
+    setSensationLoss(record.sensationLoss || 'no');
+    setFootGrade(record.footGrade || 'grade_0');
+    if (record.riskFactors && record.riskFactors.length > 0) {
+      setRiskFactors(record.riskFactors);
+    }
+    setSubmitted(true);
+    setActiveTab(0);
+    toast.success(`Loaded chronic counselling report for: ${record.patientName}`);
+    setTimeout(() => {
+      const el = document.getElementById('counselling-risk-section');
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }, 200);
+  };
+
+  // Open printable report directly for a history record
+  const handlePrintCounsellingRecord = (record: CounsellingHistoryRecord) => {
+    setCounsellingPatient({
+      name: record.patientName,
+      age: record.age,
+      gender: record.gender,
+      disease: record.disease,
+      sbp: record.sbp || '',
+      dbp: record.dbp || '',
+      hba1c: record.hba1c || '',
+      egfr: record.egfr || '',
+      sensationLoss: record.sensationLoss || 'no',
+      footGrade: record.footGrade || 'grade_0'
+    });
+    if (record.riskFactors && record.riskFactors.length > 0) {
+      setRiskFactors(record.riskFactors);
+    }
+    setPrintOpen(true);
   };
 
   const handleSubmitForm = async () => {
@@ -607,8 +698,9 @@ export default function CounsellingModule({
   ];
 
   return (
-    <Card
-      sx={{
+    <Box>
+      <Card
+        sx={{
         borderRadius: 1,
         boxShadow: isDark ? '0 12px 40px rgba(0, 0, 0, 0.25)' : '0 4px 20px rgba(0, 0, 0, 0.08)',
         background: isDark
@@ -2028,5 +2120,13 @@ export default function CounsellingModule({
       {/* Full Page Analysis Loader for Counselling Generation */}
       <CounsellingAnalysisLoader open={isAnalyzing} />
     </Card>
+
+    {/* Dynamic Counselling Consultation History Table */}
+    <CounsellingHistoryTable
+      onLoadRecord={handleLoadCounsellingRecord}
+      onPrintRecord={handlePrintCounsellingRecord}
+      refreshTrigger={counsellingRefreshKey}
+    />
+  </Box>
   );
 }

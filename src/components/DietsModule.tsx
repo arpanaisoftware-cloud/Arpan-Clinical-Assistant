@@ -49,8 +49,9 @@ import {
 import { toast } from "react-toastify";
 import confetti from "canvas-confetti";
 import { useAppSelector } from "../redux/hooks";
-import { HistoryRecord } from "../types/clinical";
+import { HistoryRecord, DietHistoryRecord } from "../types/clinical";
 import DietAnalysisLoader from "./DietAnalysisLoader";
+import DietHistoryTable from "./DietHistoryTable";
 
 interface MealSlot {
   time: string;
@@ -234,6 +235,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
   const [rxParsed, setRxParsed] = useState(false);
 
   // Redux: Active analysis & History records
+  const authUser = useAppSelector((s: any) => s.auth?.currentUser || s.auth?.user);
   const activeAnalysis = useAppSelector((s: any) => s.clinical.analysisResult);
   const historyList: HistoryRecord[] = useAppSelector((s: any) => s.clinical.historyList) ?? [];
 
@@ -306,6 +308,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
   const [genProgress, setGenProgress] = useState(0);
   const [aiDietPlan, setAiDietPlan] = useState<AIDietPlan | null>(null);
   const [printOpen, setPrintOpen] = useState(false);
+  const [dietRefreshKey, setDietRefreshKey] = useState<number>(0);
   const [rxProgress, setRxProgress] = useState(0);
 
   // Editable Meal Schedule Popup State
@@ -566,6 +569,35 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
       setAiDietPlan(json.data);
       confetti({ particleCount: 90, spread: 100, origin: { y: 0.5 } });
       toast.success("Indian Diet & Electrolyte Plan ready!");
+
+      // Persist to MongoDB archive via /api/diet/history (auto prunes to latest 2000 records)
+      try {
+        await fetch("/api/diet/history", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${getToken()}`,
+          },
+          body: JSON.stringify({
+            patientName: activeForm.patientName,
+            age: activeForm.age,
+            gender: activeForm.gender,
+            disease: activeForm.disease,
+            dietaryPreference: activeForm.dietaryPreference || "Vegetarian (Shakahari)",
+            targetCalories: json.data?.targetCalories || Number(activeForm.customCalories) || 1750,
+            language: activeForm.language || "Hindi",
+            planName: json.data?.planName || "Indian Clinical Diet Plan",
+            summary: json.data?.summary || "",
+            dietPlan: json.data,
+            patientForm: activeForm,
+            analysedBy: authUser?.name || "Dr. Yashwant Dubey",
+          }),
+        });
+        setDietRefreshKey((prev) => prev + 1);
+      } catch (saveErr) {
+        console.warn("Failed to save diet plan history to MongoDB:", saveErr);
+      }
+
       setTimeout(() => {
         const el = document.getElementById("diet-plan-result");
         if (el) el.scrollIntoView({ behavior: "smooth" });
@@ -576,6 +608,47 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  // Load saved diet plan record from MongoDB history table
+  const handleLoadDietRecord = (record: DietHistoryRecord) => {
+    if (record.patientForm) {
+      setForm((prev) => ({
+        ...prev,
+        ...record.patientForm,
+      }));
+      setHistoryForm(record.patientForm);
+    } else {
+      const restored = {
+        ...EMPTY_FORM,
+        patientName: record.patientName,
+        age: String(record.age || ""),
+        gender: record.gender || "Male",
+        disease: record.disease || "",
+        dietaryPreference: record.dietaryPreference || "Vegetarian (Shakahari)",
+        language: record.language || "Hindi",
+        customCalories: String(record.targetCalories || "1750"),
+      };
+      setForm(restored);
+      setHistoryForm(restored);
+    }
+    if (record.dietPlan) {
+      setAiDietPlan(record.dietPlan);
+    }
+    confetti({ particleCount: 50, spread: 70, origin: { y: 0.5 } });
+    toast.success(`Loaded clinical nutrition plan for: ${record.patientName}`);
+    setTimeout(() => {
+      const el = document.getElementById("diet-plan-result");
+      if (el) el.scrollIntoView({ behavior: "smooth" });
+    }, 250);
+  };
+
+  // Open printable diet sheet directly from history record
+  const handlePrintDietRecord = (record: DietHistoryRecord) => {
+    if (record.dietPlan) {
+      setAiDietPlan(record.dietPlan);
+    }
+    setPrintOpen(true);
   };
 
   // =========================================================================
@@ -944,8 +1017,9 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
   };
 
   return (
-    <Card
-      sx={{
+    <Box>
+      <Card
+        sx={{
         borderRadius: 2,
         boxShadow: isDark ? "0 12px 40px rgba(0,0,0,0.28)" : "0 4px 20px rgba(0,0,0,0.06)",
         background: isDark
@@ -4170,5 +4244,13 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
         }}
       />
     </Card>
+
+    {/* Dynamic Diet Plan Consultation History Table */}
+    <DietHistoryTable
+      onLoadRecord={handleLoadDietRecord}
+      onPrintRecord={handlePrintDietRecord}
+      refreshTrigger={dietRefreshKey}
+    />
+  </Box>
   );
 }

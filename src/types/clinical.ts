@@ -177,6 +177,7 @@ export interface HistoryRecord {
   risk: string;
   color: string;
   date: string;
+  analysedBy?: string;
   analysisResult?: AnalysisResult;
   patientInput?: PatientInput;
 }
@@ -281,5 +282,52 @@ export interface DietPlanItem {
   };
   recommendedFoods: string[];
   foodsToAvoid: string[];
+}
+
+export interface CounsellingHistoryRecord {
+  id: string; // e.g. CNS-8421
+  _id?: string;
+  counsellingId: string;
+  patientName: string;
+  age: number | string;
+  gender: string;
+  disease: string;
+  sbp?: number | string;
+  dbp?: number | string;
+  hba1c?: number | string;
+  egfr?: number | string;
+  sensationLoss?: string;
+  footGrade?: string;
+  riskFactors: RiskAssessmentItem[];
+  highRiskCount?: number;
+  moderateRiskCount?: number;
+  riskCount?: number;
+  overallRiskLevel?: string;
+  color?: string;
+  date: string;
+  analysedBy?: string;
+  createdBy?: string;
+  createdAt?: string | Date;
+}
+
+export interface DietHistoryRecord {
+  id: string; // e.g. DT-3819
+  _id?: string;
+  dietId: string;
+  patientName: string;
+  age: number | string;
+  gender: string;
+  disease: string;
+  dietaryPreference: string;
+  targetCalories: number;
+  language: string;
+  planName: string;
+  summary: string;
+  dietPlan: any;
+  patientForm?: any;
+  date: string;
+  analysedBy?: string;
+  createdBy?: string;
+  createdAt?: string | Date;
 }
 

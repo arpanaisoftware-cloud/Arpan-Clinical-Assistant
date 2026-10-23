@@ -36,7 +36,8 @@ import {
   Psychology,
   OpenInNew,
   DeleteOutline,
-  Refresh
+  Refresh,
+  Person
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import { HistoryRecord } from '../types/clinical';
@@ -266,7 +267,7 @@ export default function HistoryTable({
                 Recent Patient Prescription Analysis History
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Paginated MongoDB archive ({rowsPerPage} records/page) &bull; Max 100 latest consultations retained automatically.
+                Paginated MongoDB archive ({rowsPerPage} records/page) &bull; Max 2000 latest consultations retained automatically.
               </Typography>
             </Box>
           </Stack>
@@ -322,6 +323,7 @@ export default function HistoryTable({
                 <TableCell sx={{ fontWeight: 800 }}>Diagnosis / Condition</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>Rx Count</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>Safety Score</TableCell>
+                <TableCell sx={{ fontWeight: 800 }}>Analysed By</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>Date</TableCell>
                 <TableCell sx={{ fontWeight: 800, whiteSpace: 'nowrap', width: '1%' }} align="center">
                   Actions
@@ -354,6 +356,24 @@ export default function HistoryTable({
                         label={`${row.safetyScore}/100 - ${row.risk}`}
                         size="small"
                         sx={{ bgcolor: row.color, color: '#FFF', fontWeight: 800, fontSize: '0.7rem' }}
+                      />
+                    </TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                      <Chip
+                        icon={<Person sx={{ fontSize: '0.9rem !important' }} />}
+                        label={row.analysedBy || 'Dr. Yashwant Dubey'}
+                        size="small"
+                        variant="outlined"
+                        sx={{
+                          fontWeight: 700,
+                          fontSize: '0.72rem',
+                          borderColor: isDarkMode ? 'rgba(0, 201, 167, 0.35)' : 'rgba(0, 201, 167, 0.4)',
+                          bgcolor: isDarkMode ? 'rgba(0, 201, 167, 0.08)' : 'rgba(0, 201, 167, 0.05)',
+                          color: isDarkMode ? '#00E5BD' : '#009F85',
+                          '& .MuiChip-icon': {
+                            color: isDarkMode ? '#00E5BD' : '#009F85'
+                          }
+                        }}
                       />
                     </TableCell>
                     <TableCell sx={{ fontSize: '0.8rem', color: 'text.secondary', whiteSpace: 'nowrap' }}>
@@ -462,7 +482,7 @@ export default function HistoryTable({
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
+                  <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
                     <Typography variant="body1" color="text.secondary">
                       {loading
                         ? 'Loading prescription analysis records...'
@@ -485,7 +505,7 @@ export default function HistoryTable({
           onPageChange={handleChangePage}
           rowsPerPage={rowsPerPage}
           onRowsPerPageChange={handleChangeRowsPerPage}
-          rowsPerPageOptions={[5, 10, 15, 20]}
+          rowsPerPageOptions={[5, 10, 20, 50]}
           labelRowsPerPage="Per page:"
           sx={{
             mt: 1,

@@ -396,7 +396,7 @@ export async function ensureDefaultPrescriptionHistory() {
       await PrescriptionHistory.insertMany(INITIAL_PRESCRIPTION_SEEDS);
       console.log('Prescription history records seeded successfully.');
     }
-    // Also enforce 100 record maximum retention on boot
+    // Also enforce 2000 record maximum retention on boot
     await pruneOldPrescriptionHistory();
   } catch (err: any) {
     console.warn('Prescription history auto-seed encountered non-fatal error:', err.message);
