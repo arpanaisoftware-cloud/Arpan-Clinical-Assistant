@@ -236,7 +236,12 @@ export type RiskCategoryType =
   | 'nephropathy'
   | 'neuropathy'
   | 'footRisk'
-  | 'cardiovascular';
+  | 'bleedingRisk'
+  | 'giddinessRisk'
+  | 'hypoglycaemiaRisk'
+  | 'weightGainObesityRisk'
+  | 'cardiovascular'
+  | string;
 
 export interface RiskAssessmentItem {
   id: RiskCategoryType;

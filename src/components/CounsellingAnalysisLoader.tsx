@@ -61,7 +61,7 @@ const COUNSELLING_STEPS = [
   },
   {
     threshold: 100,
-    title: '6-Factor Counselling Report Ready',
+    title: '10-Factor Counselling Report Ready',
     description: 'Finalizing full chronic disease complication advisory report...',
     icon: <FactCheck sx={{ fontSize: 20 }} />
   }
@@ -170,247 +170,247 @@ export default function CounsellingAnalysisLoader({ open, onFinished }: Counsell
       <Fade in={isVisible} timeout={300}>
         <Box sx={{ outline: 'none', width: '100%', maxWidth: 680, mx: 'auto', my: 'auto' }}>
           <Paper
-          elevation={isDark ? 24 : 12}
-          sx={{
-            width: '100%',
-            maxWidth: 680,
-            mx: 'auto',
-            my: 'auto',
-            borderRadius: 3,
-            p: { xs: 3, sm: 4.5 },
-            bgcolor: isDark ? 'rgba(16, 24, 44, 0.92)' : 'rgba(255, 255, 255, 0.96)',
-            backdropFilter: 'blur(16px)',
-            border: isDark ? '1px solid rgba(108, 92, 231, 0.45)' : '1px solid rgba(108, 92, 231, 0.3)',
-            boxShadow: isDark
-              ? '0 20px 60px rgba(108, 92, 231, 0.3), 0 0 100px rgba(0, 201, 167, 0.2)'
-              : '0 20px 60px rgba(108, 92, 231, 0.15), 0 10px 30px rgba(0, 201, 167, 0.1)',
-            color: isDark ? '#F0F4FC' : '#1E293B',
-            textAlign: 'center',
-            position: 'relative',
-            overflow: 'hidden'
-          }}
-        >
-          {/* Top Decorative Ambient Glow */}
-          <Box
+            elevation={isDark ? 24 : 12}
             sx={{
-              position: 'absolute',
-              top: -60,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: 320,
-              height: 120,
-              borderRadius: '50%',
-              background: isDark
-                ? 'radial-gradient(circle, rgba(108, 92, 231, 0.45) 0%, rgba(0, 201, 167, 0) 70%)'
-                : 'radial-gradient(circle, rgba(108, 92, 231, 0.25) 0%, rgba(0, 201, 167, 0) 70%)',
-              filter: 'blur(30px)',
-              pointerEvents: 'none'
+              width: '100%',
+              maxWidth: 680,
+              mx: 'auto',
+              my: 'auto',
+              borderRadius: 3,
+              p: { xs: 3, sm: 4.5 },
+              bgcolor: isDark ? 'rgba(16, 24, 44, 0.92)' : 'rgba(255, 255, 255, 0.96)',
+              backdropFilter: 'blur(16px)',
+              border: isDark ? '1px solid rgba(108, 92, 231, 0.45)' : '1px solid rgba(108, 92, 231, 0.3)',
+              boxShadow: isDark
+                ? '0 20px 60px rgba(108, 92, 231, 0.3), 0 0 100px rgba(0, 201, 167, 0.2)'
+                : '0 20px 60px rgba(108, 92, 231, 0.15), 0 10px 30px rgba(0, 201, 167, 0.1)',
+              color: isDark ? '#F0F4FC' : '#1E293B',
+              textAlign: 'center',
+              position: 'relative',
+              overflow: 'hidden'
             }}
-          />
-
-          {/* Central AI Pulse Graphic */}
-          <Box sx={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', mb: 3 }}>
-            <motion.div
-              animate={{
-                scale: [1, 1.3, 1],
-                opacity: [0.3, 0.7, 0.3]
-              }}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                ease: 'easeInOut'
-              }}
-              style={{
+          >
+            {/* Top Decorative Ambient Glow */}
+            <Box
+              sx={{
                 position: 'absolute',
-                width: 96,
-                height: 96,
+                top: -60,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: 320,
+                height: 120,
                 borderRadius: '50%',
-                border: isDark ? '2px solid rgba(108, 92, 231, 0.6)' : '2px solid rgba(108, 92, 231, 0.4)',
-                boxShadow: '0 0 20px rgba(108, 92, 231, 0.35)'
-              }}
-            />
-            <motion.div
-              animate={{
-                scale: [1.2, 1.5, 1.2],
-                opacity: [0.15, 0.4, 0.15]
-              }}
-              transition={{
-                duration: 2.5,
-                repeat: Infinity,
-                ease: 'easeInOut',
-                delay: 0.3
-              }}
-              style={{
-                position: 'absolute',
-                width: 96,
-                height: 96,
-                borderRadius: '50%',
-                border: isDark ? '1.5px solid rgba(0, 201, 167, 0.5)' : '1.5px solid rgba(0, 201, 167, 0.35)'
+                background: isDark
+                  ? 'radial-gradient(circle, rgba(108, 92, 231, 0.45) 0%, rgba(0, 201, 167, 0) 70%)'
+                  : 'radial-gradient(circle, rgba(108, 92, 231, 0.25) 0%, rgba(0, 201, 167, 0) 70%)',
+                filter: 'blur(30px)',
+                pointerEvents: 'none'
               }}
             />
 
-            <Box
-              sx={{
-                width: 76,
-                height: 76,
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #6C5CE7 0%, #00C9A7 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#FFF',
-                boxShadow: '0 8px 24px rgba(108, 92, 231, 0.45)',
-                zIndex: 2
-              }}
-            >
+            {/* Central AI Pulse Graphic */}
+            <Box sx={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', mb: 3 }}>
               <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 7, repeat: Infinity, ease: 'linear' }}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <AutoAwesome sx={{ fontSize: 38 }} />
-              </motion.div>
-            </Box>
-          </Box>
-
-          {/* Heading */}
-          <Typography
-            variant="h5"
-            sx={{
-              fontWeight: 900,
-              letterSpacing: '-0.02em',
-              mb: 0.5,
-              background: 'linear-gradient(135deg, #6C5CE7 0%, #00C9A7 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              fontSize: { xs: '1.25rem', sm: '1.6rem' }
-            }}
-          >
-            AI Patient Chronic Risk Analysis
-          </Typography>
-
-          <Typography
-            variant="body2"
-            sx={{
-              color: isDark ? '#94A3B8' : '#64748B',
-              mb: 3,
-              fontWeight: 500,
-              maxWidth: 480,
-              mx: 'auto'
-            }}
-          >
-            Evaluating 6 Chronic Risk Factors & formulating personalized clinical counseling guidance
-          </Typography>
-
-          {/* Main Progress Bar */}
-          <Box sx={{ width: '100%', mb: 2 }}>
-            <Box
-              sx={{
-                width: '100%',
-                height: 10,
-                borderRadius: 5,
-                bgcolor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
-                overflow: 'hidden',
-                position: 'relative',
-                boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.2)'
-              }}
-            >
-              <motion.div
+                animate={{
+                  scale: [1, 1.3, 1],
+                  opacity: [0.3, 0.7, 0.3]
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: 'easeInOut'
+                }}
                 style={{
-                  height: '100%',
-                  borderRadius: 5,
-                  background: 'linear-gradient(90deg, #6C5CE7 0%, #00C9A7 100%)',
-                  boxShadow: '0 0 12px rgba(108, 92, 231, 0.5)'
-                }}
-                animate={{ width: `${displayProgress}%` }}
-                transition={{ ease: 'easeOut', duration: 0.2 }}
-              />
-            </Box>
-
-            <Stack direction="row" justifyContent="space-between" alignItems="center" mt={1}>
-              <Typography variant="caption" sx={{ color: isDark ? '#94A3B8' : '#64748B', fontWeight: 600 }}>
-                {activeStepIdx + 1} of {COUNSELLING_STEPS.length}: {currentStep.title}
-              </Typography>
-              <Chip
-                label={`${displayProgress}%`}
-                size="small"
-                sx={{
-                  bgcolor: isDark ? 'rgba(108, 92, 231, 0.2)' : 'rgba(108, 92, 231, 0.1)',
-                  color: '#6C5CE7',
-                  fontWeight: 800,
-                  fontSize: '0.75rem',
-                  height: 22
+                  position: 'absolute',
+                  width: 96,
+                  height: 96,
+                  borderRadius: '50%',
+                  border: isDark ? '2px solid rgba(108, 92, 231, 0.6)' : '2px solid rgba(108, 92, 231, 0.4)',
+                  boxShadow: '0 0 20px rgba(108, 92, 231, 0.35)'
                 }}
               />
-            </Stack>
-          </Box>
+              <motion.div
+                animate={{
+                  scale: [1.2, 1.5, 1.2],
+                  opacity: [0.15, 0.4, 0.15]
+                }}
+                transition={{
+                  duration: 2.5,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                  delay: 0.3
+                }}
+                style={{
+                  position: 'absolute',
+                  width: 96,
+                  height: 96,
+                  borderRadius: '50%',
+                  border: isDark ? '1.5px solid rgba(0, 201, 167, 0.5)' : '1.5px solid rgba(0, 201, 167, 0.35)'
+                }}
+              />
 
-          {/* Active Step Card */}
-          <Paper
-            elevation={0}
-            sx={{
-              p: 2,
-              borderRadius: 2,
-              bgcolor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(108, 92, 231, 0.04)',
-              border: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(108, 92, 231, 0.15)',
-              mb: 3,
-              textAlign: 'left'
-            }}
-          >
-            <Stack direction="row" spacing={1.5} alignItems="center">
               <Box
                 sx={{
-                  color: '#6C5CE7',
-                  bgcolor: isDark ? 'rgba(108, 92, 231, 0.15)' : '#FFF',
-                  p: 1,
-                  borderRadius: 1.5,
+                  width: 76,
+                  height: 76,
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #6C5CE7 0%, #00C9A7 100%)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+                  color: '#FFF',
+                  boxShadow: '0 8px 24px rgba(108, 92, 231, 0.45)',
+                  zIndex: 2
                 }}
               >
-                {currentStep.icon}
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 7, repeat: Infinity, ease: 'linear' }}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <AutoAwesome sx={{ fontSize: 38 }} />
+                </motion.div>
               </Box>
-              <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'text.primary', mb: 0.2 }}>
-                  {currentStep.title}
-                </Typography>
-                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', lineHeight: 1.3 }}>
-                  {currentStep.description}
-                </Typography>
-              </Box>
-            </Stack>
-          </Paper>
+            </Box>
 
-          {/* Stepper Dots Checklist */}
-          <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
-            {COUNSELLING_STEPS.map((step, idx) => {
-              const isDone = displayProgress >= step.threshold;
-              const isCurrent = activeStepIdx === idx;
-              return (
-                <Box
-                  key={idx}
+            {/* Heading */}
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 900,
+                letterSpacing: '-0.02em',
+                mb: 0.5,
+                background: 'linear-gradient(135deg, #6C5CE7 0%, #00C9A7 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                fontSize: { xs: '1.25rem', sm: '1.6rem' }
+              }}
+            >
+              AI Patient Chronic Risk Analysis
+            </Typography>
+
+            <Typography
+              variant="body2"
+              sx={{
+                color: isDark ? '#94A3B8' : '#64748B',
+                mb: 3,
+                fontWeight: 500,
+                maxWidth: 480,
+                mx: 'auto'
+              }}
+            >
+              Evaluating 6 Chronic Risk Factors & formulating personalized clinical counseling guidance
+            </Typography>
+
+            {/* Main Progress Bar */}
+            <Box sx={{ width: '100%', mb: 2 }}>
+              <Box
+                sx={{
+                  width: '100%',
+                  height: 10,
+                  borderRadius: 5,
+                  bgcolor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+                  overflow: 'hidden',
+                  position: 'relative',
+                  boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.2)'
+                }}
+              >
+                <motion.div
+                  style={{
+                    height: '100%',
+                    borderRadius: 5,
+                    background: 'linear-gradient(90deg, #6C5CE7 0%, #00C9A7 100%)',
+                    boxShadow: '0 0 12px rgba(108, 92, 231, 0.5)'
+                  }}
+                  animate={{ width: `${displayProgress}%` }}
+                  transition={{ ease: 'easeOut', duration: 0.2 }}
+                />
+              </Box>
+
+              <Stack direction="row" justifyContent="space-between" alignItems="center" mt={1}>
+                <Typography variant="caption" sx={{ color: isDark ? '#94A3B8' : '#64748B', fontWeight: 600 }}>
+                  {activeStepIdx + 1} of {COUNSELLING_STEPS.length}: {currentStep.title}
+                </Typography>
+                <Chip
+                  label={`${displayProgress}%`}
+                  size="small"
                   sx={{
-                    width: isCurrent ? 24 : 8,
-                    height: 8,
-                    borderRadius: 4,
-                    bgcolor: isDone
-                      ? '#00C9A7'
-                      : isCurrent
-                        ? '#6C5CE7'
-                        : isDark
-                          ? 'rgba(255, 255, 255, 0.12)'
-                          : 'rgba(0, 0, 0, 0.1)',
-                    transition: 'all 0.3s ease'
+                    bgcolor: isDark ? 'rgba(108, 92, 231, 0.2)' : 'rgba(108, 92, 231, 0.1)',
+                    color: '#6C5CE7',
+                    fontWeight: 800,
+                    fontSize: '0.75rem',
+                    height: 22
                   }}
                 />
-              );
-            })}
-          </Stack>
-        </Paper>
-      </Box>
-    </Fade>
-  </Modal>
-);
+              </Stack>
+            </Box>
+
+            {/* Active Step Card */}
+            <Paper
+              elevation={0}
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                bgcolor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(108, 92, 231, 0.04)',
+                border: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(108, 92, 231, 0.15)',
+                mb: 3,
+                textAlign: 'left'
+              }}
+            >
+              <Stack direction="row" spacing={1.5} alignItems="center">
+                <Box
+                  sx={{
+                    color: '#6C5CE7',
+                    bgcolor: isDark ? 'rgba(108, 92, 231, 0.15)' : '#FFF',
+                    p: 1,
+                    borderRadius: 1.5,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+                  }}
+                >
+                  {currentStep.icon}
+                </Box>
+                <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'text.primary', mb: 0.2 }}>
+                    {currentStep.title}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', lineHeight: 1.3 }}>
+                    {currentStep.description}
+                  </Typography>
+                </Box>
+              </Stack>
+            </Paper>
+
+            {/* Stepper Dots Checklist */}
+            <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
+              {COUNSELLING_STEPS.map((step, idx) => {
+                const isDone = displayProgress >= step.threshold;
+                const isCurrent = activeStepIdx === idx;
+                return (
+                  <Box
+                    key={idx}
+                    sx={{
+                      width: isCurrent ? 24 : 8,
+                      height: 8,
+                      borderRadius: 4,
+                      bgcolor: isDone
+                        ? '#00C9A7'
+                        : isCurrent
+                          ? '#6C5CE7'
+                          : isDark
+                            ? 'rgba(255, 255, 255, 0.12)'
+                            : 'rgba(0, 0, 0, 0.1)',
+                      transition: 'all 0.3s ease'
+                    }}
+                  />
+                );
+              })}
+            </Stack>
+          </Paper>
+        </Box>
+      </Fade>
+    </Modal>
+  );
 }

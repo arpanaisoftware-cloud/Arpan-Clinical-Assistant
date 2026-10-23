@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import DietHistory, { pruneOldDietHistory } from '@/models/DietHistory';
+import User from '@/models/User';
 import { ensureDefaultDietHistory } from '@/lib/seedDietHistory';
 import { verifyAuthToken } from '@/lib/auth';
 
@@ -51,26 +52,36 @@ export async function GET(req: Request) {
       .limit(limit)
       .lean();
 
-    const data = records.map((r: any) => ({
-      id: r.dietId,
-      _id: r._id.toString(),
-      dietId: r.dietId,
-      patientName: r.patientName,
-      age: r.age,
-      gender: r.gender,
-      disease: r.disease,
-      dietaryPreference: r.dietaryPreference || 'Vegetarian (Shakahari)',
-      targetCalories: r.targetCalories || 1750,
-      language: r.language || 'Hindi',
-      planName: r.planName || 'Indian Clinical Diet Plan',
-      summary: r.summary || '',
-      dietPlan: r.dietPlan,
-      patientForm: r.patientForm,
-      date: r.date,
-      analysedBy: r.analysedBy || (r.createdBy && !r.createdBy.includes('@') ? r.createdBy : 'Dr. Yashwant Dubey'),
-      createdBy: r.createdBy,
-      createdAt: r.createdAt,
-    }));
+    const allUsers = await User.find({}).select('email staffId name').lean();
+    const userMap = new Map<string, string>();
+    allUsers.forEach((u: any) => {
+      if (u.email) userMap.set(u.email.toLowerCase(), u.name);
+      if (u.staffId) userMap.set(u.staffId.toLowerCase(), u.name);
+    });
+
+    const data = records.map((r: any) => {
+      const fallbackName = (r.createdBy && userMap.get(r.createdBy.toLowerCase())) || (r.createdBy && !r.createdBy.includes('@') ? r.createdBy : 'Dr. Yashwant Dubey');
+      return {
+        id: r.dietId,
+        _id: r._id.toString(),
+        dietId: r.dietId,
+        patientName: r.patientName,
+        age: r.age,
+        gender: r.gender,
+        disease: r.disease,
+        dietaryPreference: r.dietaryPreference || 'Vegetarian (Shakahari)',
+        targetCalories: r.targetCalories || 1750,
+        language: r.language || 'Hindi',
+        planName: r.planName || 'Indian Clinical Diet Plan',
+        summary: r.summary || '',
+        dietPlan: r.dietPlan,
+        patientForm: r.patientForm,
+        date: r.date,
+        analysedBy: r.analysedBy || fallbackName,
+        createdBy: r.createdBy,
+        createdAt: r.createdAt,
+      };
+    });
 
     return NextResponse.json(
       {
@@ -131,10 +142,7 @@ export async function POST(req: Request) {
     }
 
     // Always use the JWT-verified user's name as analysedBy — the real logged-in user.
-    const userDisplayName = auth.user?.name
-      ? (auth.user.role === 'Doctor' && !auth.user.name.toLowerCase().startsWith('dr.') ? `Dr. ${auth.user.name}` : auth.user.name)
-      : null;
-    const analysedBy = userDisplayName || body.analysedBy || 'Dr. Yashwant Dubey';
+    const analysedBy = auth.user?.name || body.analysedBy || 'Dr. Yashwant Dubey';
 
     const newRecord = new DietHistory({
       dietId,

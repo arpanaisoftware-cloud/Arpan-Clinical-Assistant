@@ -122,8 +122,13 @@ export async function pruneOldPrescriptionHistory() {
   }
 }
 
+if (mongoose.models.PrescriptionHistory && !mongoose.models.PrescriptionHistory.schema?.paths['analysedBy']) {
+  delete mongoose.models.PrescriptionHistory;
+}
+
 const PrescriptionHistory =
   mongoose.models.PrescriptionHistory ||
   mongoose.model<IPrescriptionHistory>('PrescriptionHistory', PrescriptionHistorySchema);
 
 export default PrescriptionHistory;
+

@@ -125,8 +125,13 @@ export async function pruneOldDietHistory() {
   }
 }
 
+if (mongoose.models.DietHistory && !mongoose.models.DietHistory.schema?.paths['analysedBy']) {
+  delete mongoose.models.DietHistory;
+}
+
 const DietHistory =
   mongoose.models.DietHistory ||
   mongoose.model<IDietHistory>('DietHistory', DietHistorySchema);
 
 export default DietHistory;
+

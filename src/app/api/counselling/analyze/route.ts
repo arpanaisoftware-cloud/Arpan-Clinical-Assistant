@@ -83,6 +83,48 @@ function generateFallbackCounselling(input: any): RiskAssessmentItem[] {
   footScore = Math.min(95, Math.max(10, footScore));
   const footMeta = getRiskMeta(footScore);
 
+  // 7. Risk of Bleeding calculation
+  let bleedScore = 25;
+  if (sbp > 150) bleedScore += 18;
+  if (egfr < 50) bleedScore += 22;
+  else if (egfr < 60) bleedScore += 12;
+  if (age > 60) bleedScore += 15;
+  if (disease.toLowerCase().includes('hypertension') || disease.toLowerCase().includes('cad') || disease.toLowerCase().includes('stroke')) bleedScore += 15;
+  bleedScore = Math.min(95, Math.max(10, bleedScore));
+  const bleedMeta = getRiskMeta(bleedScore);
+
+  // 8. Risk of Giddiness / Orthostatic Hypotension calculation
+  let giddinessScore = 25;
+  const pulsePressure = sbp - dbp;
+  if (pulsePressure > 60) giddinessScore += 25;
+  else if (pulsePressure > 50) giddinessScore += 15;
+  if (dbp < 65) giddinessScore += 25;
+  else if (dbp < 75) giddinessScore += 10;
+  if (sensation !== 'Normal') giddinessScore += 18;
+  if (age > 60) giddinessScore += 12;
+  giddinessScore = Math.min(95, Math.max(10, giddinessScore));
+  const giddinessMeta = getRiskMeta(giddinessScore);
+
+  // 9. Risk of Hypoglycaemia calculation
+  let hypoScore = 25;
+  if (hba1c < 6.8) hypoScore += 30; // Over-tight control on medications
+  else if (hba1c > 8.5) hypoScore += 18; // Erratic glycemic swings
+  if (egfr < 50) hypoScore += 28; // Reduced antidiabetic drug clearance
+  else if (egfr < 65) hypoScore += 15;
+  if (age > 60) hypoScore += 15;
+  if (disease.toLowerCase().includes('diabetes')) hypoScore += 12;
+  hypoScore = Math.min(95, Math.max(10, hypoScore));
+  const hypoMeta = getRiskMeta(hypoScore);
+
+  // 10. Risk of Weight Gain / Obesity calculation
+  let weightScore = 28;
+  if (hba1c > 8.0) weightScore += 25;
+  else if (hba1c > 7.0) weightScore += 15;
+  if (sbp > 140 || dbp > 90) weightScore += 15;
+  if (disease.toLowerCase().includes('diabetes') || disease.toLowerCase().includes('metabolic') || disease.toLowerCase().includes('obesity')) weightScore += 18;
+  weightScore = Math.min(95, Math.max(10, weightScore));
+  const weightMeta = getRiskMeta(weightScore);
+
   return [
     {
       id: 'heartAttack',
@@ -229,6 +271,106 @@ function generateFallbackCounselling(input: any): RiskAssessmentItem[] {
         'Wear seamless, moisture-wicking diabetic socks and fitted protective shoes with cushioned insoles.'
       ],
       screeningSchedule: 'Daily patient self-inspection; Podiatric clinical checkup every 6 months.'
+    },
+    {
+      id: 'bleedingRisk',
+      title: 'Risk of Bleeding (Antiplatelet / Anticoagulant & Hemorrhagic Risk)',
+      subtitle: 'Mucosal, Gastrointestinal & Microvascular Bleeding Vulnerability',
+      riskLevel: bleedMeta.riskLevel,
+      score: bleedScore,
+      color: bleedMeta.color,
+      keyIndicators: [
+        `Blood pressure stress (${sbp}/${dbp} mmHg) increasing capillary vascular strain`,
+        `Renal filtration status (eGFR: ${egfr} mL/min) affecting antithrombotic clearance`,
+        `Patient age factor (${age} years) with fragile mucosal microvasculature`,
+        `Co-occurring condition profile (${disease})`
+      ],
+      clinicalGuidance: [
+        'Calculate HAS-BLED clinical bleeding score to assess balance between thromboprophylaxis and bleed risk.',
+        'Co-prescribe a Proton Pump Inhibitor (PPI e.g., Pantoprazole 40mg daily) for gastroprotection if patient is on antiplatelet therapy.',
+        'Strictly avoid concurrent over-the-counter NSAIDs (Ibuprofen, Diclofenac) with antithrombotic agents.'
+      ],
+      patientAdvice: [
+        'Immediately seek medical evaluation for warning signs: prolonged nosebleeds, bleeding gums, black tarry stools, or coffee-ground vomit.',
+        'Use a soft-bristled toothbrush and an electric razor to minimize tissue microtrauma.',
+        'Never take over-the-counter pain relievers or fever medicines without confirming with your doctor.'
+      ],
+      screeningSchedule: 'Complete Blood Count (CBC/Platelets) & Hemoglobin every 6 months; Stool Occult Blood annually.'
+    },
+    {
+      id: 'giddinessRisk',
+      title: 'Risk of Giddiness (Orthostatic Hypotension, Dizziness & Fall Risk)',
+      subtitle: 'Cerebral Hypoperfusion, Autonomic Dysregulation & Equilibrium Guard',
+      riskLevel: giddinessMeta.riskLevel,
+      score: giddinessScore,
+      color: giddinessMeta.color,
+      keyIndicators: [
+        `Pulse pressure gap (${pulsePressure} mmHg) with diastolic baseline ${dbp} mmHg`,
+        `Diabetic autonomic neuropathic risk indicated by peripheral sensation (${sensation})`,
+        `Age related vascular baroreflex sensitivity (${age} years)`,
+        'Vasodilating antihypertensive load'
+      ],
+      clinicalGuidance: [
+        'Perform active lying-to-standing orthostatic blood pressure measurements (check drop >20 mmHg systolic or >10 mmHg diastolic).',
+        'Avoid excessive evening diuretic dosing to prevent nocturia and nocturnal volume depletion.',
+        'Review polypharmacy to eliminate drug-induced vestibular toxicity or vasodilatory peaks.'
+      ],
+      patientAdvice: [
+        'Transition posture in stages: sit at the bed edge for 30-60 seconds before standing up completely.',
+        'Maintain adequate fluid hydration (2L to 2.5L daily); avoid sudden hot showers or prolonged motionless standing.',
+        'If dizziness occurs, immediately sit down, lower your head, or lie flat with legs elevated to restore cerebral blood flow.'
+      ],
+      screeningSchedule: 'Postural/Orthostatic Blood Pressure check at every clinic follow-up; Annual Vestibular assessment.'
+    },
+    {
+      id: 'hypoglycaemiaRisk',
+      title: 'Risk of Hypoglycaemia (Acute Low Blood Glucose & Autonomic Surge)',
+      subtitle: 'Neuroglycopenic Episodes, Counter-Regulatory Failure & Nocturnal Dip',
+      riskLevel: hypoMeta.riskLevel,
+      score: hypoScore,
+      color: hypoMeta.color,
+      keyIndicators: [
+        `Current glycemic marker (HbA1c: ${hba1c}%) reflecting glucose exposure`,
+        `Renal clearance capacity (eGFR: ${egfr} mL/min) predisposing to drug accumulation`,
+        `Autonomic neuropathy status (${sensation}) which blunts sympathetic adrenergic warning signs`,
+        'Irregular meal patterns or unadjusted physical activity'
+      ],
+      clinicalGuidance: [
+        'Dose-titrate secretagogues cautiously or switch to glucose-dependent agents (DPP-4i, GLP-1RA, SGLT2i).',
+        'Relax HbA1c targets to 7.5% - 8.0% if hypoglycaemic unawareness or renal insufficiency is present.',
+        'Prescribe CGM (Continuous Glucose Monitoring) and provide caregiver training on Glucagon rescue kits.'
+      ],
+      patientAdvice: [
+        'Follow the "Rule of 15": if blood glucose drops <70 mg/dL or you experience trembling/sweats, consume 15g fast-acting sugar (3 glucose tabs, 1/2 cup juice), wait 15 minutes, and retest.',
+        'Always carry fast-acting glucose sweets or sachets in your bag or pocket.',
+        'Never skip meals after administering morning or evening diabetes medications.'
+      ],
+      screeningSchedule: 'Daily Self-Monitoring of Blood Glucose (SMBG); Quarterly review of CGM sensor Ambulatory Glucose Profile (AGP).'
+    },
+    {
+      id: 'weightGainObesityRisk',
+      title: 'Risk of Weight Gain / Obesity (Metabolic Adiposity & Caloric Imbalance)',
+      subtitle: 'Visceral Fat Accumulation, Insulin Resistance & Satiety Dysregulation',
+      riskLevel: weightMeta.riskLevel,
+      score: weightScore,
+      color: weightMeta.color,
+      keyIndicators: [
+        `Hyperglycemic load (HbA1c: ${hba1c}%) indicating hyperinsulinemia and insulin resistance`,
+        `Hypertensive vascular loading (${sbp}/${dbp} mmHg) associated with metabolic syndrome`,
+        `Chronic disease profile (${disease}) and physical activity limitations`,
+        'Medications with weight-gain propensity (secretagogues, insulin, beta-blockers)'
+      ],
+      clinicalGuidance: [
+        'Prioritize metabolic antidiabetic agents with proven weight-reduction efficacy (SGLT2 inhibitors or GLP-1 RAs).',
+        'Prescribe personalized medical nutrition therapy with a 500 kcal daily deficit under dietitian guidance.',
+        'Monitor abdominal circumference, visceral adiposity markers, and metabolic lipid ratios.'
+      ],
+      patientAdvice: [
+        'Prioritize high-fiber complex grains, fresh green vegetables, and lean proteins to prolong natural satiety.',
+        'Engage in a minimum of 150 minutes of brisk cardiovascular exercise plus 2 weekly strength-training sessions.',
+        'Completely eliminate refined sugars, sweetened cold drinks, deep-fried fast foods, and late-night snacking.'
+      ],
+      screeningSchedule: 'Monthly Body Weight & BMI monitoring; 3-monthly Waist Circumference & Body Composition Analysis.'
     }
   ];
 }
@@ -270,13 +412,17 @@ export async function POST(req: Request) {
     if (process.env.GEMINI_API_KEY) {
       const prompt = `
 You are an expert clinical endocrinologist, cardiologist, and patient counselling specialist.
-Evaluate the following patient and generate comprehensive chronic risk counselling across EXACTLY 6 DISTINCT FACTORS:
+Evaluate the following patient and generate comprehensive chronic risk counselling across EXACTLY 10 DISTINCT FACTORS:
 1. "heartAttack" - Heart Attack (Myocardial Infarction & Coronary Artery Risk)
 2. "stroke" - Stroke (Cerebrovascular Accident & Brain Health Risk)
 3. "retinopathy" - Diabetic Retinopathy (Eye & Retinal Vascular Damage)
 4. "nephropathy" - Diabetic Nephropathy (Kidney Disease & Filtration Risk)
 5. "neuropathy" - Diabetic Neuropathy (Peripheral Nerve Damage)
 6. "footRisk" - Diabetic Foot Risk (Foot Complications & Ulcer Prevention)
+7. "bleedingRisk" - Risk of Bleeding (Antiplatelet / Anticoagulant & Hemorrhagic Risk)
+8. "giddinessRisk" - Risk of Giddiness (Orthostatic Hypotension, Dizziness & Fall Risk)
+9. "hypoglycaemiaRisk" - Risk of Hypoglycaemia (Acute Low Blood Glucose & Autonomic Surge)
+10. "weightGainObesityRisk" - Risk of Weight Gain / Obesity (Metabolic Adiposity & Caloric Imbalance)
 
 Patient Details:
 - Name: ${currPatientName}
@@ -290,9 +436,9 @@ Patient Details:
 - Monofilament Sensation: ${sensationLoss || 'Normal'}
 - Wagner Foot Ulcer Grade: ${footGrade || 'Grade 0 (Intact Skin)'}
 
-For EACH of the 6 factors, return an object in the JSON array:
-- "id": one of "heartAttack", "stroke", "retinopathy", "nephropathy", "neuropathy", "footRisk"
-- "title": factor title string
+For EACH of the 10 factors, return an object in the JSON array:
+- "id": one of "heartAttack", "stroke", "retinopathy", "nephropathy", "neuropathy", "footRisk", "bleedingRisk", "giddinessRisk", "hypoglycaemiaRisk", "weightGainObesityRisk"
+- "title": factor title string (clearly stating the condition/risk)
 - "subtitle": factor subtitle string
 - "riskLevel": exactly one of "OPTIMAL / LOW", "MODERATE CAUTION", "HIGH RISK" (based on score: >=65 is HIGH RISK, 40-64 is MODERATE CAUTION, <40 is OPTIMAL / LOW)
 - "score": number between 5 and 95
@@ -302,7 +448,7 @@ For EACH of the 6 factors, return an object in the JSON array:
 - "patientAdvice": array of 3 practical instructions for the patient
 - "screeningSchedule": string describing frequency of tests
 
-Return a RAW JSON array of exactly 6 items with no markdown code blocks or surrounding text.
+Return a RAW JSON array of exactly 10 items with no markdown code blocks or surrounding text.
 `;
 
       try {

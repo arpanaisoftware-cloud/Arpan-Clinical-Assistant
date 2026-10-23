@@ -66,7 +66,11 @@ import {
   Upload,
   CheckCircleOutline,
   Refresh,
-  Bolt
+  Bolt,
+  Bloodtype,
+  AirlineSeatReclineNormal,
+  Speed,
+  MonitorWeight
 } from '@mui/icons-material';
 import { COUNSELLING_RISK_DATABASE } from '../mockData/clinicalModulesData';
 import { RiskAssessmentItem, RiskCategoryType, HistoryRecord, CounsellingHistoryRecord } from '../types/clinical';
@@ -718,7 +722,7 @@ export default function CounsellingModule({
               Patient Chronic Risk Counselling &amp; Education Center
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Evidence-based complication risk stratification &amp; patient education across 6 major chronic factors
+              Evidence-based complication risk stratification &amp; patient education across 10 major chronic &amp; clinical risk factors
             </Typography>
           </Grid>
 
@@ -1208,7 +1212,7 @@ export default function CounsellingModule({
                       ? 'Reading prescription text & medications...'
                       : rxProgress < 75
                         ? 'Extracting clinical vitals (BP, HbA1c, eGFR)...'
-                        : 'Generating personalized 6-point chronic risk evaluation...'}
+                        : 'Generating personalized 10-point chronic risk evaluation...'}
                   </Typography>
                   <Typography variant="caption" sx={{ fontWeight: 900, color: '#6C5CE7' }}>
                     {rxProgress}%
@@ -1824,14 +1828,14 @@ export default function CounsellingModule({
               Counselling Report Not Generated Yet
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Fill in the patient details and vitals above, then click <strong>Generate Counselling Report</strong> to view all 6 risk category assessments.
+              Fill in the patient details and vitals above, then click <strong>Generate Counselling Report</strong> to view all 10 risk category assessments.
             </Typography>
           </Paper>
         )}
 
         {submitted && (
           <Box id="counselling-risk-section">
-            {/* Tabs for 6 Risk Categories */}
+            {/* Tabs for 10 Risk Categories */}
             <Tabs
               value={activeTab}
               onChange={(e, newValue) => setActiveTab(newValue)}
@@ -1847,9 +1851,25 @@ export default function CounsellingModule({
               TabIndicatorProps={{ style: { backgroundColor: riskFactors[activeTab]?.color } }}
             >
               {riskFactors.map((risk, idx) => {
-                // Distinct icons for the 6 factors: Heart, Brain/Psychology (Stroke), Eye, WaterDrop (Kidney), Flash (Nerves), Foot/Pets
-                const factorIcons = [Favorite, Psychology, Visibility, WaterDrop, FlashOn, Pets];
-                const IconComponent = factorIcons[idx] || Shield;
+                const getRiskIcon = (riskId: string) => {
+                  switch (riskId) {
+                    case 'heartAttack': return Favorite;
+                    case 'stroke': return Psychology;
+                    case 'retinopathy': return Visibility;
+                    case 'nephropathy': return WaterDrop;
+                    case 'neuropathy': return FlashOn;
+                    case 'footRisk': return Pets;
+                    case 'bleedingRisk': return Bloodtype;
+                    case 'giddinessRisk': return AirlineSeatReclineNormal;
+                    case 'hypoglycaemiaRisk': return Speed;
+                    case 'weightGainObesityRisk': return MonitorWeight;
+                    default: {
+                      const allIcons = [Favorite, Psychology, Visibility, WaterDrop, FlashOn, Pets, Bloodtype, AirlineSeatReclineNormal, Speed, MonitorWeight];
+                      return allIcons[idx] || Shield;
+                    }
+                  }
+                };
+                const IconComponent = getRiskIcon(risk.id);
                 return (
                   <Tab
                     key={risk.id}
@@ -2064,13 +2084,13 @@ export default function CounsellingModule({
                 Patient: {counsellingPatient?.name || currPatientName} ({counsellingPatient?.age || currPatientAge} Y, {counsellingPatient?.gender || currPatientGender}) • Diagnosis: {counsellingPatient?.disease || currPatientDisease}{(counsellingPatient?.sbp || sbp) && (counsellingPatient?.dbp || dbp) ? ` • BP: ${counsellingPatient?.sbp || sbp}/${counsellingPatient?.dbp || dbp} mmHg` : ''}
               </Typography>
               <Typography variant="caption" sx={{ color: '#475569 !important' }}>
-                Comprehensive 6-Point Diabetic, Coronary &amp; Hypertensive Risk Evaluation
+                Comprehensive 10-Point Clinical Complication &amp; Chronic Risk Evaluation
               </Typography>
             </Paper>
 
             {/* Content List */}
             <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#4C1D95 !important', mb: 2 }}>
-              Key Health Action Steps For Patient (6 Chronic Factors):
+              Key Health Action Steps For Patient (10 Chronic &amp; Clinical Risk Factors):
             </Typography>
             <Box sx={{ pl: 1, mb: 3 }}>
               {riskFactors.map((risk) => (

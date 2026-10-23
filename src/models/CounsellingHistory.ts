@@ -151,8 +151,13 @@ export async function pruneOldCounsellingHistory() {
   }
 }
 
+if (mongoose.models.CounsellingHistory && !mongoose.models.CounsellingHistory.schema?.paths['analysedBy']) {
+  delete mongoose.models.CounsellingHistory;
+}
+
 const CounsellingHistory =
   mongoose.models.CounsellingHistory ||
   mongoose.model<ICounsellingHistory>('CounsellingHistory', CounsellingHistorySchema);
 
 export default CounsellingHistory;
+

@@ -149,6 +149,106 @@ export const COUNSELLING_RISK_DATABASE: RiskAssessmentItem[] = [
       'Wear seamless cotton/wool socks without tight elastic bands.'
     ],
     screeningSchedule: 'Daily self-inspection; Professional podiatry check every 6 months.'
+  },
+  {
+    id: 'bleedingRisk',
+    title: 'Risk of Bleeding (Antiplatelet / Anticoagulant & Hemorrhagic Risk)',
+    subtitle: 'Mucosal, Gastrointestinal & Microvascular Bleeding Vulnerability',
+    riskLevel: 'MODERATE CAUTION',
+    score: 46,
+    color: '#FFB703',
+    keyIndicators: [
+      'Concurrent antiplatelet / anticoagulant pharmacotherapy (Aspirin, Clopidogrel, DOACs)',
+      'Borderline eGFR or hepatic metabolism influencing antithrombotic clearance',
+      'Systolic blood pressure spikes (>140 mmHg) exerting vascular shear strain',
+      'Advanced age (>55 years) and past history of mucosal or gastric irritation'
+    ],
+    clinicalGuidance: [
+      'Calculate HAS-BLED clinical bleeding score to assess balance between thromboprophylaxis and bleed risk.',
+      'Co-prescribe a Proton Pump Inhibitor (PPI e.g., Pantoprazole 40mg daily) for gastroprotection on dual antiplatelet therapy.',
+      'Strictly avoid concurrent over-the-counter NSAIDs (Ibuprofen, Diclofenac) with antithrombotic agents.'
+    ],
+    patientAdvice: [
+      'Immediately seek medical evaluation for warning signs: prolonged nosebleeds, bleeding gums, black tarry stools, or coffee-ground vomit.',
+      'Use a soft-bristled toothbrush and an electric razor to minimize tissue microtrauma.',
+      'Never take over-the-counter pain relievers or fever medicines without confirming with your doctor.'
+    ],
+    screeningSchedule: 'Complete Blood Count (CBC/Platelets) & Hemoglobin every 6 months; Stool Occult Blood annually.'
+  },
+  {
+    id: 'giddinessRisk',
+    title: 'Risk of Giddiness (Orthostatic Hypotension, Dizziness & Fall Risk)',
+    subtitle: 'Cerebral Hypoperfusion, Autonomic Dysregulation & Equilibrium Guard',
+    riskLevel: 'MODERATE CAUTION',
+    score: 52,
+    color: '#FFB703',
+    keyIndicators: [
+      'Wide pulse pressure with low diastolic blood pressure (<60 mmHg)',
+      'Multiple vasodilating antihypertensive agents acting simultaneously',
+      'Diabetic autonomic neuropathy causing blunted postural baroreflex',
+      'Occasional lightheadedness upon standing or transitioning from bed'
+    ],
+    clinicalGuidance: [
+      'Perform active lying-to-standing orthostatic blood pressure measurements (check drop >20 mmHg systolic or >10 mmHg diastolic).',
+      'Avoid excessive evening diuretic dosing to prevent nocturia and nocturnal volume depletion.',
+      'Review polypharmacy to eliminate drug-induced vestibular toxicity or vasodilatory peaks.'
+    ],
+    patientAdvice: [
+      'Transition posture in stages: sit at the bed edge for 30-60 seconds before standing up completely.',
+      'Maintain adequate fluid hydration (2L to 2.5L daily); avoid sudden hot showers or prolonged motionless standing.',
+      'If dizziness occurs, immediately sit down, lower your head, or lie flat with legs elevated to restore cerebral blood flow.'
+    ],
+    screeningSchedule: 'Postural/Orthostatic Blood Pressure check at every clinic follow-up; Annual Vestibular assessment.'
+  },
+  {
+    id: 'hypoglycaemiaRisk',
+    title: 'Risk of Hypoglycaemia (Acute Low Blood Glucose & Autonomic Surge)',
+    subtitle: 'Neuroglycopenic Episodes, Counter-Regulatory Failure & Nocturnal Dip',
+    riskLevel: 'HIGH RISK',
+    score: 68,
+    color: '#FF4D6D',
+    keyIndicators: [
+      'Prescribed secretagogues (Sulfonylureas / Meglitinides) or exogenous Insulin therapy',
+      'Impaired renal clearance (eGFR <60 mL/min) causing prolonged drug half-life',
+      'Erratic meal timings, prolonged fasting intervals, or unplanned physical exertion',
+      'Autonomic neuropathy diminishing sympathetic adrenergic warning symptoms'
+    ],
+    clinicalGuidance: [
+      'Dose-titrate secretagogues cautiously or switch to glucose-dependent agents (DPP-4i, GLP-1RA, SGLT2i).',
+      'Relax HbA1c targets to 7.5% - 8.0% if hypoglycaemic unawareness or renal insufficiency is present.',
+      'Prescribe CGM (Continuous Glucose Monitoring) and provide caregiver training on Glucagon rescue kits.'
+    ],
+    patientAdvice: [
+      'Follow the "Rule of 15": if blood glucose drops <70 mg/dL or you experience trembling/sweats, consume 15g fast-acting sugar (3 glucose tabs, 1/2 cup juice), wait 15 minutes, and retest.',
+      'Always carry fast-acting glucose sweets or sachets in your bag or pocket.',
+      'Never skip meals after administering morning or evening diabetes medications.'
+    ],
+    screeningSchedule: 'Daily Self-Monitoring of Blood Glucose (SMBG); Quarterly review of CGM sensor Ambulatory Glucose Profile (AGP).'
+  },
+  {
+    id: 'weightGainObesityRisk',
+    title: 'Risk of Weight Gain / Obesity (Metabolic Adiposity & Caloric Imbalance)',
+    subtitle: 'Visceral Fat Accumulation, Insulin Resistance & Satiety Dysregulation',
+    riskLevel: 'MODERATE CAUTION',
+    score: 58,
+    color: '#FFB703',
+    keyIndicators: [
+      'Pharmacotherapy with weight-gain propensity (Insulin secretagogues, Pioglitazone, Beta-blockers)',
+      'Sedentary lifestyle with low daily caloric expenditure (<4,000 steps/day)',
+      'Elevated baseline BMI and central abdominal adiposity (waist-to-hip ratio >0.9)',
+      'High glycemic variability driving reactive postprandial hyperphagia and cravings'
+    ],
+    clinicalGuidance: [
+      'Prioritize metabolic antidiabetic agents with proven weight-reduction efficacy (SGLT2 inhibitors or GLP-1 RAs).',
+      'Prescribe personalized medical nutrition therapy with a 500 kcal daily deficit under dietitian guidance.',
+      'Monitor abdominal circumference, visceral adiposity markers, and metabolic lipid ratios.'
+    ],
+    patientAdvice: [
+      'Prioritize high-fiber complex grains, fresh green vegetables, and lean proteins to prolong natural satiety.',
+      'Engage in a minimum of 150 minutes of brisk cardiovascular exercise plus 2 weekly strength-training sessions.',
+      'Completely eliminate refined sugars, sweetened cold drinks, deep-fried fast foods, and late-night snacking.'
+    ],
+    screeningSchedule: 'Monthly Body Weight & BMI monitoring; 3-monthly Waist Circumference & Body Composition Analysis.'
   }
 ];
 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import CounsellingHistory, { pruneOldCounsellingHistory } from '@/models/CounsellingHistory';
+import User from '@/models/User';
 import { ensureDefaultCounsellingHistory } from '@/lib/seedCounsellingHistory';
 import { verifyAuthToken } from '@/lib/auth';
 
@@ -49,31 +50,41 @@ export async function GET(req: Request) {
       .limit(limit)
       .lean();
 
-    const data = records.map((r: any) => ({
-      id: r.counsellingId,
-      _id: r._id.toString(),
-      counsellingId: r.counsellingId,
-      patientName: r.patientName,
-      age: r.age,
-      gender: r.gender,
-      disease: r.disease,
-      sbp: r.sbp,
-      dbp: r.dbp,
-      hba1c: r.hba1c,
-      egfr: r.egfr,
-      sensationLoss: r.sensationLoss,
-      footGrade: r.footGrade,
-      riskFactors: r.riskFactors || [],
-      highRiskCount: r.highRiskCount || 0,
-      moderateRiskCount: r.moderateRiskCount || 0,
-      riskCount: r.riskCount || 0,
-      overallRiskLevel: r.overallRiskLevel || 'OPTIMAL / LOW',
-      color: r.color || '#00C9A7',
-      date: r.date,
-      analysedBy: r.analysedBy || (r.createdBy && !r.createdBy.includes('@') ? r.createdBy : 'Dr. Yashwant Dubey'),
-      createdBy: r.createdBy,
-      createdAt: r.createdAt,
-    }));
+    const allUsers = await User.find({}).select('email staffId name').lean();
+    const userMap = new Map<string, string>();
+    allUsers.forEach((u: any) => {
+      if (u.email) userMap.set(u.email.toLowerCase(), u.name);
+      if (u.staffId) userMap.set(u.staffId.toLowerCase(), u.name);
+    });
+
+    const data = records.map((r: any) => {
+      const fallbackName = (r.createdBy && userMap.get(r.createdBy.toLowerCase())) || (r.createdBy && !r.createdBy.includes('@') ? r.createdBy : 'Dr. Yashwant Dubey');
+      return {
+        id: r.counsellingId,
+        _id: r._id.toString(),
+        counsellingId: r.counsellingId,
+        patientName: r.patientName,
+        age: r.age,
+        gender: r.gender,
+        disease: r.disease,
+        sbp: r.sbp,
+        dbp: r.dbp,
+        hba1c: r.hba1c,
+        egfr: r.egfr,
+        sensationLoss: r.sensationLoss,
+        footGrade: r.footGrade,
+        riskFactors: r.riskFactors || [],
+        highRiskCount: r.highRiskCount || 0,
+        moderateRiskCount: r.moderateRiskCount || 0,
+        riskCount: r.riskCount || 0,
+        overallRiskLevel: r.overallRiskLevel || 'OPTIMAL / LOW',
+        color: r.color || '#00C9A7',
+        date: r.date,
+        analysedBy: r.analysedBy || fallbackName,
+        createdBy: r.createdBy,
+        createdAt: r.createdAt,
+      };
+    });
 
     return NextResponse.json(
       {
@@ -158,10 +169,7 @@ export async function POST(req: Request) {
     }
 
     // Always use the JWT-verified user's name as analysedBy — the real logged-in user.
-    const userDisplayName = auth.user?.name
-      ? (auth.user.role === 'Doctor' && !auth.user.name.toLowerCase().startsWith('dr.') ? `Dr. ${auth.user.name}` : auth.user.name)
-      : null;
-    const analysedBy = userDisplayName || body.analysedBy || 'Dr. Yashwant Dubey';
+    const analysedBy = auth.user?.name || body.analysedBy || 'Dr. Yashwant Dubey';
 
     const newRecord = new CounsellingHistory({
       counsellingId,

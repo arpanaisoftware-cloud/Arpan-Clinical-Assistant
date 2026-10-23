@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import connectDB from '@/lib/db';
 import PrescriptionHistory from '@/models/PrescriptionHistory';
+import User from '@/models/User';
 import { verifyAuthToken } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -32,6 +33,15 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       );
     }
 
+    let analysedBy = (record as any).analysedBy;
+    if (!analysedBy && (record as any).createdBy) {
+      const creator = await User.findOne({
+        $or: [{ email: (record as any).createdBy }, { staffId: (record as any).createdBy }]
+      }).select('name').lean();
+      analysedBy = creator?.name || ((record as any).createdBy && !(record as any).createdBy.includes('@') ? (record as any).createdBy : 'Dr. Yashwant Dubey');
+    }
+    if (!analysedBy) analysedBy = 'Dr. Yashwant Dubey';
+
     const formattedData = {
       id: (record as any).rxId,
       _id: (record as any)._id.toString(),
@@ -45,7 +55,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       risk: (record as any).risk,
       color: (record as any).color,
       date: (record as any).date,
-      analysedBy: (record as any).analysedBy || ((record as any).createdBy && !(record as any).createdBy.includes('@') ? (record as any).createdBy : 'Dr. Yashwant Dubey'),
+      analysedBy,
       patientInput: (record as any).patientInput,
       analysisResult: (record as any).analysisResult,
       createdAt: (record as any).createdAt,
