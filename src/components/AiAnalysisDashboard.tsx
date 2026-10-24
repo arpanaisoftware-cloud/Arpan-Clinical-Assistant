@@ -29,30 +29,28 @@ import {
   TableRow,
   LinearProgress
 } from '@mui/material';
-import {
-  Shield,
-  Warning,
-  CompareArrows,
-  Schedule,
-  Restaurant,
-  LocalPharmacy,
-  Print,
-  CheckCircle,
-  Info,
-  Psychology,
-  MonetizationOn,
-  Close,
-  LocalHospital,
-  Medication,
-  BugReport,
-  VerifiedUser,
-  AccessTime,
-  AutoAwesome,
-  TrendingUp,
-  MonitorHeart,
-  Science,
-  AssignmentTurnedIn
-} from '@mui/icons-material';
+import Shield from '@mui/icons-material/Shield';
+import Warning from '@mui/icons-material/Warning';
+import CompareArrows from '@mui/icons-material/CompareArrows';
+import Schedule from '@mui/icons-material/Schedule';
+import Restaurant from '@mui/icons-material/Restaurant';
+import LocalPharmacy from '@mui/icons-material/LocalPharmacy';
+import Print from '@mui/icons-material/Print';
+import CheckCircle from '@mui/icons-material/CheckCircle';
+import Info from '@mui/icons-material/Info';
+import Psychology from '@mui/icons-material/Psychology';
+import MonetizationOn from '@mui/icons-material/MonetizationOn';
+import Close from '@mui/icons-material/Close';
+import LocalHospital from '@mui/icons-material/LocalHospital';
+import Medication from '@mui/icons-material/Medication';
+import BugReport from '@mui/icons-material/BugReport';
+import VerifiedUser from '@mui/icons-material/VerifiedUser';
+import AccessTime from '@mui/icons-material/AccessTime';
+import AutoAwesome from '@mui/icons-material/AutoAwesome';
+import TrendingUp from '@mui/icons-material/TrendingUp';
+import MonitorHeart from '@mui/icons-material/MonitorHeart';
+import Science from '@mui/icons-material/Science';
+import AssignmentTurnedIn from '@mui/icons-material/AssignmentTurnedIn';
 import confetti from 'canvas-confetti';
 import { AnalysisResult } from '../types/clinical';
 
@@ -1161,84 +1159,98 @@ export default function AiAnalysisDashboard({
           </IconButton>
         </DialogTitle>
 
-        <DialogContent id="printable-analysis" sx={{ p: 4, bgcolor: '#FFFFFF !important', color: '#1E293B !important' }}>
-          <Box sx={{ border: '2px solid #00C9A7', borderRadius: 1, p: 3, bgcolor: '#FFFFFF !important', color: '#1E293B !important' }}>
-            <Grid container spacing={2} sx={{ borderBottom: '2px solid #E2E8F0', pb: 2, mb: 3 }}>
-              <Grid item xs={8}>
-                <Typography variant="h5" sx={{ fontWeight: 900, color: '#00967D !important' }}>
+        <DialogContent id="printable-analysis" sx={{ p: { xs: 2, sm: 4 }, bgcolor: '#FFFFFF !important', color: '#1E293B !important' }}>
+          <Box sx={{ border: '2px solid #00C9A7', borderRadius: 2, p: { xs: 2, sm: 3.5 }, pt: { xs: 3, sm: 4 }, mt: 0.5, bgcolor: '#FFFFFF !important', color: '#1E293B !important', boxSizing: 'border-box' }}>
+            <Grid container spacing={2} alignItems="center" sx={{ borderBottom: '2.5px solid #00C9A7', pb: 2.5, mb: 3 }}>
+              <Grid item xs={12} sm={8}>
+                <Typography variant="h5" sx={{ fontWeight: 900, color: '#00796B !important', fontSize: { xs: '1.35rem', sm: '1.65rem' }, letterSpacing: '0.5px', textTransform: 'uppercase', lineHeight: 1.2 }}>
                   ARPAN CLINICAL ASSISTANT
                 </Typography>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#475569 !important' }}>
-                  AI-Powered Comprehensive Clinical Analysis Report
+                <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#334155 !important', fontSize: { xs: '0.95rem', sm: '1.05rem' }, mt: 0.5 }}>
+                  AI-Powered Comprehensive Clinical Analysis &amp; Safety Report
                 </Typography>
               </Grid>
-              <Grid item xs={4} textAlign="right">
-                <Typography variant="caption" sx={{ color: '#64748B !important', display: 'block' }} suppressHydrationWarning>
-                  Date: {new Date().toLocaleDateString('en-US', { dateStyle: 'medium' })}
-                </Typography>
-                <Typography variant="caption" sx={{ fontWeight: 700, color: '#00967D !important' }}>
-                  Safety Score: {safetyScore}/100
-                </Typography>
+              <Grid item xs={12} sm={4} textAlign={{ xs: 'left', sm: 'right' }}>
+                <Box sx={{ display: 'inline-block', p: 1.2, bgcolor: '#F0FDF4 !important', border: '1.5px solid #BBF7D0 !important', borderRadius: 1.5, textAlign: { xs: 'left', sm: 'right' } }}>
+                  <Typography variant="caption" sx={{ color: '#166534 !important', fontWeight: 800, display: 'block', fontSize: '0.78rem' }} suppressHydrationWarning>
+                    DATE: {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#00796B !important', fontWeight: 900, display: 'block', fontSize: '0.85rem' }}>
+                    SAFETY SCORE: {safetyScore}/100
+                  </Typography>
+                </Box>
               </Grid>
             </Grid>
 
             {/* Patient Header */}
-            <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: '#F8FAFC !important', borderColor: '#E2E8F0 !important', borderRadius: 1 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#0F172A !important' }}>
+            <Paper variant="outlined" sx={{ p: 2.2, mb: 3, bgcolor: '#F8FAFC !important', borderColor: '#CBD5E1 !important', borderRadius: 1.5 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 900, color: '#0F172A !important', fontSize: '1.15rem' }}>
                 Patient: {patientInfo?.patientName} ({patientInfo?.age} Y, {patientInfo?.gender})
               </Typography>
-              <Typography variant="caption" sx={{ color: '#475569 !important' }}>
-                Overall Risk Assessment: <strong style={{ color: statusColor }}>{riskCategory}</strong>
+              <Typography variant="caption" sx={{ color: '#475569 !important', fontSize: '0.85rem', fontWeight: 700, display: 'block', mt: 0.5 }}>
+                Overall Risk Assessment: <strong style={{ color: statusColor, fontSize: '0.95rem' }}>{riskCategory}</strong>
               </Typography>
             </Paper>
 
-            <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#00967D !important', mb: 1 }}>
-              Clinical Assessment Overview:
-            </Typography>
-            <Typography variant="body2" sx={{ mb: 3, color: '#1E293B !important' }}>
+            <Box sx={{ bgcolor: '#00796B !important', color: '#FFFFFF !important', px: 2.2, py: 1.2, borderRadius: 1.5, mb: 1.5 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 900, fontSize: '1.18rem', letterSpacing: '0.5px', textTransform: 'uppercase', color: '#FFFFFF !important' }}>
+                CLINICAL ASSESSMENT OVERVIEW
+              </Typography>
+            </Box>
+            <Typography variant="body2" sx={{ mb: 3, color: '#1E293B !important', fontSize: '0.95rem', lineHeight: 1.6, wordBreak: 'break-word' }}>
               {aiClinicalOverview}
             </Typography>
 
             <Grid container spacing={3} mb={3}>
-              <Grid item xs={6}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#FFB703 !important', mb: 1 }}>
-                  Drug Interactions Flagged ({flaggedInteractions.length}):
-                </Typography>
-                {flaggedInteractions.length > 0 ? flaggedInteractions.map((int, i) => (
-                  <Typography key={i} variant="body2" sx={{ mb: 0.5, color: '#334155 !important' }}>• {int.drugA} + {int.drugB}: {int.severity}</Typography>
-                )) : <Typography variant="body2" sx={{ color: '#334155 !important' }}>None detected</Typography>}
+              <Grid item xs={12} sm={6}>
+                <Box className="print-avoid-break" sx={{ p: 2, bgcolor: '#FFFBEB !important', border: '1.5px solid #FDE68A !important', borderRadius: 1.5, height: '100%' }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 900, color: '#B45309 !important', fontSize: '1.08rem', mb: 1.2 }}>
+                    Drug Interactions Flagged ({flaggedInteractions.length})
+                  </Typography>
+                  {flaggedInteractions.length > 0 ? flaggedInteractions.map((int, i) => (
+                    <Typography key={i} variant="body2" sx={{ mb: 0.6, color: '#334155 !important', fontSize: '0.9rem', lineHeight: 1.5, wordBreak: 'break-word' }}>• <strong>{int.drugA} + {int.drugB}:</strong> {int.severity}</Typography>
+                  )) : <Typography variant="body2" sx={{ color: '#334155 !important', fontSize: '0.9rem' }}>None detected</Typography>}
+                </Box>
               </Grid>
-              <Grid item xs={6}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#FF4D6D !important', mb: 1 }}>
-                  Allergy Conflicts ({flaggedAllergies.length}):
-                </Typography>
-                {flaggedAllergies.length > 0 ? flaggedAllergies.map((alg, i) => (
-                  <Typography key={i} variant="body2" sx={{ mb: 0.5, color: '#334155 !important' }}>• {alg.medication} (Allergen: {alg.allergyMatch})</Typography>
-                )) : <Typography variant="body2" sx={{ color: '#334155 !important' }}>None detected</Typography>}
+              <Grid item xs={12} sm={6}>
+                <Box className="print-avoid-break" sx={{ p: 2, bgcolor: '#FEF2F2 !important', border: '1.5px solid #FECACA !important', borderRadius: 1.5, height: '100%' }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 900, color: '#B91C1C !important', fontSize: '1.08rem', mb: 1.2 }}>
+                    Allergy Conflicts ({flaggedAllergies.length})
+                  </Typography>
+                  {flaggedAllergies.length > 0 ? flaggedAllergies.map((alg, i) => (
+                    <Typography key={i} variant="body2" sx={{ mb: 0.6, color: '#334155 !important', fontSize: '0.9rem', lineHeight: 1.5, wordBreak: 'break-word' }}>• <strong>{alg.medication}:</strong> (Allergen: {alg.allergyMatch})</Typography>
+                  )) : <Typography variant="body2" sx={{ color: '#334155 !important', fontSize: '0.9rem' }}>None detected</Typography>}
+                </Box>
               </Grid>
             </Grid>
 
-            <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#00967D !important', mb: 1 }}>
-              Dietary & Lifestyle Recommendations:
-            </Typography>
+            <Box sx={{ bgcolor: '#00796B !important', color: '#FFFFFF !important', px: 2.2, py: 1.2, borderRadius: 1.5, mb: 1.5 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 900, fontSize: '1.18rem', letterSpacing: '0.5px', textTransform: 'uppercase', color: '#FFFFFF !important' }}>
+                DIETARY &amp; LIFESTYLE RECOMMENDATIONS
+              </Typography>
+            </Box>
             <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <Typography variant="caption" sx={{ fontWeight: 700, color: '#00C9A7 !important', display: 'block', mb: 0.5 }}>Recommended (DOs)</Typography>
-                {dietLifestyleDos.map((doItem, i) => (
-                  <Typography key={i} variant="body2" sx={{ mb: 0.5, color: '#334155 !important' }}>• {doItem}</Typography>
-                ))}
+              <Grid item xs={12} sm={6}>
+                <Box className="print-avoid-break" sx={{ p: 1.8, bgcolor: '#F0FDF4 !important', border: '1.5px solid #BBF7D0 !important', borderRadius: 1.5 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 900, color: '#15803D !important', display: 'block', mb: 1, fontSize: '0.95rem', textTransform: 'uppercase' }}>Recommended (DOs)</Typography>
+                  {dietLifestyleDos.map((doItem, i) => (
+                    <Typography key={i} variant="body2" sx={{ mb: 0.6, color: '#166534 !important', fontSize: '0.9rem', lineHeight: 1.5, wordBreak: 'break-word' }}>✓ {doItem}</Typography>
+                  ))}
+                </Box>
               </Grid>
-              <Grid item xs={6}>
-                <Typography variant="caption" sx={{ fontWeight: 700, color: '#FF4D6D !important', display: 'block', mb: 0.5 }}>Avoid (DON'Ts)</Typography>
-                {dietLifestyleDonts.map((dontItem, i) => (
-                  <Typography key={i} variant="body2" sx={{ mb: 0.5, color: '#334155 !important' }}>• {dontItem}</Typography>
-                ))}
+              <Grid item xs={12} sm={6}>
+                <Box className="print-avoid-break" sx={{ p: 1.8, bgcolor: '#FEF2F2 !important', border: '1.5px solid #FECACA !important', borderRadius: 1.5 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 900, color: '#DC2626 !important', display: 'block', mb: 1, fontSize: '0.95rem', textTransform: 'uppercase' }}>Avoid (DON'Ts)</Typography>
+                  {dietLifestyleDonts.map((dontItem, i) => (
+                    <Typography key={i} variant="body2" sx={{ mb: 0.6, color: '#991B1B !important', fontSize: '0.9rem', lineHeight: 1.5, wordBreak: 'break-word' }}>✕ {dontItem}</Typography>
+                  ))}
+                </Box>
               </Grid>
             </Grid>
 
-            <Divider sx={{ my: 3, borderColor: '#E2E8F0 !important' }} />
+            <Divider className="no-print" sx={{ my: 3, borderColor: '#E2E8F0 !important', '@media print': { display: 'none !important' } }} />
 
-            <Box sx={{ textAlign: 'center' }}>
+            <Box className="no-print" sx={{ textAlign: 'center', '@media print': { display: 'none !important' } }}>
               <Button
                 variant="contained"
                 onClick={() => {

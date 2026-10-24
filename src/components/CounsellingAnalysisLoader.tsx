@@ -11,16 +11,14 @@ import {
   Modal,
   useTheme
 } from '@mui/material';
-import {
-  AutoAwesome,
-  CheckCircle,
-  Favorite,
-  Psychology,
-  Visibility,
-  WaterDrop,
-  HealthAndSafety,
-  FactCheck
-} from '@mui/icons-material';
+import AutoAwesome from '@mui/icons-material/AutoAwesome';
+import CheckCircle from '@mui/icons-material/CheckCircle';
+import Favorite from '@mui/icons-material/Favorite';
+import Psychology from '@mui/icons-material/Psychology';
+import Visibility from '@mui/icons-material/Visibility';
+import WaterDrop from '@mui/icons-material/WaterDrop';
+import HealthAndSafety from '@mui/icons-material/HealthAndSafety';
+import FactCheck from '@mui/icons-material/FactCheck';
 import { motion } from 'framer-motion';
 
 interface CounsellingAnalysisLoaderProps {

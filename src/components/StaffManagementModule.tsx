@@ -33,19 +33,17 @@ import {
   DialogContentText,
   DialogActions
 } from '@mui/material';
-import {
-  PersonAdd,
-  Badge,
-  ContentCopy,
-  Verified,
-  Close,
-  Shield,
-  Key,
-  Visibility,
-  VisibilityOff,
-  Edit,
-  Delete
-} from '@mui/icons-material';
+import PersonAdd from '@mui/icons-material/PersonAdd';
+import Badge from '@mui/icons-material/Badge';
+import ContentCopy from '@mui/icons-material/ContentCopy';
+import Verified from '@mui/icons-material/Verified';
+import Close from '@mui/icons-material/Close';
+import Shield from '@mui/icons-material/Shield';
+import Key from '@mui/icons-material/Key';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import Edit from '@mui/icons-material/Edit';
+import Delete from '@mui/icons-material/Delete';
 import { StaffUser, UserRole, ModulePermission } from '../types/clinical';
 import { toast } from 'react-toastify';
 

@@ -38,40 +38,38 @@ import InputAdornment from '@mui/material/InputAdornment';
 import Fade from '@mui/material/Fade';
 import TablePagination from '@mui/material/TablePagination';
 import { useTheme } from '@mui/material/styles';
-import {
-  Favorite,
-  Psychology,
-  Visibility,
-  WaterDrop,
-  FlashOn,
-  Pets,
-  Print,
-  CheckCircle,
-  Warning,
-  Info,
-  MedicalServices,
-  Shield,
-  Close,
-  Verified,
-  LocalHospital,
-  Biotech,
-  ContentPaste,
-  FileUpload,
-  History,
-  AutoAwesome,
-  Search,
-  TableRows,
-  ViewAgenda,
-  SmartToy,
-  Upload,
-  CheckCircleOutline,
-  Refresh,
-  Bolt,
-  Bloodtype,
-  AirlineSeatReclineNormal,
-  Speed,
-  MonitorWeight
-} from '@mui/icons-material';
+import Favorite from '@mui/icons-material/Favorite';
+import Psychology from '@mui/icons-material/Psychology';
+import Visibility from '@mui/icons-material/Visibility';
+import WaterDrop from '@mui/icons-material/WaterDrop';
+import FlashOn from '@mui/icons-material/FlashOn';
+import Pets from '@mui/icons-material/Pets';
+import Print from '@mui/icons-material/Print';
+import CheckCircle from '@mui/icons-material/CheckCircle';
+import Warning from '@mui/icons-material/Warning';
+import Info from '@mui/icons-material/Info';
+import MedicalServices from '@mui/icons-material/MedicalServices';
+import Shield from '@mui/icons-material/Shield';
+import Close from '@mui/icons-material/Close';
+import Verified from '@mui/icons-material/Verified';
+import LocalHospital from '@mui/icons-material/LocalHospital';
+import Biotech from '@mui/icons-material/Biotech';
+import ContentPaste from '@mui/icons-material/ContentPaste';
+import FileUpload from '@mui/icons-material/FileUpload';
+import History from '@mui/icons-material/History';
+import AutoAwesome from '@mui/icons-material/AutoAwesome';
+import Search from '@mui/icons-material/Search';
+import TableRows from '@mui/icons-material/TableRows';
+import ViewAgenda from '@mui/icons-material/ViewAgenda';
+import SmartToy from '@mui/icons-material/SmartToy';
+import Upload from '@mui/icons-material/Upload';
+import CheckCircleOutline from '@mui/icons-material/CheckCircleOutline';
+import Refresh from '@mui/icons-material/Refresh';
+import Bolt from '@mui/icons-material/Bolt';
+import Bloodtype from '@mui/icons-material/Bloodtype';
+import AirlineSeatReclineNormal from '@mui/icons-material/AirlineSeatReclineNormal';
+import Speed from '@mui/icons-material/Speed';
+import MonitorWeight from '@mui/icons-material/MonitorWeight';
 import { COUNSELLING_RISK_DATABASE } from '../mockData/clinicalModulesData';
 import { RiskAssessmentItem, RiskCategoryType, HistoryRecord, CounsellingHistoryRecord } from '../types/clinical';
 import confetti from 'canvas-confetti';
@@ -2058,72 +2056,139 @@ export default function CounsellingModule({
         <DialogContent
           id="printable-counselling"
           dividers
-          sx={{ p: { xs: 2, sm: 4 }, bgcolor: '#FFFFFF !important', color: '#1E293B !important', overflowY: 'auto' }}
+          sx={{ p: { xs: 1.5, sm: 3 }, bgcolor: '#FFFFFF !important', color: '#000000 !important', overflowY: 'auto' }}
         >
-          <Box sx={{ border: '2px solid #6C5CE7', borderRadius: 1.5, p: { xs: 2, sm: 3 }, bgcolor: '#FFFFFF !important', color: '#1E293B !important' }}>
+          <Box sx={{ border: '1.5px solid #000000 !important', borderRadius: 1, p: { xs: 1.5, sm: 2.5 }, mt: 0, bgcolor: '#FFFFFF !important', color: '#000000 !important', boxSizing: 'border-box' }}>
             {/* Header */}
-            <Grid container spacing={2} sx={{ borderBottom: '2px solid #E2E8F0', pb: 2, mb: 3 }}>
+            <Grid container spacing={1.5} alignItems="center" sx={{ borderBottom: '2px solid #000000 !important', pb: 1.5, mb: 1.8 }}>
               <Grid item xs={12} sm={8}>
-                <Typography variant="h5" sx={{ fontWeight: 900, color: '#4C1D95 !important', fontSize: { xs: '1.15rem', sm: '1.5rem' } }}>
+                <Typography variant="h5" sx={{ fontWeight: 900, color: '#000000 !important', fontSize: { xs: '1.25rem', sm: '1.45rem' }, letterSpacing: '0.5px', textTransform: 'uppercase', lineHeight: 1.2 }}>
                   ARPAN CLINICAL COUNSELLING CENTER
                 </Typography>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#475569 !important' }}>
-                  Patient Education &amp; Complication Prevention Advisory
+                <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#000000 !important', fontSize: { xs: '0.88rem', sm: '0.98rem' }, mt: 0.3 }}>
+                  Patient Education, Clinical Risk Mitigation &amp; Complication Prevention Advisory
+                </Typography>
+                <Typography variant="caption" sx={{ color: '#000000 !important', display: 'block', mt: 0.2, fontSize: '0.78rem', fontWeight: 700 }}>
+                  Arpan Clinical Care OS · Evidence-Based Chronic Disease Counselling
                 </Typography>
               </Grid>
               <Grid item xs={12} sm={4} textAlign={{ xs: 'left', sm: 'right' }}>
-                <Typography variant="caption" sx={{ color: '#64748B !important', display: 'block' }} suppressHydrationWarning>
-                  Date: {new Date().toLocaleDateString('en-US', { dateStyle: 'medium' })}
-                </Typography>
+                <Box sx={{ display: 'inline-block', p: 1, bgcolor: '#FFFFFF !important', border: '1.2px solid #000000 !important', borderRadius: 1, textAlign: { xs: 'left', sm: 'right' } }}>
+                  <Typography variant="caption" sx={{ color: '#000000 !important', fontWeight: 900, display: 'block', fontSize: '0.8rem' }} suppressHydrationWarning>
+                    DATE: {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </Typography>
+                </Box>
               </Grid>
             </Grid>
 
-            {/* Patient Header */}
-            <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: '#F8FAFC !important', borderColor: '#E2E8F0 !important', borderRadius: 1 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#0F172A !important' }}>
-                Patient: {counsellingPatient?.name || currPatientName} ({counsellingPatient?.age || currPatientAge} Y, {counsellingPatient?.gender || currPatientGender}) • Diagnosis: {counsellingPatient?.disease || currPatientDisease}{(counsellingPatient?.sbp || sbp) && (counsellingPatient?.dbp || dbp) ? ` • BP: ${counsellingPatient?.sbp || sbp}/${counsellingPatient?.dbp || dbp} mmHg` : ''}
-              </Typography>
-              <Typography variant="caption" sx={{ color: '#475569 !important' }}>
-                Comprehensive 10-Point Clinical Complication &amp; Chronic Risk Evaluation
+            {/* Patient Header Card */}
+            <Paper variant="outlined" sx={{ p: 1.5, mb: 1.8, bgcolor: '#FFFFFF !important', borderColor: '#000000 !important', borderWidth: 1.2, borderRadius: 1 }}>
+              <Grid container spacing={1.5}>
+                <Grid item xs={6} sm={3}>
+                  <Typography variant="caption" sx={{ color: '#000000 !important', fontWeight: 900, display: 'block', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.5px' }}>
+                    PATIENT NAME
+                  </Typography>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 900, color: '#000000 !important', fontSize: '1.05rem' }}>
+                    {counsellingPatient?.name || currPatientName || 'N/A'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={6} sm={2.5}>
+                  <Typography variant="caption" sx={{ color: '#000000 !important', fontWeight: 900, display: 'block', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.5px' }}>
+                    AGE / GENDER
+                  </Typography>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#000000 !important', fontSize: '0.95rem', mt: 0.2 }}>
+                    {counsellingPatient?.age || currPatientAge} Y / {counsellingPatient?.gender || currPatientGender}
+                  </Typography>
+                </Grid>
+                <Grid item xs={6} sm={(counsellingPatient?.sbp || sbp) ? 4 : 6.5}>
+                  <Typography variant="caption" sx={{ color: '#000000 !important', fontWeight: 900, display: 'block', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.5px' }}>
+                    PRIMARY CLINICAL CONDITION
+                  </Typography>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 900, color: '#000000 !important', fontSize: '1.02rem' }}>
+                    {counsellingPatient?.disease || currPatientDisease}
+                  </Typography>
+                </Grid>
+                {(counsellingPatient?.sbp || sbp) && (
+                  <Grid item xs={6} sm={2.5}>
+                    <Typography variant="caption" sx={{ color: '#000000 !important', fontWeight: 900, display: 'block', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.5px' }}>
+                      BLOOD PRESSURE
+                    </Typography>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#000000 !important', fontSize: '0.95rem', mt: 0.2 }}>
+                      {counsellingPatient?.sbp || sbp}/{counsellingPatient?.dbp || dbp} mmHg
+                    </Typography>
+                  </Grid>
+                )}
+              </Grid>
+              <Typography variant="caption" sx={{ color: '#000000 !important', fontWeight: 700, display: 'block', mt: 1, pt: 0.8, borderTop: '1px dashed #000000 !important', fontSize: '0.78rem' }}>
+                Comprehensive 10-Point Clinical Complication &amp; Chronic Risk Prevention Protocol
               </Typography>
             </Paper>
 
-            {/* Content List */}
-            <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#4C1D95 !important', mb: 2 }}>
-              Key Health Action Steps For Patient (10 Chronic &amp; Clinical Risk Factors):
-            </Typography>
-            <Box sx={{ pl: 1, mb: 3 }}>
-              {riskFactors.map((risk) => (
-                <Box key={risk.id} sx={{ mb: 2 }}>
-                  <Typography variant="caption" sx={{ fontWeight: 800, color: risk.color }}>
-                    {risk.title} ({risk.riskLevel})
-                  </Typography>
-                  {risk.patientAdvice.map((adv, idx) => (
-                    <Typography key={idx} variant="body2" sx={{ mb: 0.5, color: '#334155 !important' }}>
-                      • {adv}
-                    </Typography>
-                  ))}
-                </Box>
-              ))}
+            {/* DISTINCT SECTION HEADING: 10 RISK FACTORS */}
+            <Box sx={{ bgcolor: '#000000 !important', color: '#FFFFFF !important', px: 1.8, py: 0.8, borderRadius: 1, mb: 1.8 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 900, fontSize: "1.08rem", letterSpacing: "0.5px", textTransform: "uppercase", color: "#FFFFFF !important" }}>
+                KEY HEALTH ACTION STEPS FOR PATIENT (10 CHRONIC &amp; CLINICAL RISK FACTORS)
+              </Typography>
             </Box>
 
-            <Divider sx={{ mb: 2, borderColor: '#E2E8F0 !important' }} />
-
-            <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} sm={8}>
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  <Verified sx={{ color: '#6C5CE7' }} />
-                  <Typography variant="caption" sx={{ fontWeight: 700, color: '#475569 !important' }}>
-                    Verified by Clinical Care Team &amp; Doctor
-                  </Typography>
-                </Stack>
-              </Grid>
-              <Grid item xs={12} sm={4} textAlign={{ xs: 'left', sm: 'right' }}>
-                <Typography variant="caption" sx={{ fontStyle: 'italic', display: 'block', color: '#64748B !important' }}>
-                  Arpan Clinical Care OS
-                </Typography>
-              </Grid>
-            </Grid>
+            {/* Content List with Distinct Headings and Avoid Break */}
+            <Stack spacing={1.2} mb={2}>
+              {riskFactors.map((risk) => (
+                <Box
+                  key={risk.id}
+                  className="print-avoid-break"
+                  sx={{
+                    p: 1.3,
+                    bgcolor: '#FFFFFF !important',
+                    border: '1.2px solid #000000 !important',
+                    borderRadius: 1,
+                    pageBreakInside: 'avoid !important',
+                    breakInside: 'avoid !important'
+                  }}
+                >
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" mb={0.6} flexWrap="wrap" gap={1}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 900, color: '#000000 !important', fontSize: '0.98rem', letterSpacing: '0.3px' }}>
+                      {risk.title}
+                    </Typography>
+                    <Chip
+                      label={risk.riskLevel}
+                      size="small"
+                      sx={{
+                        bgcolor: '#FFFFFF !important',
+                        color: '#000000 !important',
+                        border: '1.2px solid #000000 !important',
+                        fontWeight: 900,
+                        fontSize: '0.75rem',
+                        height: 24,
+                        textTransform: 'uppercase'
+                      }}
+                    />
+                  </Stack>
+                  <Stack spacing={0.6}>
+                    {risk.patientAdvice.map((adv, idx) => (
+                      <Typography
+                        key={idx}
+                        variant="body2"
+                        sx={{
+                          color: '#000000 !important',
+                          fontWeight: 700,
+                          fontSize: '0.92rem',
+                          lineHeight: 1.55,
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: 1.2,
+                          wordBreak: 'break-word !important',
+                          overflowWrap: 'break-word !important'
+                        }}
+                      >
+                        <span style={{ color: '#000000', fontWeight: 900, fontSize: '1.1rem', lineHeight: 1 }}>•</span>
+                        <span>{adv}</span>
+                      </Typography>
+                    ))}
+                  </Stack>
+                </Box>
+              ))}
+            </Stack>
           </Box>
         </DialogContent>
 

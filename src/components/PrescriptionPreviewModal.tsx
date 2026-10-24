@@ -21,13 +21,11 @@ import {
   Stack,
   IconButton
 } from '@mui/material';
-import {
-  Print,
-  Close,
-  LocalHospital,
-  QrCode2,
-  Verified
-} from '@mui/icons-material';
+import Print from '@mui/icons-material/Print';
+import Close from '@mui/icons-material/Close';
+import LocalHospital from '@mui/icons-material/LocalHospital';
+import QrCode2 from '@mui/icons-material/QrCode2';
+import Verified from '@mui/icons-material/Verified';
 import { AnalysisResult } from '../types/clinical';
 
 interface PrescriptionPreviewModalProps {
@@ -65,114 +63,182 @@ export default function PrescriptionPreviewModal({ open, onClose, analysisData }
 
       <Divider sx={{ borderColor: '#E2E8F0 !important' }} />
 
-      <DialogContent id="printable-prescription" sx={{ p: 4, bgcolor: '#FFFFFF !important', color: '#1E293B !important' }}>
-        {/* Printable Prescription Layout */}
-        <Box sx={{ border: '2px solid #00C9A7', borderRadius: 1, p: 3, position: 'relative' }}>
+      <DialogContent id="printable-prescription" sx={{ p: { xs: 1.5, sm: 3 }, bgcolor: '#FFFFFF !important', color: '#000000 !important' }}>
+        {/* Printable Prescription Layout (High-Contrast Solid B&W) */}
+        <Box sx={{ border: '1.5px solid #000000 !important', borderRadius: 1.5, p: { xs: 1.5, sm: 2.5 }, mt: 0, position: 'relative', bgcolor: '#FFFFFF !important', color: '#000000 !important', boxSizing: 'border-box' }}>
           {/* Header */}
-          <Grid container spacing={2} alignItems="center" sx={{ borderBottom: '2px solid #E2E8F0', pb: 2, mb: 3 }}>
-            <Grid item xs={8}>
-              <Typography variant="h5" sx={{ fontWeight: 900, color: '#00967D', letterSpacing: '-0.02em' }}>
+          <Grid container spacing={2} alignItems="center" sx={{ borderBottom: '2px solid #000000 !important', pb: 1.5, mb: 1.8 }}>
+            <Grid item xs={12} sm={8}>
+              <Typography variant="h5" sx={{ fontWeight: 900, color: '#000000 !important', fontSize: { xs: '1.25rem', sm: '1.45rem' }, letterSpacing: '0.5px', textTransform: 'uppercase', lineHeight: 1.2 }}>
                 ARPAN CLINICAL MEDICAL CENTER
               </Typography>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#475569' }}>
-                Dr. Yashwant Dubey • Chief Cardiologist & Internal Medicine
+              <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#000000 !important', fontSize: { xs: '0.9rem', sm: '0.98rem' }, mt: 0.3 }}>
+                Dr. Yashwant Dubey • Chief Cardiologist &amp; Internal Medicine
               </Typography>
-              {/* <Typography variant="caption" sx={{ color: '#64748B', display: 'block' }}>
-                Reg. No: MED-8849204 • Tel: +1 (800) 555-0199 • Dept of General Clinical Care
-              </Typography> */}
+              <Typography variant="caption" sx={{ color: '#000000 !important', display: 'block', mt: 0.2, fontSize: '0.78rem', fontWeight: 700 }}>
+                Reg. No: MED-8849204 · Department of General &amp; Specialty Clinical Care
+              </Typography>
             </Grid>
-            {/* <Grid item xs={4} textAlign="right">
-              <QrCode2 sx={{ fontSize: 60, color: '#1E293B' }} />
-              <Typography variant="caption" sx={{ display: 'block', color: '#64748B', fontSize: '0.65rem' }} suppressHydrationWarning>
-                Verified Rx ID: #{rxId}
-              </Typography>
-            </Grid> */}
+            <Grid item xs={12} sm={4} textAlign={{ xs: 'left', sm: 'right' }}>
+              <Box sx={{ display: 'inline-block', p: 1, bgcolor: '#FFFFFF !important', border: '1.2px solid #000000 !important', borderRadius: 1, textAlign: { xs: 'left', sm: 'right' } }}>
+                <Typography variant="caption" sx={{ color: '#000000 !important', fontWeight: 900, display: 'block', fontSize: '0.78rem' }} suppressHydrationWarning>
+                  DATE: {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                </Typography>
+                <Typography variant="caption" sx={{ color: '#000000 !important', fontWeight: 900, display: 'block', fontSize: '0.82rem' }}>
+                  Rx CERTIFICATE #{rxId}
+                </Typography>
+              </Box>
+            </Grid>
           </Grid>
 
           {/* Patient Info Bar */}
-          <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: '#F8FAFC', borderColor: '#E2E8F0', borderRadius: 1 }}>
-            <Grid container spacing={2}>
+          <Paper variant="outlined" sx={{ p: 1.5, mb: 1.8, bgcolor: '#FFFFFF !important', borderColor: '#000000 !important', borderWidth: 1.2, borderRadius: 1.2 }}>
+            <Grid container spacing={1.5}>
               <Grid item xs={6} sm={3}>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>Patient Name</Typography>
-                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#0F172A' }}>
+                <Typography variant="caption" sx={{ color: '#000000 !important', fontWeight: 900, display: 'block', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.5px' }}>
+                  PATIENT NAME
+                </Typography>
+                <Typography variant="subtitle1" sx={{ fontWeight: 900, color: '#000000 !important', fontSize: '1.05rem' }}>
                   {patientInfo.patientName || 'N/A'}
                 </Typography>
               </Grid>
               <Grid item xs={3} sm={2}>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>Age / Gender</Typography>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#0F172A' }}>
+                <Typography variant="caption" sx={{ color: '#000000 !important', fontWeight: 900, display: 'block', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.5px' }}>
+                  AGE / GENDER
+                </Typography>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#000000 !important', fontSize: '0.95rem', mt: 0.1 }}>
                   {patientInfo.age} Y / {patientInfo.gender}
                 </Typography>
               </Grid>
               <Grid item xs={3} sm={2}>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>Weight</Typography>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#0F172A' }}>
+                <Typography variant="caption" sx={{ color: '#000000 !important', fontWeight: 900, display: 'block', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.5px' }}>
+                  WEIGHT
+                </Typography>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#000000 !important', fontSize: '0.95rem', mt: 0.1 }}>
                   {patientInfo.weight ? `${patientInfo.weight} kg` : 'N/A'}
                 </Typography>
               </Grid>
               <Grid item xs={12} sm={5}>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>Diagnosis / Condition</Typography>
-                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#00967D' }}>
+                <Typography variant="caption" sx={{ color: '#000000 !important', fontWeight: 900, display: 'block', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.5px' }}>
+                  DIAGNOSIS &amp; CLINICAL CONDITION
+                </Typography>
+                <Typography variant="subtitle1" sx={{ fontWeight: 900, color: '#000000 !important', fontSize: '1.05rem' }}>
                   {patientInfo.disease}
                 </Typography>
               </Grid>
             </Grid>
           </Paper>
 
-          {/* Rx Symbol */}
-          <Typography variant="h3" sx={{ fontWeight: 900, color: '#00C9A7', fontFamily: 'serif', fontStyle: 'italic', mb: 1 }}>
-            ℞
-          </Typography>
+          {/* DISTINCT SECTION HEADING: PRESCRIBED MEDICATIONS */}
+          <Box sx={{ bgcolor: '#000000 !important', color: '#FFFFFF !important', px: 1.8, py: 0.8, borderRadius: 1, mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography sx={{ fontWeight: 900, fontSize: '1.3rem', fontFamily: 'serif', fontStyle: 'italic', lineHeight: 1, color: '#FFFFFF !important' }}>
+              ℞
+            </Typography>
+            <Typography variant="subtitle1" sx={{ fontWeight: 900, fontSize: '1.05rem', letterSpacing: '0.5px', textTransform: 'uppercase', color: '#FFFFFF !important' }}>
+              PRESCRIBED MEDICATIONS &amp; DOSAGE DIRECTIVE
+            </Typography>
+          </Box>
 
           {/* Prescribed Table */}
-          <TableContainer component={Paper} variant="outlined" sx={{ mb: 3, borderColor: '#E2E8F0', borderRadius: 1 }}>
+          <TableContainer component={Paper} variant="outlined" sx={{ mb: 2, borderColor: '#000000 !important', borderWidth: 1.2, borderRadius: 1, overflow: 'hidden' }}>
             <Table size="small">
-              <TableHead sx={{ bgcolor: '#F1F5F9' }}>
+              <TableHead sx={{ bgcolor: '#000000 !important' }}>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 800, color: '#334155' }}>Medication Name</TableCell>
-                  <TableCell sx={{ fontWeight: 800, color: '#334155' }}>Dosage</TableCell>
-                  <TableCell sx={{ fontWeight: 800, color: '#334155' }}>Frequency</TableCell>
-                  <TableCell sx={{ fontWeight: 800, color: '#334155' }}>Duration</TableCell>
-                  <TableCell sx={{ fontWeight: 800, color: '#334155' }}>Instructions</TableCell>
+                  <TableCell sx={{ fontWeight: 900, color: '#FFFFFF !important', fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: '0.5px', py: 1 }}>
+                    Medication Name
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 900, color: '#FFFFFF !important', fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: '0.5px', py: 1 }}>
+                    Dosage
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 900, color: '#FFFFFF !important', fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: '0.5px', py: 1 }}>
+                    Frequency
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 900, color: '#FFFFFF !important', fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: '0.5px', py: 1 }}>
+                    Duration
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 900, color: '#FFFFFF !important', fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: '0.5px', py: 1 }}>
+                    Timing &amp; Instructions
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {medications.map((m, i) => (
-                  <TableRow key={i}>
-                    <TableCell sx={{ fontWeight: 700, color: '#0F172A' }}>{m.name}</TableCell>
-                    <TableCell>{m.dosage}</TableCell>
-                    <TableCell>{m.frequency}</TableCell>
-                    <TableCell>{m.duration}</TableCell>
-                    <TableCell sx={{ color: '#475569' }}>{m.timing || 'As directed'}</TableCell>
+                  <TableRow key={i} sx={{ bgcolor: '#FFFFFF !important', borderBottom: '1px solid #000000 !important', pageBreakInside: 'avoid !important', breakInside: 'avoid !important' }}>
+                    <TableCell sx={{ fontWeight: 900, color: '#000000 !important', fontSize: '0.88rem', py: 0.9, wordBreak: 'break-word', borderBottom: '1px solid #000000 !important' }}>
+                      {m.name}
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 800, color: '#000000 !important', fontSize: '0.84rem', py: 0.9, borderBottom: '1px solid #000000 !important' }}>
+                      {m.dosage}
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 800, color: '#000000 !important', fontSize: '0.84rem', py: 0.9, borderBottom: '1px solid #000000 !important' }}>
+                      {m.frequency}
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 800, color: '#000000 !important', fontSize: '0.84rem', py: 0.9, borderBottom: '1px solid #000000 !important' }}>
+                      {m.duration}
+                    </TableCell>
+                    <TableCell sx={{ color: '#000000 !important', fontWeight: 700, fontSize: '0.82rem', py: 0.9, wordBreak: 'break-word', borderBottom: '1px solid #000000 !important' }}>
+                      {m.timing || 'As directed by physician'}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </TableContainer>
 
-          {/* AI Clearance Badge & Doctor Sign */}
-          <Grid container spacing={2} alignItems="center" sx={{ mt: 3, pt: 2, borderTop: '2px dashed #E2E8F0' }}>
-            <Grid item xs={7}>
-              <Stack direction="row" alignItems="center" spacing={1}>
-                <Verified sx={{ color: '#00C9A7', fontSize: 28 }} />
-                <Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#00967D', lineHeight: 1.1 }}>
-                    Arpan Clinical AI Safety Verified ({safetyScore}/100)
+          {/* AI Clearance Badge & Doctor / Patient Signatures */}
+          <Box sx={{ mt: 2, pt: 1.5, borderTop: '1.5px solid #000000 !important', pageBreakInside: 'avoid !important', breakInside: 'avoid !important' }}>
+            {/* AI Safety Banner */}
+            <Stack direction="row" alignItems="center" spacing={1.2} mb={2} sx={{ p: 1, bgcolor: '#FFFFFF !important', border: '1.2px solid #000000 !important', borderRadius: 1 }}>
+              <Verified sx={{ color: '#000000 !important', fontSize: 22, flexShrink: 0 }} />
+              <Box>
+                <Typography variant="subtitle2" sx={{ fontWeight: 900, color: '#000000 !important', fontSize: '0.9rem', lineHeight: 1.2 }}>
+                  Arpan Clinical AI Safety Verified ({safetyScore}/100)
+                </Typography>
+                <Typography variant="caption" sx={{ color: '#000000 !important', display: 'block', fontSize: '0.74rem', mt: 0.1, fontWeight: 700 }} suppressHydrationWarning>
+                  Zero fatal drug interactions &amp; allergy cross-checks executed on {timestamp}
+                </Typography>
+              </Box>
+            </Stack>
+
+            {/* Dual Signature Boxes */}
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <Box sx={{ border: '1px solid #000000 !important', borderRadius: 1, p: 1.5, bgcolor: '#FFFFFF !important' }}>
+                  <Typography variant="caption" sx={{ fontWeight: 900, color: '#000000 !important', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px', mb: 0.5, fontSize: '0.74rem' }}>
+                    Attending Physician
                   </Typography>
-                  <Typography variant="caption" sx={{ color: '#64748B', display: 'block' }} suppressHydrationWarning>
-                    Multi-drug conflict & allergy scan executed on {timestamp}
+                  <Typography variant="body2" sx={{ fontWeight: 900, color: '#000000 !important', mb: 1.8, fontSize: '0.88rem' }}>
+                    Name: Dr. Yashwant Dubey
+                  </Typography>
+                  <Box sx={{ borderBottom: '1.2px dashed #000000 !important', height: 22, mb: 0.5 }} />
+                  <Typography variant="caption" sx={{ color: '#000000 !important', fontWeight: 900, display: 'block', fontSize: '0.74rem' }}>
+                    Signature &amp; Clinical Seal
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#000000 !important', display: 'block', mt: 0.2, fontSize: '0.7rem', fontWeight: 700 }} suppressHydrationWarning>
+                    Date: {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                   </Typography>
                 </Box>
-              </Stack>
-            </Grid>
+              </Grid>
 
-            <Grid item xs={5} textAlign="right">
-              <Box sx={{ borderBottom: '1px solid #94A3B8', width: 160, ml: 'auto', mb: 0.5, height: 30 }} />
-              <Typography variant="caption" sx={{ fontWeight: 700, color: '#475569', display: 'block' }}>
-                Physician Signature & Seal
-              </Typography>
+              <Grid item xs={6}>
+                <Box sx={{ border: '1px solid #000000 !important', borderRadius: 1, p: 1.5, bgcolor: '#FFFFFF !important' }}>
+                  <Typography variant="caption" sx={{ fontWeight: 900, color: '#000000 !important', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px', mb: 0.5, fontSize: '0.74rem' }}>
+                    Patient / Caregiver Acknowledgement
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 900, color: '#000000 !important', mb: 1.8, fontSize: '0.88rem' }}>
+                    Name: {patientInfo.patientName || 'Patient'}
+                  </Typography>
+                  <Box sx={{ borderBottom: '1.2px dashed #000000 !important', height: 22, mb: 0.5 }} />
+                  <Typography variant="caption" sx={{ color: '#000000 !important', fontWeight: 900, display: 'block', fontSize: '0.74rem' }}>
+                    Signature of Patient / Caregiver
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#000000 !important', display: 'block', mt: 0.2, fontSize: '0.7rem', fontWeight: 700 }} suppressHydrationWarning>
+                    Date: {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </Typography>
+                </Box>
+              </Grid>
             </Grid>
-          </Grid>
+          </Box>
         </Box>
       </DialogContent>
 

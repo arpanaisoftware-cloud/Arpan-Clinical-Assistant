@@ -28,26 +28,24 @@ import {
   Toolbar,
   Container
 } from '@mui/material';
-import {
-  LocalHospital,
-  Lock,
-  SupervisorAccount,
-  MedicalServices,
-  ArrowForward,
-  VerifiedUser,
-  Person,
-  Close,
-  Email,
-  CheckCircle,
-  MarkEmailRead,
-  LockReset,
-  ContentCopy,
-  OpenInNew,
-  Brightness4,
-  Brightness7,
-  Visibility,
-  VisibilityOff
-} from '@mui/icons-material';
+import LocalHospital from '@mui/icons-material/LocalHospital';
+import Lock from '@mui/icons-material/Lock';
+import SupervisorAccount from '@mui/icons-material/SupervisorAccount';
+import MedicalServices from '@mui/icons-material/MedicalServices';
+import ArrowForward from '@mui/icons-material/ArrowForward';
+import VerifiedUser from '@mui/icons-material/VerifiedUser';
+import Person from '@mui/icons-material/Person';
+import Close from '@mui/icons-material/Close';
+import Email from '@mui/icons-material/Email';
+import CheckCircle from '@mui/icons-material/CheckCircle';
+import MarkEmailRead from '@mui/icons-material/MarkEmailRead';
+import LockReset from '@mui/icons-material/LockReset';
+import ContentCopy from '@mui/icons-material/ContentCopy';
+import OpenInNew from '@mui/icons-material/OpenInNew';
+import Brightness4 from '@mui/icons-material/Brightness4';
+import Brightness7 from '@mui/icons-material/Brightness7';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { StaffUser, UserRole, AuthUser } from '../types/clinical';
 import { toast } from 'react-toastify';
 import { ColorModeContext } from '../theme/ThemeRegistry';

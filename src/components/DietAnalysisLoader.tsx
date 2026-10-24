@@ -11,16 +11,14 @@ import {
   Modal,
   useTheme
 } from '@mui/material';
-import {
-  AutoAwesome,
-  CheckCircle,
-  Restaurant,
-  MonitorHeart,
-  WaterDrop,
-  Spa,
-  LocalDining,
-  FactCheck
-} from '@mui/icons-material';
+import AutoAwesome from '@mui/icons-material/AutoAwesome';
+import CheckCircle from '@mui/icons-material/CheckCircle';
+import Restaurant from '@mui/icons-material/Restaurant';
+import MonitorHeart from '@mui/icons-material/MonitorHeart';
+import WaterDrop from '@mui/icons-material/WaterDrop';
+import Spa from '@mui/icons-material/Spa';
+import LocalDining from '@mui/icons-material/LocalDining';
+import FactCheck from '@mui/icons-material/FactCheck';
 import { motion } from 'framer-motion';
 
 interface DietAnalysisLoaderProps {

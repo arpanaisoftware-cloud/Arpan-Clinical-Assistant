@@ -29,16 +29,14 @@ import DialogActions from '@mui/material/DialogActions';
 import CircularProgress from '@mui/material/CircularProgress';
 import { useTheme } from '@mui/material/styles';
 import { useRouter } from 'next/navigation';
-import {
-  Search,
-  History,
-  PlayArrow,
-  Psychology,
-  OpenInNew,
-  DeleteOutline,
-  Refresh,
-  Person
-} from '@mui/icons-material';
+import Search from '@mui/icons-material/Search';
+import History from '@mui/icons-material/History';
+import PlayArrow from '@mui/icons-material/PlayArrow';
+import Psychology from '@mui/icons-material/Psychology';
+import OpenInNew from '@mui/icons-material/OpenInNew';
+import DeleteOutline from '@mui/icons-material/DeleteOutline';
+import Refresh from '@mui/icons-material/Refresh';
+import Person from '@mui/icons-material/Person';
 import { toast } from 'react-toastify';
 import { HistoryRecord } from '../types/clinical';
 import { useAppDispatch } from '../redux/hooks';

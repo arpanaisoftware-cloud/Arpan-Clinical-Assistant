@@ -27,25 +27,23 @@ import {
   CircularProgress,
   LinearProgress
 } from '@mui/material';
-import {
-  LocalHospital,
-  Lock,
-  ArrowForward,
-  VerifiedUser,
-  Person,
-  LockReset,
-  CheckCircle,
-  Brightness4,
-  Brightness7,
-  VpnKey,
-  ArrowBack,
-  Email,
-  MarkEmailRead,
-  Visibility,
-  VisibilityOff,
-  Security,
-  ShieldOutlined
-} from '@mui/icons-material';
+import LocalHospital from '@mui/icons-material/LocalHospital';
+import Lock from '@mui/icons-material/Lock';
+import ArrowForward from '@mui/icons-material/ArrowForward';
+import VerifiedUser from '@mui/icons-material/VerifiedUser';
+import Person from '@mui/icons-material/Person';
+import LockReset from '@mui/icons-material/LockReset';
+import CheckCircle from '@mui/icons-material/CheckCircle';
+import Brightness4 from '@mui/icons-material/Brightness4';
+import Brightness7 from '@mui/icons-material/Brightness7';
+import VpnKey from '@mui/icons-material/VpnKey';
+import ArrowBack from '@mui/icons-material/ArrowBack';
+import Email from '@mui/icons-material/Email';
+import MarkEmailRead from '@mui/icons-material/MarkEmailRead';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import Security from '@mui/icons-material/Security';
+import ShieldOutlined from '@mui/icons-material/ShieldOutlined';
 import { useAuth } from '../context/AuthContext';
 import { ColorModeContext } from '../theme/ThemeRegistry';
 import { toast } from 'react-toastify';
