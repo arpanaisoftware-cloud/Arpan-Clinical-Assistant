@@ -164,6 +164,8 @@ export interface AnalysisResult {
   drugIndicationAnalysis?: DrugIndicationItem[];
   doseFrequencyAnalysis?: DoseFrequencyAnalysisItem[];
   adverseEffectAnalysis?: AdverseEffectAnalysisItem[];
+  aiProvider?: 'gemini' | 'deepseek';
+  aiModel?: string;
 }
 
 export interface HistoryRecord {

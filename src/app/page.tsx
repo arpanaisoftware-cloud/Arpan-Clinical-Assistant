@@ -211,7 +211,7 @@ export default function Home() {
       scrollToAnalysis();
     } catch (error: any) {
       console.error(error);
-      toast.error(error.message || 'Failed to get AI analysis. Ensure GEMINI_API_KEY is set in .env.local.');
+      toast.error(error.message || 'Failed to get AI analysis. Please verify your GEMINI_API_KEY / DEEPSEEK_API_KEY in .env.local.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -295,7 +295,7 @@ export default function Home() {
       scrollToAnalysis();
     } catch (error: any) {
       console.error(error);
-      toast.error(error.message || 'Failed to analyze document. Ensure GEMINI_API_KEY is set in .env.local.');
+      toast.error(error.message || 'Failed to analyze document. Please verify your GEMINI_API_KEY / DEEPSEEK_API_KEY in .env.local.');
     } finally {
       setIsAnalyzing(false);
     }

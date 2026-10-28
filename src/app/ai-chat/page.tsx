@@ -52,6 +52,8 @@ import { useAuth } from '../../context/AuthContext';
 import { ColorModeContext } from '../../theme/ThemeRegistry';
 import { useAppSelector } from '../../redux/hooks';
 import { PatientInput, AuthUser, AnalysisResult, HistoryRecord } from '../../types/clinical';
+import AdminAiSwitcherDialog from '../../components/AdminAiSwitcherDialog';
+import axiosClient from '../../redux/api/axiosClient';
 
 interface Message {
   sender: 'user' | 'ai';
@@ -264,6 +266,32 @@ function AiChatView() {
     ? `I have correlated the pre-analyzed clinical record for **${activePatientName}** (${activePatientInput?.disease || 'Metabolic Case'}). Pre-analyzed Safety Score: ${activeSafetyScore !== undefined ? `${activeSafetyScore}/100` : 'Assessed'}.`
     : 'Ready to assist with your diabetic & metabolic pharmacotherapy, glycemic titration, and organ protection cases colleague-to-colleague.'
     }\n\nWhat clinical dilemma would you like to review?`;
+
+  const [activeAiProvider, setActiveAiProvider] = useState<'gemini' | 'deepseek'>('gemini');
+  const [aiSwitcherOpen, setAiSwitcherOpen] = useState(false);
+  const isAdmin = currentUser?.role === 'Doctor' || currentUser?.modulePermissions === 'Full Access';
+
+  useEffect(() => {
+    const fetchAiStatus = async () => {
+      try {
+        const res = await axiosClient.get('/api/admin/ai-settings');
+        if (res.data?.success && res.data.activeProvider) {
+          setActiveAiProvider(res.data.activeProvider);
+        }
+      } catch (e) {
+        // silent
+      }
+    };
+    fetchAiStatus();
+
+    const handleAiChanged = (e: any) => {
+      if (e.detail?.provider) {
+        setActiveAiProvider(e.detail.provider);
+      }
+    };
+    window.addEventListener('ai-provider-changed', handleAiChanged);
+    return () => window.removeEventListener('ai-provider-changed', handleAiChanged);
+  }, []);
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -911,20 +939,30 @@ function AiChatView() {
                   <Typography variant="h6" sx={{ fontWeight: 900, lineHeight: 1.2, fontSize: { xs: '0.88rem', sm: '1.05rem' } }}>
                     Prof. Dr. Arpan AI
                   </Typography>
-                  <Chip
-                    icon={<AutoAwesome sx={{ fontSize: '11px !important', color: '#10B981 !important' }} />}
-                    label="Gemini 3.8 Flash • Extreme Medical AI"
-                    size="small"
-                    sx={{
-                      bgcolor: 'rgba(16, 185, 129, 0.15)',
-                      color: '#10B981',
-                      fontWeight: 800,
-                      fontSize: '0.64rem',
-                      height: 20,
-                      border: '1px solid rgba(16, 185, 129, 0.3)',
-                      display: { xs: 'none', md: 'flex' }
-                    }}
-                  />
+                  <Tooltip title={isAdmin ? "Admin: Click to switch between Google Gemini and DeepSeek AI" : `Active Engine: ${activeAiProvider === 'deepseek' ? 'DeepSeek AI' : 'Google Gemini'}`} arrow>
+                    <Chip
+                      icon={
+                        activeAiProvider === 'deepseek' ? (
+                          <Psychology sx={{ fontSize: '13px !important', color: '#818CF8 !important' }} />
+                        ) : (
+                          <AutoAwesome sx={{ fontSize: '11px !important', color: '#10B981 !important' }} />
+                        )
+                      }
+                      label={activeAiProvider === 'deepseek' ? 'DeepSeek-V3 • Extreme Medical AI' : 'Gemini 3.8 Flash • Extreme Medical AI'}
+                      size="small"
+                      onClick={() => isAdmin && setAiSwitcherOpen(true)}
+                      sx={{
+                        bgcolor: activeAiProvider === 'deepseek' ? 'rgba(79, 70, 229, 0.18)' : 'rgba(16, 185, 129, 0.15)',
+                        color: activeAiProvider === 'deepseek' ? '#A5B4FC' : '#10B981',
+                        fontWeight: 800,
+                        fontSize: '0.64rem',
+                        height: 22,
+                        border: activeAiProvider === 'deepseek' ? '1px solid rgba(79, 70, 229, 0.35)' : '1px solid rgba(16, 185, 129, 0.3)',
+                        cursor: isAdmin ? 'pointer' : 'default',
+                        display: { xs: 'none', md: 'flex' }
+                      }}
+                    />
+                  </Tooltip>
                 </Stack>
                 <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>
                   Diabetic &amp; Metabolic Pharmacotherapy Colleague • Organ Dosing • Interactions
@@ -934,6 +972,28 @@ function AiChatView() {
           </Stack>
 
           <Stack direction="row" spacing={1} alignItems="center">
+            {isAdmin && (
+              <Tooltip title="Admin: Switch between Google Gemini and DeepSeek AI" arrow>
+                <Button
+                  variant="outlined"
+                  color="secondary"
+                  size="small"
+                  startIcon={activeAiProvider === 'deepseek' ? <Psychology /> : <AutoAwesome />}
+                  onClick={() => setAiSwitcherOpen(true)}
+                  sx={{
+                    borderRadius: 1,
+                    fontWeight: 700,
+                    fontSize: { xs: '0.72rem', sm: '0.75rem' },
+                    px: { xs: 1, sm: 1.5 },
+                    py: 0.4,
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  AI: {activeAiProvider === 'deepseek' ? 'DeepSeek' : 'Gemini'}
+                </Button>
+              </Tooltip>
+            )}
+
             <Tooltip title="Reset consultation to General Clinical Mode" arrow>
               <Button
                 variant="outlined"
@@ -1382,6 +1442,15 @@ function AiChatView() {
           </Grid>
         </Grid>
       </Container>
+
+      {/* Admin AI Engine Switcher Modal */}
+      {isAdmin && (
+        <AdminAiSwitcherDialog
+          open={aiSwitcherOpen}
+          onClose={() => setAiSwitcherOpen(false)}
+          onProviderChanged={(newP) => setActiveAiProvider(newP)}
+        />
+      )}
     </Box>
   );
 }

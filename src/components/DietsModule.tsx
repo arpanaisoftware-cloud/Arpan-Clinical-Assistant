@@ -44,7 +44,7 @@ import {
   EmojiNature, MonitorHeart, WaterDrop, LocalDining, Refresh,
   CheckCircleOutline, FitnessCenter, Upload, Search, Bolt, Spa,
   ViewAgenda, TableRows, WbSunny, Bedtime, FreeBreakfast, LunchDining,
-  LocalCafe, Nightlife, Translate
+  LocalCafe, Nightlife, Translate, Psychology
 } from "@mui/icons-material";
 import { toast } from "react-toastify";
 import confetti from "canvas-confetti";
@@ -356,6 +356,30 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
   // Filter history records
   const filteredHistory = historyPatients;
 
+  // Active AI Provider state
+  const [activeAiProvider, setActiveAiProvider] = useState<'gemini' | 'deepseek'>('deepseek');
+  const [dietAiProvider, setDietAiProvider] = useState<string>('deepseek');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const handleAiChanged = (e: any) => {
+        if (e.detail?.provider) {
+          setActiveAiProvider(e.detail.provider);
+        }
+      };
+      window.addEventListener('ai-provider-changed', handleAiChanged);
+      fetch('/api/admin/ai-settings')
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.success && d.activeProvider) {
+            setActiveAiProvider(d.activeProvider);
+          }
+        })
+        .catch(() => {});
+      return () => window.removeEventListener('ai-provider-changed', handleAiChanged);
+    }
+  }, []);
+
   // BMI Calculation
   const w = Number(form.weightKg) || 0;
   const h = Number(form.heightCm) / 100 || 0;
@@ -567,6 +591,11 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
         return;
       }
       setAiDietPlan(json.data);
+      if (json.provider) {
+        setDietAiProvider(json.provider);
+      } else {
+        setDietAiProvider(activeAiProvider);
+      }
       confetti({ particleCount: 90, spread: 100, origin: { y: 0.5 } });
       toast.success("Indian Diet & Electrolyte Plan ready!");
 
@@ -2282,20 +2311,30 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                   size="large"
                   onClick={handleGenerateDiet}
                   disabled={isGenDisabled}
-                  startIcon={isGenerating ? <CircularProgress size={20} color="inherit" /> : <AutoAwesome />}
+                  startIcon={isGenerating ? <CircularProgress size={20} color="inherit" /> : (activeAiProvider === 'deepseek' ? <Psychology /> : <AutoAwesome />)}
                   sx={{
                     borderRadius: "50px",
                     px: { xs: 4, sm: 6 },
                     py: 1.8,
                     fontSize: { xs: "0.95rem", sm: "1.05rem" },
                     fontWeight: 900,
-                    background: "linear-gradient(135deg, #00C9A7 0%, #6C5CE7 100%)",
-                    boxShadow: "0 8px 32px rgba(0,201,167,0.35)",
-                    "&:hover": { background: "linear-gradient(135deg, #00B395 0%, #5a4bd1 100%)" },
+                    background: activeAiProvider === 'deepseek'
+                      ? "linear-gradient(135deg, #4F46E5 0%, #2563EB 100%)"
+                      : "linear-gradient(135deg, #00C9A7 0%, #6C5CE7 100%)",
+                    boxShadow: activeAiProvider === 'deepseek'
+                      ? "0 8px 32px rgba(79,70,229,0.35)"
+                      : "0 8px 32px rgba(0,201,167,0.35)",
+                    "&:hover": {
+                      background: activeAiProvider === 'deepseek'
+                        ? "linear-gradient(135deg, #4338CA 0%, #1D4ED8 100%)"
+                        : "linear-gradient(135deg, #00B395 0%, #5a4bd1 100%)"
+                    },
                     "&:disabled": { background: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)" }
                   }}
                 >
-                  {isGenerating ? `Analysing Clinical Profile... ${genProgress}%` : "Generate Indian Diet Plan"}
+                  {isGenerating
+                    ? `Analysing Clinical Profile with ${activeAiProvider === 'deepseek' ? 'DeepSeek AI' : 'Gemini AI'}... ${genProgress}%`
+                    : (activeAiProvider === 'deepseek' ? "Generate Indian Diet Plan with DeepSeek AI" : "Generate Indian Diet Plan with Gemini AI")}
                 </Button>
                 {(!activeForm || !activeForm.patientName || !activeForm.age || !activeForm.gender || !activeForm.disease) && (
                   <Typography variant="caption" color="text.secondary" display="block" mt={1}>
@@ -2358,7 +2397,22 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                       {aiDietPlan.summary}
                     </Typography>
 
-                    <Stack direction="row" spacing={1} mt={2} flexWrap="wrap">
+                    <Stack direction="row" spacing={1} mt={2} flexWrap="wrap" gap={0.5}>
+                      {dietAiProvider === 'deepseek' ? (
+                        <Chip
+                          icon={<Psychology sx={{ fontSize: "14px !important", color: "#FFF !important" }} />}
+                          label="DeepSeek AI (DeepSeek-V3)"
+                          size="small"
+                          sx={{ bgcolor: "#4F46E5", color: "#FFF", fontWeight: 800, fontSize: "0.74rem" }}
+                        />
+                      ) : (
+                        <Chip
+                          icon={<AutoAwesome sx={{ fontSize: "14px !important", color: "#FFF !important" }} />}
+                          label="Google Gemini (3.8 Flash)"
+                          size="small"
+                          sx={{ bgcolor: "#00C9A7", color: "#FFF", fontWeight: 800, fontSize: "0.74rem" }}
+                        />
+                      )}
                       <Chip
                         icon={<CheckCircle sx={{ fontSize: "14px !important" }} />}
                         label={`Patient: ${form.patientName} (${form.age}Y, ${form.gender})`}
@@ -4254,3 +4308,4 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
     </Box>
   );
 }
+

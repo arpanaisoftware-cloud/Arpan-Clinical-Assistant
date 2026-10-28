@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, DragEvent, ChangeEvent } from 'react';
+import React, { useState, useEffect, DragEvent, ChangeEvent } from 'react';
 import {
   Card,
   CardContent,
@@ -39,6 +39,25 @@ export default function PrescriptionUploader({
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [file, setFile] = useState<File | null>(null);
   const [analysisProgress, setAnalysisProgress] = useState<number>(0);
+  const [activeAiProvider, setActiveAiProvider] = useState<'gemini' | 'deepseek'>('gemini');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const handleAiChanged = (e: any) => {
+        if (e.detail?.provider) {
+          setActiveAiProvider(e.detail.provider);
+        }
+      };
+      window.addEventListener('ai-provider-changed', handleAiChanged);
+      fetch('/api/admin/ai-settings')
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.success && d.activeProvider) setActiveAiProvider(d.activeProvider);
+        })
+        .catch(() => {});
+      return () => window.removeEventListener('ai-provider-changed', handleAiChanged);
+    }
+  }, []);
 
   React.useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -122,7 +141,7 @@ export default function PrescriptionUploader({
           </Typography>
         </Stack>
         <Typography variant="body2" color="text.secondary" mb={2.5}>
-          Upload a prescription image (JPG/PNG) or PDF. Click <strong>Analyze with AI</strong> to send it directly to Gemini AI for complete analysis.
+          Upload a prescription image (JPG/PNG) or PDF. Optical character reading &amp; document parsing is processed by <strong>Gemini Vision OCR</strong> (multimodal document engine).
         </Typography>
 
         {/* Upload Drop Zone */}
@@ -175,7 +194,7 @@ export default function PrescriptionUploader({
                       {file.name}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {formatFileSize(file.size)} • {isPdf ? 'PDF Document' : 'Image File'} — Ready for AI Analysis
+                      {formatFileSize(file.size)} • {isPdf ? 'PDF Document' : 'Image File'} — Ready for Vision Scan
                     </Typography>
                   </Box>
                 </Stack>
@@ -190,7 +209,7 @@ export default function PrescriptionUploader({
             <Box sx={{ width: '100%', mt: 2 }}>
               <Stack direction="row" justifyContent="space-between" alignItems="center" mb={0.5}>
                 <Typography variant="caption" color="secondary" sx={{ fontWeight: 800 }}>
-                  ⚡ Analyzing prescription with Gemini AI...
+                  ⚡ Scanning &amp; extracting prescription with Gemini Vision OCR...
                 </Typography>
                 <Typography variant="caption" color="secondary" sx={{ fontWeight: 900 }}>
                   {analysisProgress}%
@@ -209,12 +228,28 @@ export default function PrescriptionUploader({
         {/* Info chips */}
         <Stack direction="row" spacing={1} mt={2} flexWrap="wrap" gap={1}>
           <Chip label="✦ Direct PDF → AI" size="small" sx={{ fontWeight: 700, fontSize: '0.72rem', bgcolor: 'rgba(108, 92, 231, 0.12)', color: '#6C5CE7' }} />
-          <Chip label="✦ No Text Extraction" size="small" sx={{ fontWeight: 700, fontSize: '0.72rem', bgcolor: 'rgba(0, 201, 167, 0.12)', color: '#00C9A7' }} />
-          <Chip label="✦ Gemini Vision" size="small" sx={{ fontWeight: 700, fontSize: '0.72rem', bgcolor: 'rgba(255, 183, 3, 0.12)', color: '#FFB703' }} />
+          <Chip label="✦ No Manual Typing" size="small" sx={{ fontWeight: 700, fontSize: '0.72rem', bgcolor: 'rgba(0, 201, 167, 0.12)', color: '#00C9A7' }} />
+          <Chip
+            label="✦ Powered by Gemini Vision OCR"
+            size="small"
+            sx={{
+              fontWeight: 800,
+              fontSize: '0.72rem',
+              bgcolor: 'rgba(0, 201, 167, 0.12)',
+              color: '#00C9A7',
+              border: '1px solid rgba(0, 201, 167, 0.35)'
+            }}
+          />
         </Stack>
 
+        <Box sx={{ mt: 1.5, p: 1, borderRadius: 1, bgcolor: 'rgba(0, 201, 167, 0.05)', border: '1px solid rgba(0, 201, 167, 0.2)' }}>
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.73rem', display: 'block', lineHeight: 1.35 }}>
+            📄 <strong>Note:</strong> Optical PDF/Image scan is powered by Gemini Vision OCR. DeepSeek is dedicated to clinical text reasoning ({activeAiProvider === 'deepseek' ? 'Active on Manual Form, Diet, Counselling & Chat' : 'Standby'}).
+          </Typography>
+        </Box>
+
         {/* Dedicated Action Buttons */}
-        <Stack direction="row" spacing={1.5} mt={2.5}>
+        <Stack direction="row" spacing={1.5} mt={2}>
           {file && (
             <Button
               variant="outlined"
@@ -238,7 +273,7 @@ export default function PrescriptionUploader({
             sx={{
               py: 1.3,
               fontWeight: 800,
-              fontSize: '1rem',
+              fontSize: '0.95rem',
               borderRadius: 1.5,
               background: 'linear-gradient(135deg, #6C5CE7 0%, #8C7AE6 100%)',
               boxShadow: '0 4px 16px rgba(108, 92, 231, 0.4)',
@@ -247,7 +282,9 @@ export default function PrescriptionUploader({
               }
             }}
           >
-            {isAnalyzing ? `Analyzing with Gemini AI... ${analysisProgress}%` : 'Analyze with AI'}
+            {isAnalyzing
+              ? `Scanning with Gemini Vision... ${analysisProgress}%`
+              : 'Scan & Analyze with Gemini Vision'}
           </Button>
         </Stack>
       </CardContent>

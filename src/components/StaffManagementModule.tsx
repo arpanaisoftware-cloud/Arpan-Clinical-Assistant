@@ -44,10 +44,14 @@ import {
   Visibility,
   VisibilityOff,
   Edit,
-  Delete
+  Delete,
+  AutoAwesome,
+  Psychology
 } from '@mui/icons-material';
 import { StaffUser, UserRole, ModulePermission } from '../types/clinical';
 import { toast } from 'react-toastify';
+import AdminAiSwitcherDialog from './AdminAiSwitcherDialog';
+import axiosClient from '../redux/api/axiosClient';
 
 // ─── Yup Validation Schema ────────────────────────────────────────────────────
 const staffSchema = Yup.object({
@@ -117,6 +121,32 @@ export default function StaffManagementModule({
 
   // Recently created user credential slip state
   const [issuedUser, setIssuedUser] = useState<StaffUser | null>(null);
+
+  // Active AI Provider state ('gemini' | 'deepseek')
+  const [activeAiProvider, setActiveAiProvider] = useState<'gemini' | 'deepseek'>('gemini');
+  const [aiSwitcherOpen, setAiSwitcherOpen] = useState(false);
+
+  useEffect(() => {
+    const fetchAiStatus = async () => {
+      try {
+        const res = await axiosClient.get('/api/admin/ai-settings');
+        if (res.data?.success && res.data.activeProvider) {
+          setActiveAiProvider(res.data.activeProvider);
+        }
+      } catch (e) {
+        // silent
+      }
+    };
+    fetchAiStatus();
+
+    const handleAiChanged = (e: any) => {
+      if (e.detail?.provider) {
+        setActiveAiProvider(e.detail.provider);
+      }
+    };
+    window.addEventListener('ai-provider-changed', handleAiChanged);
+    return () => window.removeEventListener('ai-provider-changed', handleAiChanged);
+  }, []);
 
   // Detect whether running locally or on production (https://www.arpanaisoftware.in/)
   const [isLocalHost, setIsLocalHost] = useState<boolean>(() => {
@@ -365,15 +395,70 @@ export default function StaffManagementModule({
       }}
     >
       <CardContent sx={{ p: { xs: 2.5, md: 4 } }}>
-        {/* Module Header Banner */}
-        <Grid container spacing={3} alignItems="center" mb={3}>
-          <Grid item xs={12} md={8}>
+        {/* Module Header Banner + AI Engine Switcher Card */}
+        <Grid container spacing={3} alignItems="center" justifyContent="space-between" mb={3}>
+          <Grid item xs={12} md={7}>
             <Typography variant="h4" sx={{ fontWeight: 900, mb: 1, fontSize: { xs: '1.4rem', sm: '1.8rem', md: '2.125rem' } }}>
-              Clinic Roster &amp; Staff Credential Management
+              Clinic Roster &amp; Admin Management
             </Typography>
             <Typography variant="body1" color="text.secondary">
               Manage clinical team access, issue secure credentials with registered email, and control granular module permissions.
             </Typography>
+          </Grid>
+
+          {/* Clinical AI Provider Switcher Card (Admin Only) */}
+          <Grid item xs={12} md={5}>
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                bgcolor: activeAiProvider === 'deepseek' ? 'rgba(79, 70, 229, 0.08)' : 'rgba(0, 201, 167, 0.08)',
+                borderColor: activeAiProvider === 'deepseek' ? '#4F46E5' : '#00C9A7',
+                borderWidth: 1.5,
+                boxShadow: activeAiProvider === 'deepseek' ? '0 4px 18px rgba(79, 70, 229, 0.15)' : '0 4px 18px rgba(0, 201, 167, 0.15)'
+              }}
+            >
+              <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
+                <Stack direction="row" alignItems="center" spacing={1.5}>
+                  <Box
+                    sx={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 1.5,
+                      bgcolor: activeAiProvider === 'deepseek' ? '#4F46E5' : '#00C9A7',
+                      color: '#FFF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: activeAiProvider === 'deepseek' ? '0 2px 8px rgba(79, 70, 229, 0.4)' : '0 2px 8px rgba(0, 201, 167, 0.4)'
+                    }}
+                  >
+                    {activeAiProvider === 'deepseek' ? <Psychology sx={{ fontSize: 22 }} /> : <AutoAwesome sx={{ fontSize: 20 }} />}
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', display: 'block', lineHeight: 1 }}>
+                      ACTIVE CLINICAL AI ENGINE
+                    </Typography>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 900, color: activeAiProvider === 'deepseek' ? '#818CF8' : '#00C9A7' }}>
+                      {activeAiProvider === 'deepseek' ? 'DeepSeek AI (DeepSeek-V3)' : 'Google Gemini (3.8 Flash)'}
+                    </Typography>
+                  </Box>
+                </Stack>
+                <Button
+                  size="small"
+                  variant="contained"
+                  color={activeAiProvider === 'deepseek' ? 'secondary' : 'primary'}
+                  onClick={() => setAiSwitcherOpen(true)}
+                  sx={{ fontWeight: 800, fontSize: '0.75rem', borderRadius: 1.2, textTransform: 'none' }}
+                >
+                  Change AI
+                </Button>
+              </Stack>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '0.72rem', lineHeight: 1.3 }}>
+                Admin Control: Changes clinical reasoning &amp; consultation AI model hospital-wide across all active users.
+              </Typography>
+            </Paper>
           </Grid>
         </Grid>
 
@@ -899,6 +984,13 @@ export default function StaffManagementModule({
           <Button onClick={confirmDelete} color="error" variant="contained" sx={{ fontWeight: 700 }}>Delete</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Admin AI Engine Switcher Modal */}
+      <AdminAiSwitcherDialog
+        open={aiSwitcherOpen}
+        onClose={() => setAiSwitcherOpen(false)}
+        onProviderChanged={(newP) => setActiveAiProvider(newP)}
+      />
     </Card>
   );
 }

@@ -408,8 +408,9 @@ export async function POST(req: Request) {
 
     const fallbackFactors = generateFallbackCounselling(body);
 
-    // If Gemini API Key is available, prompt Gemini for personalized clinical counseling across all 6 factors
-    if (process.env.GEMINI_API_KEY) {
+    // Generate AI personalized clinical counseling across all 10 chronic risk factors
+    try {
+      const { generateClinicalJsonAnalysis } = await import('@/lib/aiProvider');
       const prompt = `
 You are an expert clinical endocrinologist, cardiologist, and patient counselling specialist.
 Evaluate the following patient and generate comprehensive chronic risk counselling across EXACTLY 10 DISTINCT FACTORS:
@@ -451,40 +452,22 @@ For EACH of the 10 factors, return an object in the JSON array:
 Return a RAW JSON array of exactly 10 items with no markdown code blocks or surrounding text.
 `;
 
-      try {
-        const geminiRes = await fetch(GEMINI_ENDPOINT, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': process.env.GEMINI_API_KEY
-          },
-          body: JSON.stringify({
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            generationConfig: {
-              temperature: 0.2,
-              responseMimeType: 'application/json'
-            }
-          })
-        });
+      const aiRes = await generateClinicalJsonAnalysis<any[]>({
+        prompt,
+        systemPrompt: 'You are an expert clinical endocrinologist, cardiologist, and patient counselling specialist. Return only a valid JSON array of 10 items.'
+      });
 
-        if (geminiRes.ok) {
-          const geminiData = await geminiRes.json();
-          const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-          if (rawText) {
-            const cleaned = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
-            const parsed = JSON.parse(cleaned);
-            if (Array.isArray(parsed) && parsed.length >= 6) {
-              return NextResponse.json({
-                success: true,
-                data: parsed,
-                source: 'gemini-ai'
-              });
-            }
-          }
-        }
-      } catch (geminiError: any) {
-        console.warn('Gemini counselling AI call failed, using rule-based algorithm:', geminiError?.message);
+      if (aiRes?.data && Array.isArray(aiRes.data) && aiRes.data.length >= 6) {
+        return NextResponse.json({
+          success: true,
+          data: aiRes.data,
+          source: `${aiRes.provider}-ai`,
+          provider: aiRes.provider,
+          model: aiRes.model
+        });
       }
+    } catch (aiError: any) {
+      console.warn('[counselling/analyze] AI counselling call failed, using rule-based algorithm:', aiError?.message);
     }
 
     // Return the calculated 6 factors

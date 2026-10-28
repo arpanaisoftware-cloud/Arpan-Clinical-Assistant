@@ -403,23 +403,33 @@ export async function POST(req: Request) {
     const effectiveLanguage = language || "English";
 
     let dietPlan: any = null;
+    let aiProviderUsed: string = 'clinical-engine';
+    let aiModelUsed: string = 'clinical-engine';
 
-    // 1. Attempt Gemini 3.8 Flash AI generation
-    if (process.env.GEMINI_API_KEY) {
-      try {
-        const prompt = buildDietPrompt({
-          patientName, age, gender, weightKg, heightCm, disease,
-          allergies, comorbidities, bmi, hba1c, fastingGlucose,
-          creatinine, egfr, sodiumNa, potassiumK, totalCholesterol,
-          bpSystolic, bpDiastolic, dietaryPreference,
-          language: effectiveLanguage,
-          customCalories: effectiveCalories
-        });
-        const rawText = await callGeminiAPI(prompt);
-        dietPlan = parseJson(rawText);
-      } catch (geminiErr: any) {
-        console.warn("[diet/generate] Gemini API call had issues, falling back to clinical engine:", geminiErr?.message);
+    // 1. Attempt AI generation via active provider (Gemini or DeepSeek)
+    try {
+      const { generateClinicalJsonAnalysis } = await import('@/lib/aiProvider');
+      const prompt = buildDietPrompt({
+        patientName, age, gender, weightKg, heightCm, disease,
+        allergies, comorbidities, bmi, hba1c, fastingGlucose,
+        creatinine, egfr, sodiumNa, potassiumK, totalCholesterol,
+        bpSystolic, bpDiastolic, dietaryPreference,
+        language: effectiveLanguage,
+        customCalories: effectiveCalories
+      });
+
+      const res = await generateClinicalJsonAnalysis({
+        prompt,
+        systemPrompt: "You are an expert Indian Clinical Dietitian & Diabetic Nutritionist. Return only valid JSON adhering strictly to the schema."
+      });
+
+      if (res?.data && res.data.mealSchedule) {
+        dietPlan = res.data;
+        aiProviderUsed = res.provider;
+        aiModelUsed = res.model;
       }
+    } catch (aiErr: any) {
+      console.warn("[diet/generate] AI generation had issues, falling back to clinical engine:", aiErr?.message);
     }
 
     // 2. Fallback to clinical Indian nutrition engine with simple, casual wording
@@ -431,7 +441,12 @@ export async function POST(req: Request) {
       });
     }
 
-    return NextResponse.json({ success: true, data: dietPlan });
+    return NextResponse.json({
+      success: true,
+      data: dietPlan,
+      provider: aiProviderUsed,
+      model: aiModelUsed
+    });
   } catch (err: any) {
     console.error("[diet/generate] Critical error:", err);
     return NextResponse.json(
