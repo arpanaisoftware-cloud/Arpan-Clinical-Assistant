@@ -40,7 +40,7 @@ import History from '@mui/icons-material/History';
 import OpenInNew from '@mui/icons-material/OpenInNew';
 import { toast } from 'react-toastify';
 import { useAppSelector } from '../redux/hooks';
-import { PatientInput, AuthUser, AnalysisResult, HistoryRecord } from '../types/clinical';
+import { PatientInput, AuthUser, AnalysisResult, HistoryRecord, isSuperAdminUser } from '../types/clinical';
 import axiosClient from '../redux/api/axiosClient';
 
 interface Message {
@@ -248,6 +248,10 @@ export default function DoctorCopilotChat({
     ? `I have correlated the pre-analyzed clinical record for **${activePatientName}** (${activePatientInput?.disease || 'Metabolic Case'}). Pre-analyzed Safety Score: ${activeSafetyScore !== undefined ? `${activeSafetyScore}/100` : 'Assessed'}.`
     : 'Ready to assist with your diabetic & metabolic pharmacotherapy, glycemic titration, and organ protection cases colleague-to-colleague.'
     }\n\nWhat clinical dilemma would you like to review?`;
+
+  const reduxUser = useAppSelector((state) => state.auth.currentUser);
+  const effectiveUser = currentUser || reduxUser;
+  const isSuperAdmin = isSuperAdminUser(effectiveUser);
 
   const [activeAiProvider, setActiveAiProvider] = useState<'gemini' | 'deepseek'>('gemini');
 
@@ -618,25 +622,27 @@ export default function DoctorCopilotChat({
 
         {/* Status & Capabilities Pill */}
         <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-          <Chip
-            icon={
-              activeAiProvider === 'deepseek' ? (
-                <Psychology sx={{ fontSize: '13px !important', color: '#818CF8 !important' }} />
-              ) : (
-                <AutoAwesome sx={{ fontSize: '12px !important', color: '#10B981 !important' }} />
-              )
-            }
-            label={activeAiProvider === 'deepseek' ? 'DeepSeek-V3 • Extreme Medical AI' : 'Gemini 3.8 Flash • Extreme Medical AI'}
-            size="small"
-            sx={{
-              bgcolor: activeAiProvider === 'deepseek' ? 'rgba(79, 70, 229, 0.2)' : 'rgba(16, 185, 129, 0.2)',
-              color: activeAiProvider === 'deepseek' ? '#C7D2FE' : '#A7F3D0',
-              fontWeight: 800,
-              fontSize: '0.7rem',
-              height: 22,
-              border: activeAiProvider === 'deepseek' ? '1px solid rgba(79, 70, 229, 0.4)' : '1px solid rgba(16, 185, 129, 0.3)',
-            }}
-          />
+          {isSuperAdmin && (
+            <Chip
+              icon={
+                activeAiProvider === 'deepseek' ? (
+                  <Psychology sx={{ fontSize: '13px !important', color: '#818CF8 !important' }} />
+                ) : (
+                  <AutoAwesome sx={{ fontSize: '12px !important', color: '#10B981 !important' }} />
+                )
+              }
+              label={activeAiProvider === 'deepseek' ? 'DeepSeek-V3 • Extreme Medical AI' : 'Gemini 3.8 Flash • Extreme Medical AI'}
+              size="small"
+              sx={{
+                bgcolor: activeAiProvider === 'deepseek' ? 'rgba(79, 70, 229, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+                color: activeAiProvider === 'deepseek' ? '#C7D2FE' : '#A7F3D0',
+                fontWeight: 800,
+                fontSize: '0.7rem',
+                height: 22,
+                border: activeAiProvider === 'deepseek' ? '1px solid rgba(79, 70, 229, 0.4)' : '1px solid rgba(16, 185, 129, 0.3)',
+              }}
+            />
+          )}
           {activePatientName && (
             <Chip
               icon={<VerifiedUser sx={{ fontSize: '12px !important', color: '#FBBF24 !important' }} />}
@@ -989,11 +995,11 @@ export default function DoctorCopilotChat({
                   borderColor: '#6366F1',
                 }}
               >
-                <CircularProgress size={16} sx={{ color: activeAiProvider === 'deepseek' ? '#818CF8' : '#4F46E5' }} />
-                <Typography variant="caption" sx={{ fontWeight: 700, color: activeAiProvider === 'deepseek' ? '#818CF8' : '#4F46E5', fontStyle: 'italic' }}>
-                  {activeAiProvider === 'deepseek'
+                <CircularProgress size={16} sx={{ color: isSuperAdmin && activeAiProvider === 'deepseek' ? '#818CF8' : '#4F46E5' }} />
+                <Typography variant="caption" sx={{ fontWeight: 700, color: isSuperAdmin && activeAiProvider === 'deepseek' ? '#818CF8' : '#4F46E5', fontStyle: 'italic' }}>
+                  {isSuperAdmin && activeAiProvider === 'deepseek'
                     ? 'Consulting pharmacology protocols & DeepSeek-V3 reasoning engine...'
-                    : 'Consulting pharmacology protocols & Gemini 3.8 Flash engine...'}
+                    : 'Consulting pharmacology protocols & clinical reasoning engine...'}
                 </Typography>
               </Paper>
             </Box>

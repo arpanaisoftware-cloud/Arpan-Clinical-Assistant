@@ -51,7 +51,7 @@ import Header from '../../components/Header';
 import { useAuth } from '../../context/AuthContext';
 import { ColorModeContext } from '../../theme/ThemeRegistry';
 import { useAppSelector } from '../../redux/hooks';
-import { PatientInput, AuthUser, AnalysisResult, HistoryRecord } from '../../types/clinical';
+import { PatientInput, AuthUser, AnalysisResult, HistoryRecord, isSuperAdminUser } from '../../types/clinical';
 import AdminAiSwitcherDialog from '../../components/AdminAiSwitcherDialog';
 import axiosClient from '../../redux/api/axiosClient';
 
@@ -269,7 +269,7 @@ function AiChatView() {
 
   const [activeAiProvider, setActiveAiProvider] = useState<'gemini' | 'deepseek'>('gemini');
   const [aiSwitcherOpen, setAiSwitcherOpen] = useState(false);
-  const isAdmin = currentUser?.role === 'Doctor' || currentUser?.modulePermissions === 'Full Access';
+  const isSuperAdmin = isSuperAdminUser(currentUser);
 
   useEffect(() => {
     const fetchAiStatus = async () => {
@@ -939,30 +939,32 @@ function AiChatView() {
                   <Typography variant="h6" sx={{ fontWeight: 900, lineHeight: 1.2, fontSize: { xs: '0.88rem', sm: '1.05rem' } }}>
                     Prof. Dr. Arpan AI
                   </Typography>
-                  <Tooltip title={isAdmin ? "Admin: Click to switch between Google Gemini and DeepSeek AI" : `Active Engine: ${activeAiProvider === 'deepseek' ? 'DeepSeek AI' : 'Google Gemini'}`} arrow>
-                    <Chip
-                      icon={
-                        activeAiProvider === 'deepseek' ? (
-                          <Psychology sx={{ fontSize: '13px !important', color: '#818CF8 !important' }} />
-                        ) : (
-                          <AutoAwesome sx={{ fontSize: '11px !important', color: '#10B981 !important' }} />
-                        )
-                      }
-                      label={activeAiProvider === 'deepseek' ? 'DeepSeek-V3 • Extreme Medical AI' : 'Gemini 3.8 Flash • Extreme Medical AI'}
-                      size="small"
-                      onClick={() => isAdmin && setAiSwitcherOpen(true)}
-                      sx={{
-                        bgcolor: activeAiProvider === 'deepseek' ? 'rgba(79, 70, 229, 0.18)' : 'rgba(16, 185, 129, 0.15)',
-                        color: activeAiProvider === 'deepseek' ? '#A5B4FC' : '#10B981',
-                        fontWeight: 800,
-                        fontSize: '0.64rem',
-                        height: 22,
-                        border: activeAiProvider === 'deepseek' ? '1px solid rgba(79, 70, 229, 0.35)' : '1px solid rgba(16, 185, 129, 0.3)',
-                        cursor: isAdmin ? 'pointer' : 'default',
-                        display: { xs: 'none', md: 'flex' }
-                      }}
-                    />
-                  </Tooltip>
+                  {isSuperAdmin && (
+                    <Tooltip title="Super Admin: Click to switch between Google Gemini and DeepSeek AI" arrow>
+                      <Chip
+                        icon={
+                          activeAiProvider === 'deepseek' ? (
+                            <Psychology sx={{ fontSize: '13px !important', color: '#818CF8 !important' }} />
+                          ) : (
+                            <AutoAwesome sx={{ fontSize: '11px !important', color: '#10B981 !important' }} />
+                          )
+                        }
+                        label={activeAiProvider === 'deepseek' ? 'DeepSeek-V3 • Extreme Medical AI' : 'Gemini 3.8 Flash • Extreme Medical AI'}
+                        size="small"
+                        onClick={() => setAiSwitcherOpen(true)}
+                        sx={{
+                          bgcolor: activeAiProvider === 'deepseek' ? 'rgba(79, 70, 229, 0.18)' : 'rgba(16, 185, 129, 0.15)',
+                          color: activeAiProvider === 'deepseek' ? '#A5B4FC' : '#10B981',
+                          fontWeight: 800,
+                          fontSize: '0.64rem',
+                          height: 22,
+                          border: activeAiProvider === 'deepseek' ? '1px solid rgba(79, 70, 229, 0.35)' : '1px solid rgba(16, 185, 129, 0.3)',
+                          cursor: 'pointer',
+                          display: { xs: 'none', md: 'flex' }
+                        }}
+                      />
+                    </Tooltip>
+                  )}
                 </Stack>
                 <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>
                   Diabetic &amp; Metabolic Pharmacotherapy Colleague • Organ Dosing • Interactions
@@ -972,8 +974,8 @@ function AiChatView() {
           </Stack>
 
           <Stack direction="row" spacing={1} alignItems="center">
-            {isAdmin && (
-              <Tooltip title="Admin: Switch between Google Gemini and DeepSeek AI" arrow>
+            {isSuperAdmin && (
+              <Tooltip title="Super Admin: Switch between Google Gemini and DeepSeek AI" arrow>
                 <Button
                   variant="outlined"
                   color="secondary"
@@ -1443,8 +1445,8 @@ function AiChatView() {
         </Grid>
       </Container>
 
-      {/* Admin AI Engine Switcher Modal */}
-      {isAdmin && (
+      {/* Admin AI Engine Switcher Modal — Only rendered for Super Admin */}
+      {isSuperAdmin && (
         <AdminAiSwitcherDialog
           open={aiSwitcherOpen}
           onClose={() => setAiSwitcherOpen(false)}

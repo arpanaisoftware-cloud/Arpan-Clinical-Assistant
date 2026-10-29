@@ -20,7 +20,8 @@ import MonitorHeart from '@mui/icons-material/MonitorHeart';
 import Science from '@mui/icons-material/Science';
 import Warning from '@mui/icons-material/Warning';
 import { SAMPLE_CLINICAL_CASE } from '../mockData/aiAnalysisData';
-import { PatientInput, MedicationInput } from '../types/clinical';
+import { PatientInput, MedicationInput, isSuperAdminUser } from '../types/clinical';
+import { useAppSelector } from '../redux/hooks';
 
 const CLINICAL_COMPLAINTS = [
   'Loss of appetite', 'Lower-limb edema', 'Dizziness', 'Weakness',
@@ -62,6 +63,8 @@ const INITIAL_VALUES: PatientInput = {
 };
 
 export default function PatientPrescriptionForm({ onAnalyze, onReset, isAnalyzing }: PatientPrescriptionFormProps) {
+  const currentUser = useAppSelector((state) => state.auth.currentUser);
+  const isSuperAdmin = isSuperAdminUser(currentUser);
   const [analysisProgress, setAnalysisProgress] = useState<number>(0);
   const [activeAiProvider, setActiveAiProvider] = useState<'gemini' | 'deepseek'>('deepseek');
 
@@ -105,9 +108,12 @@ export default function PatientPrescriptionForm({ onAnalyze, onReset, isAnalyzin
   const formik = useFormik<PatientInput>({
     initialValues: INITIAL_VALUES,
     validationSchema: PrescriptionValidationSchema,
-    // API INTEGRATION POINT 2: POST /api/analyze-form with JSON body
     onSubmit: (values) => {
-      toast.info(`Executing Clinical Analysis with ${activeAiProvider === 'deepseek' ? 'DeepSeek AI' : 'Gemini AI'}...`, { autoClose: 2000 });
+      if (isSuperAdmin) {
+        toast.info(`Executing Clinical Analysis with ${activeAiProvider === 'deepseek' ? 'DeepSeek AI' : 'Gemini AI'}...`, { autoClose: 2000 });
+      } else {
+        toast.info('Executing Clinical Prescription Safety Analysis...', { autoClose: 2000 });
+      }
       onAnalyze(values);
     }
   });
@@ -142,7 +148,9 @@ export default function PatientPrescriptionForm({ onAnalyze, onReset, isAnalyzin
 
             </Stack>
             <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' }, mt: 0.3 }}>
-              Manual clinical form is processed by <strong>{activeAiProvider === 'deepseek' ? 'DeepSeek AI (DeepSeek-V3)' : 'Google Gemini (3.8 Flash)'}</strong>.
+              {isSuperAdmin
+                ? <>Manual clinical form is processed by <strong>{activeAiProvider === 'deepseek' ? 'DeepSeek AI (DeepSeek-V3)' : 'Google Gemini (3.8 Flash)'}</strong>.</>
+                : <>Manual clinical form is processed by <strong>Clinical Safety Intelligence AI</strong>.</>}
             </Typography>
           </Box>
           <Button variant="outlined" size="small" color="secondary" startIcon={<Biotech />} onClick={handleLoadSample} sx={{ borderStyle: 'dashed', flexShrink: 0 }}>
@@ -347,27 +355,31 @@ export default function PatientPrescriptionForm({ onAnalyze, onReset, isAnalyzin
               <Button
                 type="submit"
                 variant="contained"
-                color={activeAiProvider === 'deepseek' ? 'secondary' : 'primary'}
+                color={isSuperAdmin && activeAiProvider === 'deepseek' ? 'secondary' : 'primary'}
                 size="large"
                 disabled={isAnalyzing}
-                startIcon={isAnalyzing ? <CircularProgress size={18} color="inherit" /> : (activeAiProvider === 'deepseek' ? <Biotech /> : <AutoAwesome />)}
+                startIcon={isAnalyzing ? <CircularProgress size={18} color="inherit" /> : (isSuperAdmin && activeAiProvider === 'deepseek' ? <Biotech /> : <AutoAwesome />)}
                 sx={{
                   px: 4,
                   py: 1.5,
                   fontSize: '1.02rem',
                   fontWeight: 800,
-                  bgcolor: activeAiProvider === 'deepseek' ? '#4F46E5' : undefined,
+                  bgcolor: isSuperAdmin && activeAiProvider === 'deepseek' ? '#4F46E5' : undefined,
                   '&:hover': {
-                    bgcolor: activeAiProvider === 'deepseek' ? '#4338CA' : undefined,
+                    bgcolor: isSuperAdmin && activeAiProvider === 'deepseek' ? '#4338CA' : undefined,
                   },
-                  boxShadow: activeAiProvider === 'deepseek'
+                  boxShadow: isSuperAdmin && activeAiProvider === 'deepseek'
                     ? '0 6px 20px rgba(79, 70, 229, 0.4)'
                     : '0 6px 20px rgba(0, 201, 167, 0.4)'
                 }}
               >
                 {isAnalyzing
-                  ? `Analyzing with ${activeAiProvider === 'deepseek' ? 'DeepSeek AI' : 'Gemini AI'}... ${analysisProgress}%`
-                  : (activeAiProvider === 'deepseek' ? 'Analyze with DeepSeek AI' : 'Analyze with Gemini AI')}
+                  ? (isSuperAdmin
+                      ? `Analyzing with ${activeAiProvider === 'deepseek' ? 'DeepSeek AI' : 'Gemini AI'}... ${analysisProgress}%`
+                      : `Analyzing Prescription Safety... ${analysisProgress}%`)
+                  : (isSuperAdmin
+                      ? (activeAiProvider === 'deepseek' ? 'Analyze with DeepSeek AI' : 'Analyze with Gemini AI')
+                      : 'Analyze Prescription Safety')}
               </Button>
             </Stack>
           </form>

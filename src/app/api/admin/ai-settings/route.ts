@@ -8,25 +8,7 @@ import {
   callGeminiAPI
 } from '@/lib/aiProvider';
 
-// Helper to check if user has admin privileges
-function isUserAdmin(user: any): boolean {
-  if (!user) return false;
-  if (user.role === 'Doctor') return true;
-  if (user.modulePermissions === 'Full Access') return true;
-
-  const name = (user.name || '').toLowerCase();
-  const staffId = (user.staffId || '').toLowerCase();
-  const email = (user.email || '').toLowerCase();
-
-  return (
-    name.includes('admin') ||
-    name.includes('superadmin') ||
-    staffId === 'admin' ||
-    staffId === 'admin 2' ||
-    email === 'arpanaisoftware@gmail.com' ||
-    email === 'dikshajain9907580417@gmail.com'
-  );
-}
+import { isSuperAdminUser } from '@/types/clinical';
 
 /**
  * GET /api/admin/ai-settings
@@ -61,11 +43,11 @@ export async function POST(req: Request) {
     }
 
     const currentUser = auth.user;
-    if (!currentUser || !isUserAdmin(currentUser)) {
+    if (!currentUser || !isSuperAdminUser(currentUser)) {
       return NextResponse.json(
         {
           success: false,
-          message: 'Access Denied: Only Clinical Administrators and Attending Physicians can change the AI provider.'
+          message: 'Access Denied: Only Super Admin can change the active AI provider.'
         },
         { status: 403 }
       );
@@ -115,9 +97,9 @@ export async function PUT(req: Request) {
     }
 
     const currentUser = auth.user;
-    if (!currentUser || !isUserAdmin(currentUser)) {
+    if (!currentUser || !isSuperAdminUser(currentUser)) {
       return NextResponse.json(
-        { success: false, message: 'Access Denied: Admin authorization required to test AI engines.' },
+        { success: false, message: 'Access Denied: Only Super Admin can test AI engines.' },
         { status: 403 }
       );
     }

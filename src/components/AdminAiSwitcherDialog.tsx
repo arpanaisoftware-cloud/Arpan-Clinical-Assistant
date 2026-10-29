@@ -34,6 +34,9 @@ import {
   Hub,
   Refresh
 } from '@mui/icons-material';
+import { useSelector } from 'react-redux';
+import { RootState } from '../redux/store';
+import { isSuperAdminUser } from '@/types/clinical';
 import { toast } from 'react-toastify';
 import axiosClient from '../redux/api/axiosClient';
 
@@ -50,6 +53,12 @@ export default function AdminAiSwitcherDialog({
 }: AdminAiSwitcherDialogProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  const currentUser = useSelector((state: RootState) => state.auth.currentUser);
+  const isSuperAdmin = isSuperAdminUser(currentUser);
+
+  if (!isSuperAdmin) {
+    return null;
+  }
 
   const [activeProvider, setActiveProvider] = useState<'gemini' | 'deepseek'>('gemini');
   const [geminiConfigured, setGeminiConfigured] = useState<boolean>(true);

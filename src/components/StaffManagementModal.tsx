@@ -40,7 +40,7 @@ import ContentCopy from '@mui/icons-material/ContentCopy';
 import Verified from '@mui/icons-material/Verified';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
-import { StaffUser, UserRole, ModulePermission } from '../types/clinical';
+import { StaffUser, UserRole, ModulePermission, isSuperAdminAccount } from '../types/clinical';
 import { toast } from 'react-toastify';
 
 // ─── Yup Validation Schema ────────────────────────────────────────────────────
@@ -416,7 +416,7 @@ export default function StaffManagementModal({
               </TableRow>
             </TableHead>
             <TableBody>
-              {staffList.map((user) => (
+              {staffList.filter(u => !isSuperAdminAccount(u)).map((user) => (
                 <TableRow key={user.id} hover>
                   <TableCell sx={{ fontWeight: 900, color: '#00C9A7' }}>{user.staffId}</TableCell>
                   <TableCell sx={{ fontWeight: 800, color: '#FFB703', fontFamily: 'monospace' }}>

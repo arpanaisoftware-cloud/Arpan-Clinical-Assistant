@@ -31,7 +31,7 @@ import Logout from '@mui/icons-material/Logout';
 import VpnKey from '@mui/icons-material/VpnKey';
 import AutoAwesome from '@mui/icons-material/AutoAwesome';
 import { useRouter } from 'next/navigation';
-import { AuthUser } from '../types/clinical';
+import { AuthUser, isSuperAdminUser } from '../types/clinical';
 import { useAppDispatch } from '../redux/hooks';
 import { changePassword } from '../redux/slices/authSlice';
 import { toast } from 'react-toastify';
@@ -65,7 +65,7 @@ export default function Header({
 }: HeaderProps) {
   const router = useRouter();
   const userRole = currentUser?.role || 'Doctor';
-  const isAdmin = userRole === 'Doctor' || currentUser?.modulePermissions === 'Full Access';
+  const isSuperAdmin = isSuperAdminUser(currentUser);
   const dispatch = useAppDispatch();
   const [changePasswordOpen, setChangePasswordOpen] = React.useState(false);
   const [currentPassword, setCurrentPassword] = React.useState('');
@@ -203,9 +203,9 @@ export default function Header({
           {currentUser && (
             <Stack direction="row" alignItems="center" spacing={{ xs: 0.8, sm: 1.5 }}>
 
-              {/* Admin AI Switcher (Admin-Only Switcher Dialog Trigger / Staff Indicator) */}
-              {isAdmin ? (
-                <Tooltip title="Admin Control: Click to switch between Google Gemini and DeepSeek AI" arrow placement="bottom">
+              {/* Admin AI Switcher (Super-Admin Only Switcher Dialog Trigger) */}
+              {isSuperAdmin && (
+                <Tooltip title="Super Admin: Click to switch between Google Gemini and DeepSeek AI" arrow placement="bottom">
                   <Box component="span" sx={{ display: 'inline-flex' }}>
                     <Chip
                       onClick={() => setAiSwitcherOpen(true)}
@@ -250,16 +250,6 @@ export default function Header({
                       }}
                     />
                   </Box>
-                </Tooltip>
-              ) : (
-                <Tooltip title={`Clinical AI Engine: ${activeAiProvider === 'deepseek' ? 'DeepSeek AI' : 'Google Gemini'}`} arrow placement="bottom">
-                  <Chip
-                    icon={activeAiProvider === 'deepseek' ? <Psychology sx={{ fontSize: '13px !important' }} /> : <AutoAwesome sx={{ fontSize: '13px !important' }} />}
-                    label={activeAiProvider === 'deepseek' ? 'DeepSeek AI' : 'Gemini AI'}
-                    size="small"
-                    variant="outlined"
-                    sx={{ height: 26, fontSize: '0.68rem', fontWeight: 800, opacity: 0.9 }}
-                  />
                 </Tooltip>
               )}
 
@@ -501,8 +491,8 @@ export default function Header({
         </DialogActions>
       </Dialog>
 
-      {/* Admin AI Engine Switcher Modal */}
-      {isAdmin && (
+      {/* Admin AI Engine Switcher Modal — Only rendered for Super Admin */}
+      {isSuperAdmin && (
         <AdminAiSwitcherDialog
           open={aiSwitcherOpen}
           onClose={() => setAiSwitcherOpen(false)}

@@ -231,6 +231,35 @@ export interface AuthUser {
   department: string;
 }
 
+export function isSuperAdminAccount(user?: { id?: string; staffId?: string; name?: string; email?: string } | null): boolean {
+  if (!user) return false;
+  const name = (user.name || '').toLowerCase().trim();
+  const staffId = (user.staffId || user.id || '').toLowerCase().trim();
+  const email = (user.email || '').toLowerCase().trim();
+
+  return (
+    name.includes('super admin') ||
+    name.includes('superadmin') ||
+    name.includes('admin 1') ||
+    name.includes('admin 2') ||
+    name === 'admin' ||
+    name.startsWith('admin') ||
+    staffId === 'admin' ||
+    staffId === 'admin-01' ||
+    staffId === 'admin-02' ||
+    staffId === 'admin 1' ||
+    staffId === 'admin 2' ||
+    staffId.startsWith('admin') ||
+    staffId === 'stf005' ||
+    staffId === 'stf006' ||
+    email === 'arpanaisoftware@gmail.com' ||
+    email === 'dikshajain9907580417@gmail.com' ||
+    email.startsWith('admin@')
+  );
+}
+
+export const isSuperAdminUser = isSuperAdminAccount;
+
 export type RiskCategoryType =
   | 'heartAttack'
   | 'stroke'

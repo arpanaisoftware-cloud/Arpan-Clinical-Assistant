@@ -52,7 +52,7 @@ export default function PrescriptionUploader({
         .then((d) => {
           if (d.success && d.activeProvider) setActiveAiProvider(d.activeProvider);
         })
-        .catch(() => {});
+        .catch(() => { });
       return () => window.removeEventListener('ai-provider-changed', handleAiChanged);
     }
   }, []);
@@ -240,11 +240,7 @@ export default function PrescriptionUploader({
           />
         </Stack>
 
-        <Box sx={{ mt: 1.5, p: 1, borderRadius: 1, bgcolor: 'rgba(0, 201, 167, 0.05)', border: '1px solid rgba(0, 201, 167, 0.2)' }}>
-          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.73rem', display: 'block', lineHeight: 1.35 }}>
-            📄 <strong>Note:</strong> Optical PDF/Image scan is powered by Gemini Vision OCR. DeepSeek is dedicated to clinical text reasoning ({activeAiProvider === 'deepseek' ? 'Active on Manual Form, Diet, Counselling & Chat' : 'Standby'}).
-          </Typography>
-        </Box>
+
 
         {/* Dedicated Action Buttons */}
         <Stack direction="row" spacing={1.5} mt={2}>

@@ -141,8 +141,6 @@ export async function POST(req: Request) {
       );
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
-
     // Helper to format values strictly as grams
     const formatGrams = (v: any, fallbackNum: number) => {
       if (!v) return `${fallbackNum}g`;
@@ -150,17 +148,17 @@ export async function POST(req: Request) {
       return m ? `${m[1]}g` : `${fallbackNum}g`;
     };
 
-    // If Gemini API is available, ask Gemini to recalculate precisely with minimal tokens
-    if (apiKey) {
-      try {
-        const scheduleText = mealSchedule
-          .map((m) => `- ${m.mealName || "Meal"}: ${m.portion || "Standard"} (${m.focus || ""})`)
-          .join("\n");
+    // Attempt AI recalculation using active clinical AI provider (DeepSeek / Gemini)
+    try {
+      const { generateClinicalJsonAnalysis } = await import('@/lib/aiProvider');
+      const scheduleText = mealSchedule
+        .map((m) => `- ${m.mealName || "Meal"}: ${m.portion || "Standard"} (${m.focus || ""})`)
+        .join("\n");
 
-        const conditionText = condition || patient.disease || "General Health";
-        const prefText = dietaryPreference || patient.dietaryPreference || "Vegetarian";
+      const conditionText = condition || patient.disease || "General Health";
+      const prefText = dietaryPreference || patient.dietaryPreference || "Vegetarian";
 
-        const prompt = `Indian Clinical Nutritionist. Calculate total daily calories and macronutrients strictly in grams (g) for this meal schedule.
+      const prompt = `Indian Clinical Nutritionist. Calculate total daily calories and macronutrients strictly in grams (g) for this meal schedule.
 Condition: ${conditionText} | Diet: ${prefText}${targetCalories ? ` | Target: ${targetCalories} kcal` : ""}
 
 Meals:
@@ -168,50 +166,40 @@ ${scheduleText}
 
 Return ONLY raw JSON with protein, fats, and carbs strictly formatted as grams ending in 'g' (NEVER use %):
 {
-  "calories": <integer e.g. 1750>,
-  "caloriesText": "<string e.g. '1,750 kcal'>",
-  "protein": "<string e.g. '68g'>",
-  "fats": "<string e.g. '42g'>",
-  "carbs": "<string e.g. '275g'>",
-  "fiber": "<string e.g. '28g'>",
-  "summary": "<1 brief sentence>"
+  "calories": 1750,
+  "caloriesText": "1,750 kcal",
+  "protein": "68g",
+  "fats": "42g",
+  "carbs": "275g",
+  "fiber": "28g",
+  "summary": "Nutritional profile updated."
 }`;
 
-        const geminiRes = await fetch(GEMINI_ENDPOINT, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-goog-api-key": apiKey
-          },
-          body: JSON.stringify({
-            contents: [{ role: "user", parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.1, responseMimeType: "application/json" }
-          })
-        });
+      const aiRes = await generateClinicalJsonAnalysis({
+        prompt,
+        systemPrompt: "You are an expert Indian Clinical Nutritionist. Return ONLY a valid JSON object."
+      });
 
-        if (geminiRes.ok) {
-          const geminiData = await geminiRes.json();
-          const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-          if (rawText) {
-            const parsed = parseJson(rawText);
-            const calNum = Number(parsed.calories) || Number(parsed.targetCalories) || 1750;
-            return NextResponse.json({
-              success: true,
-              data: {
-                calories: calNum,
-                caloriesText: parsed.caloriesText || `${calNum.toLocaleString()} kcal`,
-                protein: formatGrams(parsed.protein, 65),
-                fats: formatGrams(parsed.fats, 45),
-                carbs: formatGrams(parsed.carbs, 265),
-                fiber: formatGrams(parsed.fiber, 26),
-                summary: parsed.summary || "Nutritional profile updated."
-              }
-            });
+      if (aiRes?.data) {
+        const parsed = aiRes.data;
+        const calNum = Number(parsed.calories) || Number(parsed.targetCalories) || 1750;
+        return NextResponse.json({
+          success: true,
+          provider: aiRes.provider,
+          model: aiRes.model,
+          data: {
+            calories: calNum,
+            caloriesText: parsed.caloriesText || `${calNum.toLocaleString()} kcal`,
+            protein: formatGrams(parsed.protein, 65),
+            fats: formatGrams(parsed.fats, 45),
+            carbs: formatGrams(parsed.carbs, 265),
+            fiber: formatGrams(parsed.fiber, 26),
+            summary: parsed.summary || "Nutritional profile updated."
           }
-        }
-      } catch (geminiError) {
-        console.warn("Gemini recalculate failed, using fallback:", geminiError);
+        });
       }
+    } catch (aiError) {
+      console.warn("AI recalculate failed, using fallback:", aiError);
     }
 
     // Fallback calculation

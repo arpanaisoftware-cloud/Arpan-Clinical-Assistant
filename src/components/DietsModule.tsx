@@ -79,10 +79,11 @@ import Translate from "@mui/icons-material/Translate";
 import LocalFireDepartment from "@mui/icons-material/LocalFireDepartment";
 import EditNote from "@mui/icons-material/EditNote";
 import Undo from "@mui/icons-material/Undo";
+import Psychology from "@mui/icons-material/Psychology";
 import { toast } from "react-toastify";
 import confetti from "canvas-confetti";
 import { useAppSelector } from "../redux/hooks";
-import { HistoryRecord, DietHistoryRecord } from "../types/clinical";
+import { HistoryRecord, DietHistoryRecord, isSuperAdminUser } from "../types/clinical";
 import DietAnalysisLoader from "./DietAnalysisLoader";
 import DietHistoryTable from "./DietHistoryTable";
 
@@ -457,6 +458,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
 
   // Redux: Active analysis & History records
   const authUser = useAppSelector((s: any) => s.auth?.currentUser || s.auth?.user);
+  const isSuperAdmin = isSuperAdminUser(authUser);
   const activeAnalysis = useAppSelector((s: any) => s.clinical.analysisResult);
   const historyList: HistoryRecord[] = useAppSelector((s: any) => s.clinical.historyList) ?? [];
 
@@ -818,6 +820,11 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
         return;
       }
       setAiDietPlan(json.data);
+      if (json.provider) {
+        setDietAiProvider(json.provider);
+      } else {
+        setDietAiProvider(activeAiProvider);
+      }
       lastCalculatedScheduleRef.current = serializeMealSchedule(json.data?.mealSchedule);
       confetti({ particleCount: 90, spread: 100, origin: { y: 0.5 } });
       toast.success("Indian Diet & Electrolyte Plan ready!");
@@ -2774,21 +2781,21 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                   size="large"
                   onClick={handleGenerateDiet}
                   disabled={isGenDisabled}
-                  startIcon={isGenerating ? <CircularProgress size={20} color="inherit" /> : (activeAiProvider === 'deepseek' ? <Psychology /> : <AutoAwesome />)}
+                  startIcon={isGenerating ? <CircularProgress size={20} color="inherit" /> : (isSuperAdmin && activeAiProvider === 'deepseek' ? <Psychology /> : <AutoAwesome />)}
                   sx={{
                     borderRadius: "50px",
                     px: { xs: 4, sm: 6 },
                     py: 1.8,
                     fontSize: { xs: "0.95rem", sm: "1.05rem" },
                     fontWeight: 900,
-                    background: activeAiProvider === 'deepseek'
+                    background: isSuperAdmin && activeAiProvider === 'deepseek'
                       ? "linear-gradient(135deg, #4F46E5 0%, #2563EB 100%)"
                       : "linear-gradient(135deg, #00C9A7 0%, #6C5CE7 100%)",
-                    boxShadow: activeAiProvider === 'deepseek'
+                    boxShadow: isSuperAdmin && activeAiProvider === 'deepseek'
                       ? "0 8px 32px rgba(79,70,229,0.35)"
                       : "0 8px 32px rgba(0,201,167,0.35)",
                     "&:hover": {
-                      background: activeAiProvider === 'deepseek'
+                      background: isSuperAdmin && activeAiProvider === 'deepseek'
                         ? "linear-gradient(135deg, #4338CA 0%, #1D4ED8 100%)"
                         : "linear-gradient(135deg, #00B395 0%, #5a4bd1 100%)"
                     },
@@ -2796,8 +2803,12 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                   }}
                 >
                   {isGenerating
-                    ? `Analysing Clinical Profile with ${activeAiProvider === 'deepseek' ? 'DeepSeek AI' : 'Gemini AI'}... ${genProgress}%`
-                    : (activeAiProvider === 'deepseek' ? "Generate Indian Diet Plan with DeepSeek AI" : "Generate Indian Diet Plan with Gemini AI")}
+                    ? (isSuperAdmin
+                        ? `Analysing Clinical Profile with ${activeAiProvider === 'deepseek' ? 'DeepSeek AI' : 'Gemini AI'}... ${genProgress}%`
+                        : `Analysing Clinical Profile & Formulating Diet Plan... ${genProgress}%`)
+                    : (isSuperAdmin
+                        ? (activeAiProvider === 'deepseek' ? "Generate Indian Diet Plan with DeepSeek AI" : "Generate Indian Diet Plan with Gemini AI")
+                        : "Generate Comprehensive Indian Diet Plan")}
                 </Button>
                 {(!activeForm || !activeForm.patientName || !activeForm.age || !activeForm.gender || !activeForm.disease) && (
                   <Typography variant="caption" color="text.secondary" display="block" mt={1}>
@@ -2861,17 +2872,26 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                     </Typography>
 
                     <Stack direction="row" spacing={1} mt={2} flexWrap="wrap" gap={0.5}>
-                      {dietAiProvider === 'deepseek' ? (
-                        <Chip
-                          icon={<Psychology sx={{ fontSize: "14px !important", color: "#FFF !important" }} />}
-                          label="DeepSeek AI (DeepSeek-V3)"
-                          size="small"
-                          sx={{ bgcolor: "#4F46E5", color: "#FFF", fontWeight: 800, fontSize: "0.74rem" }}
-                        />
+                      {isSuperAdmin ? (
+                        dietAiProvider === 'deepseek' ? (
+                          <Chip
+                            icon={<Psychology sx={{ fontSize: "14px !important", color: "#FFF !important" }} />}
+                            label="DeepSeek AI (DeepSeek-V3)"
+                            size="small"
+                            sx={{ bgcolor: "#4F46E5", color: "#FFF", fontWeight: 800, fontSize: "0.74rem" }}
+                          />
+                        ) : (
+                          <Chip
+                            icon={<AutoAwesome sx={{ fontSize: "14px !important", color: "#FFF !important" }} />}
+                            label="Google Gemini (3.8 Flash)"
+                            size="small"
+                            sx={{ bgcolor: "#00C9A7", color: "#FFF", fontWeight: 800, fontSize: "0.74rem" }}
+                          />
+                        )
                       ) : (
                         <Chip
                           icon={<AutoAwesome sx={{ fontSize: "14px !important", color: "#FFF !important" }} />}
-                          label="Google Gemini (3.8 Flash)"
+                          label="Clinical Dietary AI Engine"
                           size="small"
                           sx={{ bgcolor: "#00C9A7", color: "#FFF", fontWeight: 800, fontSize: "0.74rem" }}
                         />
