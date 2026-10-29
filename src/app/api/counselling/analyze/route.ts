@@ -457,10 +457,20 @@ Return a RAW JSON array of exactly 10 items with no markdown code blocks or surr
         systemPrompt: 'You are an expert clinical endocrinologist, cardiologist, and patient counselling specialist. Return only a valid JSON array of 10 items.'
       });
 
-      if (aiRes?.data && Array.isArray(aiRes.data) && aiRes.data.length >= 6) {
+      let factorsList: any[] = [];
+      if (Array.isArray(aiRes?.data)) {
+        factorsList = aiRes.data;
+      } else if (aiRes?.data && typeof aiRes.data === 'object') {
+        const found = (aiRes.data as any).factors || (aiRes.data as any).riskFactors || (aiRes.data as any).counselling || (aiRes.data as any).data || Object.values(aiRes.data).find(Array.isArray);
+        if (Array.isArray(found)) {
+          factorsList = found;
+        }
+      }
+
+      if (factorsList.length >= 6) {
         return NextResponse.json({
           success: true,
-          data: aiRes.data,
+          data: factorsList,
           source: `${aiRes.provider}-ai`,
           provider: aiRes.provider,
           model: aiRes.model
@@ -470,11 +480,15 @@ Return a RAW JSON array of exactly 10 items with no markdown code blocks or surr
       console.warn('[counselling/analyze] AI counselling call failed, using rule-based algorithm:', aiError?.message);
     }
 
+    const { getActiveAiProvider } = await import('@/lib/aiProvider');
+    const activeProvider = await getActiveAiProvider().catch(() => 'deepseek');
+
     // Return the calculated 6 factors
     return NextResponse.json({
       success: true,
       data: fallbackFactors,
-      source: 'clinical-engine'
+      source: 'clinical-engine',
+      provider: activeProvider
     });
   } catch (error: any) {
     console.error('POST /api/counselling/analyze error:', error);

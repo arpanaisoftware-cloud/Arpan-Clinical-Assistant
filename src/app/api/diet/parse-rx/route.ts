@@ -371,9 +371,11 @@ export async function POST(req: Request) {
       dietPlan = buildClinicalIndianFallbackDiet(patientInfo, language);
     }
 
-    // Return single unified response containing both patientInfo and dietPlan
+    // Return single unified response containing both patientInfo and dietPlan via Gemini Vision OCR
     return NextResponse.json({
       success: true,
+      provider: 'gemini',
+      model: 'gemini-3.8-flash (Vision OCR)',
       data: {
         ...patientInfo,
         patientInfo,

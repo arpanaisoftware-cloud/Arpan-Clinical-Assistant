@@ -253,14 +253,15 @@ export default function DoctorCopilotChat({
   const effectiveUser = currentUser || reduxUser;
   const isSuperAdmin = isSuperAdminUser(effectiveUser);
 
-  const [activeAiProvider, setActiveAiProvider] = useState<'gemini' | 'deepseek'>('gemini');
+  const [activeAiProvider, setActiveAiProvider] = useState<'gemini' | 'deepseek'>('deepseek');
 
   useEffect(() => {
     const fetchAiStatus = async () => {
       try {
-        const res = await axiosClient.get('/api/admin/ai-settings');
-        if (res.data?.success && res.data.activeProvider) {
-          setActiveAiProvider(res.data.activeProvider);
+        const res = await fetch('/api/admin/ai-settings');
+        const data = await res.json();
+        if (data?.success && data.activeProvider) {
+          setActiveAiProvider(data.activeProvider);
         }
       } catch (e) {
         // silent
@@ -282,7 +283,7 @@ export default function DoctorCopilotChat({
       sender: 'ai',
       text: initialGreeting,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      model: 'gemini-3.8-flash'
+      model: 'deepseek-chat'
     }
   ]);
   const [input, setInput] = useState<string>('');
@@ -396,7 +397,7 @@ export default function DoctorCopilotChat({
         sender: 'ai',
         text: generalGreeting,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        model: 'gemini-3.8-flash'
+        model: activeAiProvider === 'deepseek' ? 'deepseek-chat' : 'gemini-3.8-flash'
       }
     ]);
     toast.info('Consultation reset to General Clinical Consultation Mode.');
@@ -414,7 +415,7 @@ export default function DoctorCopilotChat({
         sender: 'ai',
         text: `🌐 **General Clinical Consultation Mode Enabled**\n\nNo specific patient record attached. You can ask any question regarding diabetic pharmacotherapy, drug mechanisms, generic bio-equivalents, organ-adjusted dosing, or drug interactions.`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        model: 'gemini-3.8-flash'
+        model: activeAiProvider === 'deepseek' ? 'deepseek-chat' : 'gemini-3.8-flash'
       };
       setMessages((prev) => [...prev, switchMsg]);
       toast.info('Switched to General Consultation mode.');
@@ -432,7 +433,7 @@ export default function DoctorCopilotChat({
         sender: 'ai',
         text: `🔄 **Consultation Context Switched: ${name}**\n\n* 📋 **Diagnosis**: ${disease}\n* 🛡️ **Pre-analyzed Safety Score**: ${score}/100 (${risk})\n* 💊 **Prescribed Drugs**: ${medList.length} medications loaded.\n\nAll pre-analyzed patient data (vitals, lab biomarkers, flagged drug interactions) is now active in context. What would you like to review or modify regarding this patient?`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        model: 'gemini-3.8-flash'
+        model: activeAiProvider === 'deepseek' ? 'deepseek-chat' : 'gemini-3.8-flash'
       };
       setMessages((prev) => [...prev, switchMsg]);
       toast.info(`AI context loaded for ${name}`);
@@ -526,7 +527,7 @@ export default function DoctorCopilotChat({
           sender: 'ai',
           text: aiReply,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          model: resData.model || 'gemini-3.8-flash',
+          model: resData.model || (activeAiProvider === 'deepseek' ? 'deepseek-chat' : 'gemini-3.8-flash'),
         },
       ]);
     } catch (err: any) {
@@ -908,6 +909,20 @@ export default function DoctorCopilotChat({
                     <Typography variant="caption" sx={{ fontWeight: 800, color: '#4F46E5', fontSize: '0.74rem' }}>
                       Prof. Dr. Arpan AI
                     </Typography>
+                    {isSuperAdmin && (
+                      <Chip
+                        label={m.model?.includes('deepseek') || activeAiProvider === 'deepseek' ? 'DeepSeek-V3' : 'Gemini 3.8'}
+                        size="small"
+                        sx={{
+                          height: 16,
+                          fontSize: '0.62rem',
+                          fontWeight: 800,
+                          px: 0.2,
+                          bgcolor: (m.model?.includes('deepseek') || activeAiProvider === 'deepseek') ? 'rgba(79, 70, 229, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+                          color: (m.model?.includes('deepseek') || activeAiProvider === 'deepseek') ? '#818CF8' : '#34D399',
+                        }}
+                      />
+                    )}
                     <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.68rem' }}>
                       {m.timestamp}
                     </Typography>

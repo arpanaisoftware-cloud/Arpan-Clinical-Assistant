@@ -377,7 +377,7 @@ export async function POST(req: Request) {
       try {
         let parsedAI: any = null;
 
-        // PDF / Image scanning: strictly Gemini Vision regardless of active AI provider
+        // OCR extraction & clinical analysis via Gemini Vision (document upload uses Gemini)
         const rawText = await extractPrescriptionWithVision(base64Data, mimeType, ANALYSIS_PROMPT);
         parsedAI = parseJson(rawText);
 
@@ -393,7 +393,7 @@ export async function POST(req: Request) {
         return NextResponse.json({
           ...enriched,
           aiProvider: 'gemini',
-          aiModel: 'clinical-engine-rules'
+          aiModel: 'clinical-engine-rules (Vision Fallback)'
         }, { status: 200 });
       }
     }
@@ -456,10 +456,12 @@ Perform full clinical review and return the complete JSON object matching the sc
         }, { status: 200 });
       } catch (aiErr: any) {
         console.warn('[analyze/json] AI review failed, falling back to clinical rules engine:', aiErr?.message);
+        const { getActiveAiProvider } = await import('@/lib/aiProvider');
+        const activeProvider = await getActiveAiProvider().catch(() => 'gemini');
         const enriched = enrichAnalysisResult(null, body);
         return NextResponse.json({
           ...enriched,
-          aiProvider: 'gemini',
+          aiProvider: activeProvider,
           aiModel: 'clinical-engine-fallback'
         }, { status: 200 });
       }

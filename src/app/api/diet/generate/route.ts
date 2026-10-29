@@ -386,6 +386,10 @@ export async function POST(req: Request) {
         language: effectiveLanguage,
         customCalories: effectiveCalories
       });
+      const { getActiveAiProvider } = await import('@/lib/aiProvider');
+      const active = await getActiveAiProvider().catch(() => 'deepseek');
+      aiProviderUsed = active;
+      aiModelUsed = active === 'deepseek' ? 'deepseek-chat' : 'gemini-3.8-flash';
     }
 
     return NextResponse.json({

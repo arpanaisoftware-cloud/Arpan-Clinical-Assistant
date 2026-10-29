@@ -71,7 +71,7 @@ import AirlineSeatReclineNormal from '@mui/icons-material/AirlineSeatReclineNorm
 import Speed from '@mui/icons-material/Speed';
 import MonitorWeight from '@mui/icons-material/MonitorWeight';
 import { COUNSELLING_RISK_DATABASE } from '../mockData/clinicalModulesData';
-import { RiskAssessmentItem, RiskCategoryType, HistoryRecord, CounsellingHistoryRecord } from '../types/clinical';
+import { RiskAssessmentItem, RiskCategoryType, HistoryRecord, CounsellingHistoryRecord, isSuperAdminUser } from '../types/clinical';
 import confetti from 'canvas-confetti';
 import { toast } from 'react-toastify';
 import CounsellingAnalysisLoader from './CounsellingAnalysisLoader';
@@ -172,6 +172,7 @@ export default function CounsellingModule({
 
   // Redux: Active analysis & History records
   const authUser = useAppSelector((s: any) => s.auth?.currentUser || s.auth?.user);
+  const isSuperAdmin = isSuperAdminUser(authUser);
   const activeAnalysis = useAppSelector((s: any) => s.clinical.analysisResult);
   const historyList: HistoryRecord[] = useAppSelector((s: any) => s.clinical.historyList) ?? [];
   const [historySearch, setHistorySearch] = useState<string>('');
@@ -255,6 +256,7 @@ export default function CounsellingModule({
       const handleAiChanged = (e: any) => {
         if (e.detail?.provider) {
           setActiveAiProvider(e.detail.provider);
+          setCounsellingAiProvider(e.detail.provider);
         }
       };
       window.addEventListener('ai-provider-changed', handleAiChanged);
@@ -263,6 +265,7 @@ export default function CounsellingModule({
         .then((d) => {
           if (d.success && d.activeProvider) {
             setActiveAiProvider(d.activeProvider);
+            setCounsellingAiProvider(d.activeProvider);
           }
         })
         .catch(() => { });
@@ -284,7 +287,7 @@ export default function CounsellingModule({
     egfr: number | string;
     sensationLoss?: string;
     footGrade?: string;
-  }) => {
+  }, forcedProvider?: 'gemini' | 'deepseek') => {
     setIsAnalyzing(true);
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('arpan_auth_token') : '';
@@ -320,12 +323,16 @@ export default function CounsellingModule({
         ? json.data
         : riskFactors;
 
-      if (json.provider) {
+      if (forcedProvider) {
+        setCounsellingAiProvider(forcedProvider);
+      } else if (json.provider) {
         setCounsellingAiProvider(json.provider);
       } else if (json.source?.includes('deepseek')) {
         setCounsellingAiProvider('deepseek');
       } else if (json.source?.includes('gemini')) {
         setCounsellingAiProvider('gemini');
+      } else {
+        setCounsellingAiProvider(activeAiProvider);
       }
 
       if (json.success && Array.isArray(json.data) && json.data.length > 0) {
@@ -418,6 +425,7 @@ export default function CounsellingModule({
     setFootGrade(record.footGrade || 'grade_0');
     if (record.riskFactors && record.riskFactors.length > 0) {
       setRiskFactors(record.riskFactors);
+      setCounsellingAiProvider((record as any).aiProvider || activeAiProvider);
     }
     setSubmitted(true);
     setActiveTab(0);
@@ -576,7 +584,7 @@ export default function CounsellingModule({
           egfr: parsedEgfr,
           sensationLoss: sensationLoss || 'Mild Loss',
           footGrade: footGrade || 'Grade 0 (Intact Skin)'
-        });
+        }, 'gemini');
       } catch (err: any) {
         clearInterval(progressTimer);
         toast.error(err.message || 'Error reading prescription.');
@@ -1125,8 +1133,12 @@ export default function CounsellingModule({
                   }}
                 >
                   {isAnalyzing
-                    ? `Generating with ${activeAiProvider === 'deepseek' ? 'DeepSeek AI' : 'Gemini AI'}...`
-                    : (activeAiProvider === 'deepseek' ? 'Generate Counselling with DeepSeek AI' : 'Generate Counselling with Gemini AI')}
+                    ? (isSuperAdmin
+                        ? `Generating with ${activeAiProvider === 'deepseek' ? 'DeepSeek AI' : 'Gemini AI'}...`
+                        : 'Generating Clinical Counselling Analysis...')
+                    : (isSuperAdmin
+                        ? (activeAiProvider === 'deepseek' ? 'Generate Counselling with DeepSeek AI' : 'Generate Counselling with Gemini AI')
+                        : 'Generate Clinical Counselling Report')}
                 </Button>
               </Box>
             </Paper>
@@ -1849,8 +1861,12 @@ export default function CounsellingModule({
                         }}
                       >
                         {isAnalyzing
-                          ? `Generating with ${activeAiProvider === 'deepseek' ? 'DeepSeek AI' : 'Gemini AI'}...`
-                          : (activeAiProvider === 'deepseek' ? 'Generate Counselling with DeepSeek AI' : 'Generate Counselling with Gemini AI')}
+                          ? (isSuperAdmin
+                              ? `Generating with ${activeAiProvider === 'deepseek' ? 'DeepSeek AI' : 'Gemini AI'}...`
+                              : 'Generating Clinical Counselling Analysis...')
+                          : (isSuperAdmin
+                              ? (activeAiProvider === 'deepseek' ? 'Generate Counselling with DeepSeek AI' : 'Generate Counselling with Gemini AI')
+                              : 'Generate Clinical Counselling Report')}
                       </Button>
                     </Box>
                   </Paper>
@@ -1889,17 +1905,26 @@ export default function CounsellingModule({
                 <Typography variant="h5" sx={{ fontWeight: 800 }}>
                   10-Factor Chronic Risk Advisory
                 </Typography>
-                {counsellingAiProvider === 'deepseek' ? (
-                  <Chip
-                    icon={<Psychology sx={{ fontSize: '15px !important', color: '#FFF !important' }} />}
-                    label="DeepSeek AI (DeepSeek-V3)"
-                    size="small"
-                    sx={{ bgcolor: '#4F46E5', color: '#FFF', fontWeight: 800, fontSize: '0.74rem' }}
-                  />
+                {isSuperAdmin ? (
+                  counsellingAiProvider === 'deepseek' ? (
+                    <Chip
+                      icon={<Psychology sx={{ fontSize: '15px !important', color: '#FFF !important' }} />}
+                      label="DeepSeek AI (DeepSeek-V3)"
+                      size="small"
+                      sx={{ bgcolor: '#4F46E5', color: '#FFF', fontWeight: 800, fontSize: '0.74rem' }}
+                    />
+                  ) : (
+                    <Chip
+                      icon={<AutoAwesome sx={{ fontSize: '14px !important', color: '#FFF !important' }} />}
+                      label={counsellingAiProvider === 'gemini' && inputMode === 'prescription' ? "Gemini Vision OCR" : "Google Gemini (3.8 Flash)"}
+                      size="small"
+                      sx={{ bgcolor: '#00C9A7', color: '#FFF', fontWeight: 800, fontSize: '0.74rem' }}
+                    />
+                  )
                 ) : (
                   <Chip
-                    icon={<AutoAwesome sx={{ fontSize: '14px !important', color: '#FFF !important' }} />}
-                    label="Google Gemini (3.8 Flash)"
+                    icon={<Shield sx={{ fontSize: '14px !important', color: '#FFF !important' }} />}
+                    label="Clinical Counselling Advisory Engine"
                     size="small"
                     sx={{ bgcolor: '#00C9A7', color: '#FFF', fontWeight: 800, fontSize: '0.74rem' }}
                   />

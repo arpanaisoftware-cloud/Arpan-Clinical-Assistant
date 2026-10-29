@@ -17,11 +17,13 @@ import {
 import CloudUpload from '@mui/icons-material/CloudUpload';
 import DocumentScanner from '@mui/icons-material/DocumentScanner';
 import AutoAwesome from '@mui/icons-material/AutoAwesome';
-import InsertDriveFile from '@mui/icons-material/InsertDriveFile';
 import Close from '@mui/icons-material/Close';
 import PictureAsPdf from '@mui/icons-material/PictureAsPdf';
 import ImageIcon from '@mui/icons-material/Image';
+import Psychology from '@mui/icons-material/Psychology';
 import { toast } from 'react-toastify';
+import { useAppSelector } from '../redux/hooks';
+import { isSuperAdminUser } from '../types/clinical';
 
 interface PrescriptionUploaderProps {
   onAnalyzeDocument?: (file: File) => void;
@@ -38,6 +40,9 @@ export default function PrescriptionUploader({
   const [file, setFile] = useState<File | null>(null);
   const [analysisProgress, setAnalysisProgress] = useState<number>(0);
   const [activeAiProvider, setActiveAiProvider] = useState<'gemini' | 'deepseek'>('gemini');
+
+  const currentUser = useAppSelector((state) => state.auth.currentUser);
+  const isSuperAdmin = isSuperAdminUser(currentUser);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -139,7 +144,10 @@ export default function PrescriptionUploader({
           </Typography>
         </Stack>
         <Typography variant="body2" color="text.secondary" mb={2.5}>
-          Upload a prescription image (JPG/PNG) or PDF. Optical character reading &amp; document parsing is processed by <strong>Gemini Vision OCR</strong> (multimodal document engine).
+          {isSuperAdmin
+            ? <>Upload a prescription image (JPG/PNG) or PDF. Optical character reading &amp; document parsing is processed by <strong>Gemini Vision OCR</strong>.</>
+            : <>Upload a prescription image (JPG/PNG) or PDF. Optical character reading &amp; clinical document safety evaluation.</>
+          }
         </Typography>
 
         {/* Upload Drop Zone */}
@@ -206,8 +214,10 @@ export default function PrescriptionUploader({
           {isAnalyzing && (
             <Box sx={{ width: '100%', mt: 2 }}>
               <Stack direction="row" justifyContent="space-between" alignItems="center" mb={0.5}>
-                <Typography variant="caption" color="secondary" sx={{ fontWeight: 800 }}>
-                  ⚡ Scanning &amp; extracting prescription with Gemini Vision OCR...
+                <Typography variant="caption" color={activeAiProvider === 'deepseek' && isSuperAdmin ? "primary" : "secondary"} sx={{ fontWeight: 800 }}>
+                  {isSuperAdmin
+                    ? '⚡ Scanning & extracting prescription with Gemini Vision OCR...'
+                    : '⚡ Scanning & evaluating clinical prescription...'}
                 </Typography>
                 <Typography variant="caption" color="secondary" sx={{ fontWeight: 900 }}>
                   {analysisProgress}%
@@ -227,20 +237,22 @@ export default function PrescriptionUploader({
         <Stack direction="row" spacing={1} mt={2} flexWrap="wrap" gap={1}>
           <Chip label="✦ Direct PDF → AI" size="small" sx={{ fontWeight: 700, fontSize: '0.72rem', bgcolor: 'rgba(108, 92, 231, 0.12)', color: '#6C5CE7' }} />
           <Chip label="✦ No Manual Typing" size="small" sx={{ fontWeight: 700, fontSize: '0.72rem', bgcolor: 'rgba(0, 201, 167, 0.12)', color: '#00C9A7' }} />
-          <Chip
-            label="✦ Powered by Gemini Vision OCR"
-            size="small"
-            sx={{
-              fontWeight: 800,
-              fontSize: '0.72rem',
-              bgcolor: 'rgba(0, 201, 167, 0.12)',
-              color: '#00C9A7',
-              border: '1px solid rgba(0, 201, 167, 0.35)'
-            }}
-          />
+          {isSuperAdmin ? (
+            <Chip
+              label="✦ Powered by Gemini Vision OCR"
+              size="small"
+              sx={{
+                fontWeight: 800,
+                fontSize: '0.72rem',
+                bgcolor: 'rgba(0, 201, 167, 0.12)',
+                color: '#00C9A7',
+                border: '1px solid rgba(0, 201, 167, 0.35)'
+              }}
+            />
+          ) : (
+            <Chip label="✦ Clinical AI OCR" size="small" sx={{ fontWeight: 700, fontSize: '0.72rem', bgcolor: 'rgba(0, 201, 167, 0.12)', color: '#00C9A7' }} />
+          )}
         </Stack>
-
-
 
         {/* Dedicated Action Buttons */}
         <Stack direction="row" spacing={1.5} mt={2}>
@@ -259,26 +271,36 @@ export default function PrescriptionUploader({
           <Button
             fullWidth
             variant="contained"
-            color="secondary"
+            color={activeAiProvider === 'deepseek' && isSuperAdmin ? "primary" : "secondary"}
             size="large"
             disabled={!file || isAnalyzing}
             onClick={handleAnalyzeDocument}
-            startIcon={isAnalyzing ? <CircularProgress size={18} color="inherit" /> : <AutoAwesome />}
+            startIcon={isAnalyzing ? <CircularProgress size={18} color="inherit" /> : (activeAiProvider === 'deepseek' && isSuperAdmin ? <Psychology /> : <AutoAwesome />)}
             sx={{
               py: 1.3,
               fontWeight: 800,
               fontSize: '0.95rem',
               borderRadius: 1.5,
-              background: 'linear-gradient(135deg, #6C5CE7 0%, #8C7AE6 100%)',
-              boxShadow: '0 4px 16px rgba(108, 92, 231, 0.4)',
+              background: activeAiProvider === 'deepseek' && isSuperAdmin
+                ? 'linear-gradient(135deg, #4F46E5 0%, #2563EB 100%)'
+                : 'linear-gradient(135deg, #6C5CE7 0%, #8C7AE6 100%)',
+              boxShadow: activeAiProvider === 'deepseek' && isSuperAdmin
+                ? '0 4px 16px rgba(79, 70, 229, 0.4)'
+                : '0 4px 16px rgba(108, 92, 231, 0.4)',
               '&:hover': {
-                background: 'linear-gradient(135deg, #5b4bc4 0%, #7b69d6 100%)',
+                background: activeAiProvider === 'deepseek' && isSuperAdmin
+                  ? 'linear-gradient(135deg, #4338CA 0%, #1D4ED8 100%)'
+                  : 'linear-gradient(135deg, #5b4bc4 0%, #7b69d6 100%)',
               }
             }}
           >
             {isAnalyzing
-              ? `Scanning with Gemini Vision... ${analysisProgress}%`
-              : 'Scan & Analyze with Gemini Vision'}
+              ? (isSuperAdmin
+                  ? `Scanning with Gemini Vision... ${analysisProgress}%`
+                  : `Scanning & Analyzing Prescription... ${analysisProgress}%`)
+              : (isSuperAdmin
+                  ? 'Scan & Analyze with Gemini Vision'
+                  : 'Scan & Analyze Prescription')}
           </Button>
         </Stack>
       </CardContent>

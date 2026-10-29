@@ -52,7 +52,8 @@ import MonitorHeart from '@mui/icons-material/MonitorHeart';
 import Science from '@mui/icons-material/Science';
 import AssignmentTurnedIn from '@mui/icons-material/AssignmentTurnedIn';
 import confetti from 'canvas-confetti';
-import { AnalysisResult } from '../types/clinical';
+import { AnalysisResult, isSuperAdminUser } from '../types/clinical';
+import { useAppSelector } from '../redux/hooks';
 
 interface AiAnalysisDashboardProps {
   analysisResult: AnalysisResult | null;
@@ -70,6 +71,9 @@ export default function AiAnalysisDashboard({
 
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+
+  const currentUser = useAppSelector((state) => state.auth.currentUser);
+  const isSuperAdmin = isSuperAdminUser(currentUser);
 
   if (!analysisResult) return null;
 
@@ -132,23 +136,38 @@ export default function AiAnalysisDashboard({
                   px: 1
                 }}
               />
-              {analysisResult.aiProvider === 'deepseek' ? (
-                <Chip
-                  icon={<Psychology sx={{ fontSize: '15px !important', color: '#FFF !important' }} />}
-                  label="DeepSeek AI (DeepSeek-V3)"
-                  size="small"
-                  sx={{
-                    bgcolor: '#4F46E5',
-                    color: '#FFF',
-                    fontWeight: 800,
-                    fontSize: '0.74rem',
-                    boxShadow: '0 2px 8px rgba(79, 70, 229, 0.4)'
-                  }}
-                />
+              {isSuperAdmin ? (
+                analysisResult.aiProvider === 'deepseek' ? (
+                  <Chip
+                    icon={<Psychology sx={{ fontSize: '15px !important', color: '#FFF !important' }} />}
+                    label="DeepSeek AI (DeepSeek-V3)"
+                    size="small"
+                    sx={{
+                      bgcolor: '#4F46E5',
+                      color: '#FFF',
+                      fontWeight: 800,
+                      fontSize: '0.74rem',
+                      boxShadow: '0 2px 8px rgba(79, 70, 229, 0.4)'
+                    }}
+                  />
+                ) : (
+                  <Chip
+                    icon={<AutoAwesome sx={{ fontSize: '14px !important', color: '#FFF !important' }} />}
+                    label={analysisResult.aiModel?.includes('Vision') ? 'Gemini Vision OCR' : 'Google Gemini (3.8 Flash)'}
+                    size="small"
+                    sx={{
+                      bgcolor: '#00C9A7',
+                      color: '#FFF',
+                      fontWeight: 800,
+                      fontSize: '0.74rem',
+                      boxShadow: '0 2px 8px rgba(0, 201, 167, 0.4)'
+                    }}
+                  />
+                )
               ) : (
                 <Chip
                   icon={<AutoAwesome sx={{ fontSize: '14px !important', color: '#FFF !important' }} />}
-                  label={analysisResult.aiModel?.includes('Vision') ? 'Gemini Vision OCR' : 'Google Gemini (3.8 Flash)'}
+                  label="Clinical AI Safety Engine"
                   size="small"
                   sx={{
                     bgcolor: '#00C9A7',

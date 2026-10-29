@@ -365,12 +365,10 @@ export async function generateClinicalJsonAnalysis<T = any>(options: {
     if (process.env.DEEPSEEK_API_KEY) {
       try {
         const messages: Array<{ role: 'system' | 'user'; content: string }> = [];
-        if (options.systemPrompt) {
-          messages.push({
-            role: 'system',
-            content: `${options.systemPrompt}\nYou must return a valid, well-formed JSON object or JSON array with no extra text.`
-          });
-        }
+        const systemPromptText = options.systemPrompt
+          ? `${options.systemPrompt}\nYou must return a valid, well-formed JSON response adhering to the requested schema with no extra text.`
+          : 'You are a senior clinical AI assistant. You must return a valid, well-formed JSON response with no extra text.';
+        messages.push({ role: 'system', content: systemPromptText });
         messages.push({ role: 'user', content: options.prompt });
 
         const raw = await callDeepSeekAPI({

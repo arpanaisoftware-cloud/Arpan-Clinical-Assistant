@@ -593,6 +593,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
       const handleAiChanged = (e: any) => {
         if (e.detail?.provider) {
           setActiveAiProvider(e.detail.provider);
+          setDietAiProvider(e.detail.provider);
         }
       };
       window.addEventListener('ai-provider-changed', handleAiChanged);
@@ -601,6 +602,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
         .then((d) => {
           if (d.success && d.activeProvider) {
             setActiveAiProvider(d.activeProvider);
+            setDietAiProvider(d.activeProvider);
           }
         })
         .catch(() => { });
@@ -694,6 +696,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
         const d = json.data;
         if (d.dietPlan) {
           setAiDietPlan(d.dietPlan);
+          setDietAiProvider(json.provider || activeAiProvider);
           lastCalculatedScheduleRef.current = serializeMealSchedule(d.dietPlan?.mealSchedule);
           confetti({ particleCount: 80, spread: 90, origin: { y: 0.5 } });
           toast.success("Prescription scanned & Indian Diet Plan generated in a single step!");
@@ -1083,6 +1086,11 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
       });
       const data = await res.json();
       if (data.success && data.data) {
+        if (data.provider) {
+          setDietAiProvider(data.provider);
+        } else {
+          setDietAiProvider(activeAiProvider);
+        }
         lastCalculatedScheduleRef.current = currentScheduleKey;
         updatedCalories = Number(data.data.calories) || updatedCalories;
         updatedMacro = {
@@ -1260,6 +1268,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
       };
 
       setAiDietPlan(updatedPlan);
+      setDietAiProvider(json.provider || activeAiProvider);
       lastCalculatedScheduleRef.current = serializeMealSchedule(updatedPlan.mealSchedule);
       confetti({ particleCount: 85, spread: 90, origin: { y: 0.5 } });
       toast.success(`Diet plan successfully regenerated for ${newTargetCalories} kcal!`);
@@ -2763,6 +2772,43 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                           />
                         </Grid>
                       </Grid>
+
+                      {/* Dedicated Generate Button inside the Analysed Patient Card */}
+                      <Box sx={{ textAlign: "center", mt: 3, pt: 2, borderTop: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.08)" }}>
+                        <Button
+                          variant="contained"
+                          size="large"
+                          onClick={handleGenerateDiet}
+                          disabled={isGenerating || !historyForm || !historyForm.patientName || !historyForm.age || !historyForm.gender || !historyForm.disease}
+                          startIcon={isGenerating ? <CircularProgress size={20} color="inherit" /> : (isSuperAdmin && (dietAiProvider === 'deepseek' || activeAiProvider === 'deepseek') ? <Psychology /> : <AutoAwesome />)}
+                          sx={{
+                            borderRadius: "50px",
+                            px: { xs: 4, sm: 6 },
+                            py: 1.6,
+                            fontSize: { xs: "0.95rem", sm: "1.05rem" },
+                            fontWeight: 900,
+                            background: isSuperAdmin && (dietAiProvider === 'deepseek' || activeAiProvider === 'deepseek')
+                              ? "linear-gradient(135deg, #4F46E5 0%, #2563EB 100%)"
+                              : "linear-gradient(135deg, #00C9A7 0%, #6C5CE7 100%)",
+                            boxShadow: isSuperAdmin && (dietAiProvider === 'deepseek' || activeAiProvider === 'deepseek')
+                              ? "0 8px 32px rgba(79,70,229,0.35)"
+                              : "0 8px 32px rgba(0,201,167,0.35)",
+                            "&:hover": {
+                              background: isSuperAdmin && (dietAiProvider === 'deepseek' || activeAiProvider === 'deepseek')
+                                ? "linear-gradient(135deg, #4338CA 0%, #1D4ED8 100%)"
+                                : "linear-gradient(135deg, #00B395 0%, #5a4bd1 100%)"
+                            }
+                          }}
+                        >
+                          {isGenerating
+                            ? (isSuperAdmin
+                                ? `Analysing Clinical Profile with ${(dietAiProvider === 'deepseek' || activeAiProvider === 'deepseek') ? 'DeepSeek AI' : 'Gemini AI'}... ${genProgress}%`
+                                : `Analysing Clinical Profile & Formulating Diet Plan... ${genProgress}%`)
+                            : (isSuperAdmin
+                                ? ((dietAiProvider === 'deepseek' || activeAiProvider === 'deepseek') ? "Generate Indian Diet Plan with DeepSeek AI" : "Generate Indian Diet Plan with Gemini AI")
+                                : "Generate Comprehensive Indian Diet Plan")}
+                        </Button>
+                      </Box>
                     </Box>
                   </Paper>
                 </Fade>
@@ -2770,9 +2816,9 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
             </Paper>
           )}
 
-          {/* Generate Button Section (For Manual Entry & Selected Patient) */}
-          {inputMode !== "prescription" && (() => {
-            const activeForm = inputMode === "history" ? historyForm : form;
+          {/* Generate Button Section (For Manual Entry) */}
+          {inputMode === "manual" && (() => {
+            const activeForm = form;
             const isGenDisabled = isGenerating || !activeForm || !activeForm.patientName || !activeForm.age || !activeForm.gender || !activeForm.disease;
             return (
               <Box sx={{ textAlign: "center", my: 3.5 }}>
@@ -2812,9 +2858,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                 </Button>
                 {(!activeForm || !activeForm.patientName || !activeForm.age || !activeForm.gender || !activeForm.disease) && (
                   <Typography variant="caption" color="text.secondary" display="block" mt={1}>
-                    {inputMode === "history"
-                      ? "* Please select an analysed patient above to generate diet plan"
-                      : "* Patient Name, Age, Gender, and Medical Condition required"}
+                    * Patient Name, Age, Gender, and Medical Condition required
                   </Typography>
                 )}
               </Box>
@@ -2883,7 +2927,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                         ) : (
                           <Chip
                             icon={<AutoAwesome sx={{ fontSize: "14px !important", color: "#FFF !important" }} />}
-                            label="Google Gemini (3.8 Flash)"
+                            label={dietAiProvider === 'gemini' && inputMode === 'prescription' ? "Gemini Vision OCR" : "Google Gemini (3.8 Flash)"}
                             size="small"
                             sx={{ bgcolor: "#00C9A7", color: "#FFF", fontWeight: 800, fontSize: "0.74rem" }}
                           />
@@ -2898,7 +2942,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                       )}
                       <Chip
                         icon={<CheckCircle sx={{ fontSize: "14px !important" }} />}
-                        label={`Patient: ${form.patientName} (${form.age}Y, ${form.gender})`}
+                        label={`Patient: ${(inputMode === 'history' ? historyForm?.patientName : form.patientName) || 'Clinical Patient'}`}
                         size="small"
                         sx={{ fontWeight: 700, bgcolor: isDark ? "rgba(255,255,255,0.08)" : "#FFF" }}
                       />
@@ -4315,6 +4359,11 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                   });
                   const data = await res.json();
                   if (data.success && data.data) {
+                    if (data.provider) {
+                      setDietAiProvider(data.provider);
+                    } else {
+                      setDietAiProvider(activeAiProvider);
+                    }
                     setAiDietPlan((prev) => prev ? {
                       ...prev,
                       mealSchedule: sanitized,
