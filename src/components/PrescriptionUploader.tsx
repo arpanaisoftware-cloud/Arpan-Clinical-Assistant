@@ -14,15 +14,13 @@ import {
   Chip,
   CircularProgress
 } from '@mui/material';
-import {
-  CloudUpload,
-  DocumentScanner,
-  AutoAwesome,
-  InsertDriveFile,
-  Close,
-  PictureAsPdf,
-  Image as ImageIcon
-} from '@mui/icons-material';
+import CloudUpload from '@mui/icons-material/CloudUpload';
+import DocumentScanner from '@mui/icons-material/DocumentScanner';
+import AutoAwesome from '@mui/icons-material/AutoAwesome';
+import InsertDriveFile from '@mui/icons-material/InsertDriveFile';
+import Close from '@mui/icons-material/Close';
+import PictureAsPdf from '@mui/icons-material/PictureAsPdf';
+import ImageIcon from '@mui/icons-material/Image';
 import { toast } from 'react-toastify';
 
 interface PrescriptionUploaderProps {

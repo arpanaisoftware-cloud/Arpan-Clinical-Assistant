@@ -38,40 +38,38 @@ import InputAdornment from '@mui/material/InputAdornment';
 import Fade from '@mui/material/Fade';
 import TablePagination from '@mui/material/TablePagination';
 import { useTheme } from '@mui/material/styles';
-import {
-  Favorite,
-  Psychology,
-  Visibility,
-  WaterDrop,
-  FlashOn,
-  Pets,
-  Print,
-  CheckCircle,
-  Warning,
-  Info,
-  MedicalServices,
-  Shield,
-  Close,
-  Verified,
-  LocalHospital,
-  Biotech,
-  ContentPaste,
-  FileUpload,
-  History,
-  AutoAwesome,
-  Search,
-  TableRows,
-  ViewAgenda,
-  SmartToy,
-  Upload,
-  CheckCircleOutline,
-  Refresh,
-  Bolt,
-  Bloodtype,
-  AirlineSeatReclineNormal,
-  Speed,
-  MonitorWeight
-} from '@mui/icons-material';
+import Favorite from '@mui/icons-material/Favorite';
+import Psychology from '@mui/icons-material/Psychology';
+import Visibility from '@mui/icons-material/Visibility';
+import WaterDrop from '@mui/icons-material/WaterDrop';
+import FlashOn from '@mui/icons-material/FlashOn';
+import Pets from '@mui/icons-material/Pets';
+import Print from '@mui/icons-material/Print';
+import CheckCircle from '@mui/icons-material/CheckCircle';
+import Warning from '@mui/icons-material/Warning';
+import Info from '@mui/icons-material/Info';
+import MedicalServices from '@mui/icons-material/MedicalServices';
+import Shield from '@mui/icons-material/Shield';
+import Close from '@mui/icons-material/Close';
+import Verified from '@mui/icons-material/Verified';
+import LocalHospital from '@mui/icons-material/LocalHospital';
+import Biotech from '@mui/icons-material/Biotech';
+import ContentPaste from '@mui/icons-material/ContentPaste';
+import FileUpload from '@mui/icons-material/FileUpload';
+import History from '@mui/icons-material/History';
+import AutoAwesome from '@mui/icons-material/AutoAwesome';
+import Search from '@mui/icons-material/Search';
+import TableRows from '@mui/icons-material/TableRows';
+import ViewAgenda from '@mui/icons-material/ViewAgenda';
+import SmartToy from '@mui/icons-material/SmartToy';
+import Upload from '@mui/icons-material/Upload';
+import CheckCircleOutline from '@mui/icons-material/CheckCircleOutline';
+import Refresh from '@mui/icons-material/Refresh';
+import Bolt from '@mui/icons-material/Bolt';
+import Bloodtype from '@mui/icons-material/Bloodtype';
+import AirlineSeatReclineNormal from '@mui/icons-material/AirlineSeatReclineNormal';
+import Speed from '@mui/icons-material/Speed';
+import MonitorWeight from '@mui/icons-material/MonitorWeight';
 import { COUNSELLING_RISK_DATABASE } from '../mockData/clinicalModulesData';
 import { RiskAssessmentItem, RiskCategoryType, HistoryRecord, CounsellingHistoryRecord } from '../types/clinical';
 import confetti from 'canvas-confetti';

@@ -20,18 +20,16 @@ import {
   DialogActions,
   TextField
 } from '@mui/material';
-import {
-  LocalHospital,
-  Brightness4,
-  Brightness7,
-  Psychology,
-  AddCircleOutline,
-  CloudUpload,
-  SupervisorAccount,
-  Logout,
-  VpnKey,
-  AutoAwesome
-} from '@mui/icons-material';
+import LocalHospital from '@mui/icons-material/LocalHospital';
+import Brightness4 from '@mui/icons-material/Brightness4';
+import Brightness7 from '@mui/icons-material/Brightness7';
+import Psychology from '@mui/icons-material/Psychology';
+import AddCircleOutline from '@mui/icons-material/AddCircleOutline';
+import CloudUpload from '@mui/icons-material/CloudUpload';
+import SupervisorAccount from '@mui/icons-material/SupervisorAccount';
+import Logout from '@mui/icons-material/Logout';
+import VpnKey from '@mui/icons-material/VpnKey';
+import AutoAwesome from '@mui/icons-material/AutoAwesome';
 import { useRouter } from 'next/navigation';
 import { AuthUser } from '../types/clinical';
 import { useAppDispatch } from '../redux/hooks';

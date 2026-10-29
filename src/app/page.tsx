@@ -14,19 +14,17 @@ import {
   Tooltip,
   CircularProgress
 } from '@mui/material';
-import {
-  AutoAwesome,
-  Lock,
-  SwapHoriz,
-  MedicalServices,
-  Restaurant,
-  LocalPharmacy,
-  SupervisorAccount,
-  Logout,
-  VerifiedUser,
-  CheckCircle,
-  ArrowForward
-} from '@mui/icons-material';
+import AutoAwesome from '@mui/icons-material/AutoAwesome';
+import Lock from '@mui/icons-material/Lock';
+import SwapHoriz from '@mui/icons-material/SwapHoriz';
+import MedicalServices from '@mui/icons-material/MedicalServices';
+import Restaurant from '@mui/icons-material/Restaurant';
+import LocalPharmacy from '@mui/icons-material/LocalPharmacy';
+import SupervisorAccount from '@mui/icons-material/SupervisorAccount';
+import Logout from '@mui/icons-material/Logout';
+import VerifiedUser from '@mui/icons-material/VerifiedUser';
+import CheckCircle from '@mui/icons-material/CheckCircle';
+import ArrowForward from '@mui/icons-material/ArrowForward';
 import Header from '../components/Header';
 import PatientPrescriptionForm from '../components/PatientPrescriptionForm';
 import PrescriptionUploader from '../components/PrescriptionUploader';

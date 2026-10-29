@@ -10,16 +10,14 @@ import {
   Fade,
   useTheme
 } from '@mui/material';
-import {
-  AutoAwesome,
-  CheckCircle,
-  DocumentScanner,
-  LocalPharmacy,
-  Security,
-  Medication,
-  Psychology,
-  FactCheck
-} from '@mui/icons-material';
+import AutoAwesome from '@mui/icons-material/AutoAwesome';
+import CheckCircle from '@mui/icons-material/CheckCircle';
+import DocumentScanner from '@mui/icons-material/DocumentScanner';
+import LocalPharmacy from '@mui/icons-material/LocalPharmacy';
+import Security from '@mui/icons-material/Security';
+import Medication from '@mui/icons-material/Medication';
+import Psychology from '@mui/icons-material/Psychology';
+import FactCheck from '@mui/icons-material/FactCheck';
 import { motion } from 'framer-motion';
 
 interface FullPageAnalysisLoaderProps {

@@ -28,16 +28,14 @@ import DialogContentText from '@mui/material/DialogContentText';
 import DialogActions from '@mui/material/DialogActions';
 import CircularProgress from '@mui/material/CircularProgress';
 import { useTheme } from '@mui/material/styles';
-import {
-  Search,
-  Restaurant,
-  PlayArrow,
-  DeleteOutline,
-  Refresh,
-  Print,
-  LocalFireDepartment,
-  Person
-} from '@mui/icons-material';
+import Search from '@mui/icons-material/Search';
+import Restaurant from '@mui/icons-material/Restaurant';
+import PlayArrow from '@mui/icons-material/PlayArrow';
+import DeleteOutline from '@mui/icons-material/DeleteOutline';
+import Refresh from '@mui/icons-material/Refresh';
+import Print from '@mui/icons-material/Print';
+import LocalFireDepartment from '@mui/icons-material/LocalFireDepartment';
+import Person from '@mui/icons-material/Person';
 import { toast } from 'react-toastify';
 import { DietHistoryRecord } from '../types/clinical';
 
@@ -218,7 +216,7 @@ export default function DietHistoryTable({
                 Recent Patient Diet & Nutrition Plan History
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Paginated MongoDB archive ({rowsPerPage} records/page) &bull; Max 2000 latest nutrition plans retained automatically.
+                {rowsPerPage} records/page &bull; Max 2000 latest nutrition plans retained automatically.
               </Typography>
             </Box>
           </Stack>

@@ -52,10 +52,10 @@ Return ONLY raw JSON (no markdown, no code fences) matching this schema:
     "targetCalories": 1750,
     "summary": "string - 2 short simple sentences explaining the diet plan in everyday words",
     "macroBreakdown": {
-      "carbs": "string e.g. 48% Daily Energy - Complex Indian grains (Jowar, Bajra, Multigrain Roti, Daliya)",
-      "protein": "string e.g. 25% Daily Energy - Moong dal, fresh paneer, curd, and sprouts",
-      "fats": "string e.g. 17% Daily Energy - 3 to 4 tsp cold-pressed mustard or groundnut oil per day",
-      "fiber": "string e.g. 10% Daily Energy - Fresh cucumber salad, methi leaves & isabgol"
+      "carbs": "string - ONLY percentage or grams e.g. 50% or 275g (50%) - DO NOT write description sentences",
+      "protein": "string - ONLY percentage or grams e.g. 20% or 75g (20%) - DO NOT write description sentences",
+      "fats": "string - ONLY percentage or grams e.g. 25% or 45g (25%) - DO NOT write description sentences",
+      "fiber": "string - ONLY grams or percentage e.g. 30g - DO NOT write description sentences"
     },
     "electrolyteLimits": {
       "sodium": "string e.g. Strict Salt Control (< 1,500 mg/day) - Avoid pickles, papad, namkeen & extra table salt",
@@ -84,19 +84,12 @@ Return ONLY raw JSON (no markdown, no code fences) matching this schema:
         "clinicalNote": "string - simple plain-language benefit e.g. Wakes up digestion and helps control blood sugar"
       }
     ],
-    "indianSpiceTherapy": [
-      {
-        "spice": "string e.g. Haldi (Organic Turmeric)",
-        "benefit": "string e.g. Natural body healer that cools internal swelling and helps insulin work better"
-      }
-    ],
     "lifestyleAdvice": [
       "string - practical, everyday Indian healthy lifestyle tip in simple words, minimum 4 tips"
     ],
     "avoidanceAlerts": [
       "string - crucial safety warning in simple words"
-    ],
-    "followUpNote": "string - simple doctor follow-up note"
+    ]
   }
 }
 
@@ -299,28 +292,6 @@ function buildClinicalIndianFallbackDiet(info: Record<string, any>, language?: s
         clinicalNote: "Soothing drink that calms inflammation, promotes deep sleep, and helps body recovery"
       }
     ],
-    indianSpiceTherapy: [
-      {
-        spice: "Haldi (Organic Turmeric)",
-        benefit: "Natural body healer that cools internal swelling and helps insulin work better."
-      },
-      {
-        spice: "Methi Seeds (Fenugreek)",
-        benefit: "Naturally slows down sugar absorption from your meals to keep levels flat."
-      },
-      {
-        spice: "Jeera (Cumin Seeds)",
-        benefit: "Boosts your digestive fire, eliminates gas, and soothes an uneasy stomach."
-      },
-      {
-        spice: "Dalchini (Cinnamon)",
-        benefit: "Helps cells take up glucose naturally and adds sweet warmth with zero sugar."
-      },
-      {
-        spice: "Ajwain (Carom Seeds)",
-        benefit: "Quickly relieves bloating, stomach heaviness, and helps digest dals easily."
-      }
-    ],
     lifestyleAdvice: [
       "Take a relaxed 100-step stroll ('Shatapawali') after lunch and dinner to help your food digest smoothly.",
       "Finish your evening meal by 08:00 PM to give your stomach 12 full hours of peaceful overnight rest.",
@@ -332,8 +303,7 @@ function buildClinicalIndianFallbackDiet(info: Record<string, any>, language?: s
         ? "IMPORTANT SALT ALERT: Stay away from baking soda in dhokla, bakery bread, and instant soup packets."
         : "Avoid eating heavy sugary snacks within 2 hours of going to sleep.",
       "Do not skip meals or do extreme water-less fasts while taking diabetes or BP medicines."
-    ],
-    followUpNote: "Check your fasting blood sugar and blood pressure weekly. Schedule a follow-up review with your doctor in 4 weeks."
+    ]
   };
 }
 

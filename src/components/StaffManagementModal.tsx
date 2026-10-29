@@ -29,19 +29,17 @@ import {
   useTheme,
   InputAdornment
 } from '@mui/material';
-import {
-  Close,
-  PersonAdd,
-  Badge,
-  SupervisorAccount,
-  CheckCircle,
-  LocalHospital,
-  Lock,
-  ContentCopy,
-  Verified,
-  Visibility,
-  VisibilityOff
-} from '@mui/icons-material';
+import Close from '@mui/icons-material/Close';
+import PersonAdd from '@mui/icons-material/PersonAdd';
+import Badge from '@mui/icons-material/Badge';
+import SupervisorAccount from '@mui/icons-material/SupervisorAccount';
+import CheckCircle from '@mui/icons-material/CheckCircle';
+import LocalHospital from '@mui/icons-material/LocalHospital';
+import Lock from '@mui/icons-material/Lock';
+import ContentCopy from '@mui/icons-material/ContentCopy';
+import Verified from '@mui/icons-material/Verified';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { StaffUser, UserRole, ModulePermission } from '../types/clinical';
 import { toast } from 'react-toastify';
 

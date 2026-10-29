@@ -28,15 +28,13 @@ import DialogContentText from '@mui/material/DialogContentText';
 import DialogActions from '@mui/material/DialogActions';
 import CircularProgress from '@mui/material/CircularProgress';
 import { useTheme } from '@mui/material/styles';
-import {
-  Search,
-  MedicalServices,
-  PlayArrow,
-  DeleteOutline,
-  Refresh,
-  Print,
-  Person
-} from '@mui/icons-material';
+import Search from '@mui/icons-material/Search';
+import MedicalServices from '@mui/icons-material/MedicalServices';
+import PlayArrow from '@mui/icons-material/PlayArrow';
+import DeleteOutline from '@mui/icons-material/DeleteOutline';
+import Refresh from '@mui/icons-material/Refresh';
+import Print from '@mui/icons-material/Print';
+import Person from '@mui/icons-material/Person';
 import { toast } from 'react-toastify';
 import { CounsellingHistoryRecord } from '../types/clinical';
 
@@ -217,7 +215,7 @@ export default function CounsellingHistoryTable({
                 Recent Patient Chronic Risk Counselling History
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Paginated MongoDB archive ({rowsPerPage} records/page) &bull; Max 2000 latest sessions retained automatically.
+                {rowsPerPage} records/page &bull; Max 2000 latest sessions retained automatically.
               </Typography>
             </Box>
           </Stack>

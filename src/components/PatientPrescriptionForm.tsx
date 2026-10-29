@@ -9,10 +9,16 @@ import {
   MenuItem, IconButton, Stack, Divider, Paper, Alert, Chip,
   FormControlLabel, Checkbox, CircularProgress
 } from '@mui/material';
-import {
-  Person, Add, Delete, AutoAwesome, RestartAlt, Biotech,
-  LocalPharmacy, MonitorHeart, Science, Warning
-} from '@mui/icons-material';
+import Person from '@mui/icons-material/Person';
+import Add from '@mui/icons-material/Add';
+import Delete from '@mui/icons-material/Delete';
+import AutoAwesome from '@mui/icons-material/AutoAwesome';
+import RestartAlt from '@mui/icons-material/RestartAlt';
+import Biotech from '@mui/icons-material/Biotech';
+import LocalPharmacy from '@mui/icons-material/LocalPharmacy';
+import MonitorHeart from '@mui/icons-material/MonitorHeart';
+import Science from '@mui/icons-material/Science';
+import Warning from '@mui/icons-material/Warning';
 import { SAMPLE_CLINICAL_CASE } from '../mockData/aiAnalysisData';
 import { PatientInput, MedicationInput } from '../types/clinical';
 

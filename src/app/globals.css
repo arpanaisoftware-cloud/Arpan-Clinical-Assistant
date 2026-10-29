@@ -33,52 +33,179 @@ body {
   background: rgba(0, 201, 167, 0.8);
 }
 
-/* Print Styles — Prescription, Counselling & Diets */
+/* Print Styles — Optimized for Standard A4 Paper (210mm x 297mm) */
 @media print {
 
-  /* Remove browser default header (date/time) and footer (title/URL) */
+  /* A4 Portrait standard with 8mm top/bottom and 10mm left/right margin to prevent any clipping */
   @page {
-    margin: 0;
-    size: A4;
+    size: A4 portrait;
+    margin: 8mm 10mm 8mm 10mm;
   }
 
-  /* Clamp document height so no blank overflow pages are generated */
+  /* Natural flow, crisp high contrast */
   html,
   body {
+    width: 100% !important;
     height: auto !important;
-    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #FFFFFF !important;
+    color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
-  /* Hide everything by removing from layout (display:none), not just visually */
-  body>* {
+  /* Hide everything on page except active dialog */
+  body > * {
     display: none !important;
   }
 
-  /* Make MUI Dialog portals visible when a print dialog is open */
+  /* Make MUI Dialog portals visible in print */
   .MuiDialog-root,
   .MuiModal-root {
     display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 
-  /* Hide all dialog chrome (title bar, actions, backdrop) */
+  .MuiDialog-container {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .MuiDialog-paper {
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    position: static !important;
+    overflow: visible !important;
+    border: none !important;
+    background: #FFFFFF !important;
+  }
+
+  /* Hide dialog action buttons, headers, and any print exclusion elements */
   .MuiBackdrop-root,
   .MuiDialogTitle-root,
-  .MuiDialogActions-root {
+  .MuiDialogActions-root,
+  .no-print,
+  .no-print *,
+  #printable-diets button,
+  #printable-prescription button,
+  #printable-counselling button,
+  #printable-analysis button,
+  #printable-diets .MuiButton-root,
+  #printable-prescription .MuiButton-root,
+  #printable-counselling .MuiButton-root,
+  #printable-analysis .MuiButton-root {
     display: none !important;
   }
 
-  /* Show only the printable content area */
+  /* Reset DialogContent for print: NO outer scroll, NO double padding */
+  #printable-diets,
   #printable-prescription,
   #printable-counselling,
-  #printable-diets,
   #printable-analysis {
     display: block !important;
     position: static !important;
     width: 100% !important;
     margin: 0 !important;
-    padding: 24px 28px !important;
+    padding: 0 !important;
     background: #FFFFFF !important;
     color: #000000 !important;
     box-sizing: border-box !important;
+    overflow: visible !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+
+  /* A4 Sheet Container: Page 1 of Diet Sheet (strictly single page) */
+  .diet-print-page-1 {
+    display: block !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    padding: 6mm 7mm !important;
+    border: 1.5px solid #000000 !important;
+    border-radius: 4px !important;
+    background: #FFFFFF !important;
+    color: #000000 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+
+  /* A4 Sheet Container: Page 2+ of Diet Sheet (starts on next page and continues seamlessly) */
+  .diet-print-page-2 {
+    display: block !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    padding: 6mm 7mm !important;
+    border: 1.5px solid #000000 !important;
+    border-radius: 4px !important;
+    background: #FFFFFF !important;
+    color: #000000 !important;
+    page-break-before: always !important;
+    break-before: page !important;
+  }
+
+  /* Prescription and Counselling Page Containers */
+  #printable-prescription > div,
+  #printable-counselling > div,
+  #printable-analysis > div {
+    display: block !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    padding: 6mm 7mm !important;
+    border: 1.5px solid #000000 !important;
+    border-radius: 4px !important;
+    background: #FFFFFF !important;
+    color: #000000 !important;
+  }
+
+  /* Prevent awkward page-breaks through table rows, sections, and cards */
+  #printable-prescription tr,
+  #printable-prescription .MuiTableRow-root,
+  #printable-counselling .print-avoid-break,
+  #printable-analysis .print-avoid-break,
+  .print-avoid-break {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  #printable-prescription h1,
+  #printable-prescription h2,
+  #printable-prescription h3,
+  #printable-prescription h4,
+  #printable-prescription h5,
+  #printable-prescription h6,
+  #printable-counselling h1,
+  #printable-counselling h2,
+  #printable-counselling h3,
+  #printable-counselling h4,
+  #printable-counselling h5,
+  #printable-counselling h6 {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  /* Ensure high-contrast solid borders and text on black and white printers */
+  #printable-diets *,
+  #printable-prescription *,
+  #printable-counselling * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }

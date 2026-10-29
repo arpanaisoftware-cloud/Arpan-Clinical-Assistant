@@ -21,25 +21,23 @@ import {
   FormControl,
   Collapse
 } from '@mui/material';
-import {
-  Close,
-  Send,
-  Psychology,
-  ContentCopy,
-  Check,
-  DeleteOutline,
-  MedicalServices,
-  LocalHospital,
-  AutoAwesome,
-  VerifiedUser,
-  WarningAmberRounded,
-  Person,
-  ExpandMore,
-  ExpandLess,
-  Speed,
-  History,
-  OpenInNew
-} from '@mui/icons-material';
+import Close from '@mui/icons-material/Close';
+import Send from '@mui/icons-material/Send';
+import Psychology from '@mui/icons-material/Psychology';
+import ContentCopy from '@mui/icons-material/ContentCopy';
+import Check from '@mui/icons-material/Check';
+import DeleteOutline from '@mui/icons-material/DeleteOutline';
+import MedicalServices from '@mui/icons-material/MedicalServices';
+import LocalHospital from '@mui/icons-material/LocalHospital';
+import AutoAwesome from '@mui/icons-material/AutoAwesome';
+import VerifiedUser from '@mui/icons-material/VerifiedUser';
+import WarningAmberRounded from '@mui/icons-material/WarningAmberRounded';
+import Person from '@mui/icons-material/Person';
+import ExpandMore from '@mui/icons-material/ExpandMore';
+import ExpandLess from '@mui/icons-material/ExpandLess';
+import Speed from '@mui/icons-material/Speed';
+import History from '@mui/icons-material/History';
+import OpenInNew from '@mui/icons-material/OpenInNew';
 import { toast } from 'react-toastify';
 import { useAppSelector } from '../redux/hooks';
 import { PatientInput, AuthUser, AnalysisResult, HistoryRecord } from '../types/clinical';

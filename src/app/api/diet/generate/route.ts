@@ -59,10 +59,10 @@ Generate a comprehensive Indian clinical diet plan. Return ONLY raw JSON (absolu
   "targetCalories": ${input.customCalories && Number(input.customCalories) > 0 ? Number(input.customCalories) : 1750},
   "summary": "string - 2 short, simple, reassuring sentences explaining the diet plan in everyday words",
   "macroBreakdown": {
-    "carbs": "string e.g. 50% Daily Energy - Complex carbs (Jowar, Bajra, Multigrain Roti, Daliya) for steady all-day energy",
-    "protein": "string e.g. 25% Daily Energy - Moong dal, fresh paneer, curd, and sprouts for muscle strength",
-    "fats": "string e.g. 15% Daily Energy - 3 to 4 teaspoons cold-pressed mustard or groundnut oil per day",
-    "fiber": "string e.g. 10% Daily Energy - Fresh cucumber salad, methi leaves & isabgol for smooth digestion"
+    "carbs": "string - ONLY percentage or grams e.g. 50% or 275g (50%) - DO NOT write description sentences",
+    "protein": "string - ONLY percentage or grams e.g. 20% or 75g (20%) - DO NOT write description sentences",
+    "fats": "string - ONLY percentage or grams e.g. 25% or 45g (25%) - DO NOT write description sentences",
+    "fiber": "string - ONLY grams or percentage e.g. 30g - DO NOT write description sentences"
   },
   "electrolyteLimits": {
     "sodium": "string e.g. Strict Salt Control (Under 1,500 mg/day) - Avoid papad, pickles, market namkeen & table salt",
@@ -91,19 +91,12 @@ Generate a comprehensive Indian clinical diet plan. Return ONLY raw JSON (absolu
       "clinicalNote": "string - 1 simple, plain-language reason e.g. Wakes up your metabolism and helps control morning blood sugar"
     }
   ],
-  "indianSpiceTherapy": [
-    {
-      "spice": "string e.g. Haldi (Turmeric)",
-      "benefit": "string e.g. Natural body healer that cools internal swelling and helps insulin work better"
-    }
-  ],
   "lifestyleAdvice": [
     "string - practical, everyday Indian healthy lifestyle tip in simple words, minimum 4 tips"
   ],
   "avoidanceAlerts": [
     "string - crucial safety tip in simple, direct words"
-  ],
-  "followUpNote": "string - simple note on when to check blood sugar/BP and consult doctor"
+  ]
 }
 
 The mealSchedule must have exactly 7 meals: 06:30 AM Early Morning, 08:30 AM Breakfast, 11:00 AM Mid-Morning Snack, 01:30 PM Lunch Thali, 05:00 PM Evening Snack, 08:00 PM Light Dinner, 09:45 PM Bedtime Drink.`;
@@ -307,49 +300,6 @@ function generateClinicalIndianFallback(input: Record<string, any>) {
         clinicalNote: isHindi ? "सूजन कम करने वाला आरामदायक पेय जो गहरी नींद और शरीर की मरम्मत में सहायक है" : "Soothing drink that calms inflammation, promotes deep sleep, and helps body recovery"
       }
     ],
-    indianSpiceTherapy: isHindi ? [
-      {
-        spice: "हल्दी (शुद्ध ऑर्गेनिक हल्दी)",
-        benefit: "प्राकृतिक उपशामक जो आंतरिक सूजन को शांत करती है और इंसुलिन की कार्यक्षमता बढ़ाती है।"
-      },
-      {
-        spice: "मेथी दाना",
-        benefit: "भोजन से ग्लूकोज के अवशोषण को धीमा करता है ताकि ब्लड शुगर स्थिर रहे।"
-      },
-      {
-        spice: "जीरा",
-        benefit: "पाचक अग्नि को सक्रिय करता है, गैस दूर करता है और पेट को ठंडक प्रदान करता है।"
-      },
-      {
-        spice: "दालचीनी",
-        benefit: "कोशिकाओं को प्राकृतिक रूप से ग्लूकोज अवशोषित करने में मदद करती है।"
-      },
-      {
-        spice: "अजवाइन",
-        benefit: "पेट के भारीपन और गैस से तुरंत राहत दिलाती है और दालों को पचाने में मदद करती है।"
-      }
-    ] : [
-      {
-        spice: "Haldi (Organic Turmeric)",
-        benefit: "Natural body healer that cools internal swelling and helps insulin work better."
-      },
-      {
-        spice: "Methi Seeds (Fenugreek)",
-        benefit: "Naturally slows down sugar absorption from your meals to keep levels flat."
-      },
-      {
-        spice: "Jeera (Cumin Seeds)",
-        benefit: "Boosts your digestive fire, eliminates gas, and soothes an uneasy stomach."
-      },
-      {
-        spice: "Dalchini (Cinnamon)",
-        benefit: "Helps cells take up glucose naturally and adds sweet warmth with zero sugar."
-      },
-      {
-        spice: "Ajwain (Carom Seeds)",
-        benefit: "Quickly relieves bloating, stomach heaviness, and helps digest dals easily."
-      }
-    ],
     lifestyleAdvice: isHindi ? [
       "दोपहर और रात के भोजन के बाद 100 कदम धीमी गति से शतपावली (टहलना) जरूर करें।",
       "रात का भोजन रात 08:00 बजे तक समाप्त कर लें ताकि पाचन तंत्र को 12 घंटे का विश्राम मिले।",
@@ -371,10 +321,7 @@ function generateClinicalIndianFallback(input: Record<string, any>) {
         ? "IMPORTANT SALT ALERT: Stay away from baking soda in dhokla, bakery bread, and instant soup packets."
         : "Avoid eating heavy sugary snacks within 2 hours of going to sleep.",
       "Do not skip meals or do extreme water-less fasts while taking diabetes or BP medicines."
-    ],
-    followUpNote: isHindi
-      ? "हर हफ्ते खाली पेट ब्लड शुगर और रक्तचाप की जांच करें। 4 सप्ताह बाद अपने डॉक्टर से परामर्श लें।"
-      : "Check your fasting blood sugar and blood pressure weekly. Schedule a follow-up review with your doctor in 4 weeks."
+    ]
   };
 }
 
