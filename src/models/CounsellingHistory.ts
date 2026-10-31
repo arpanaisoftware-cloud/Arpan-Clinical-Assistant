@@ -11,6 +11,7 @@ export interface ICounsellingHistory extends Document {
   dbp?: string;
   hba1c?: string;
   egfr?: string;
+  uricAcid?: string;
   sensationLoss?: string;
   footGrade?: string;
   riskFactors: RiskAssessmentItem[];
@@ -70,6 +71,10 @@ const CounsellingHistorySchema = new Schema<ICounsellingHistory>(
       default: '',
     },
     egfr: {
+      type: String,
+      default: '',
+    },
+    uricAcid: {
       type: String,
       default: '',
     },

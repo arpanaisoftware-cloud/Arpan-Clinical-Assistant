@@ -227,7 +227,7 @@ export const COUNSELLING_RISK_DATABASE: RiskAssessmentItem[] = [
   },
   {
     id: 'weightGainObesityRisk',
-    title: 'Risk of Weight Gain / Obesity (Metabolic Adiposity & Caloric Imbalance)',
+    title: 'Risk of Weight Gain & Metabolic Adiposity (Caloric Imbalance & Adipose Accretion)',
     subtitle: 'Visceral Fat Accumulation, Insulin Resistance & Satiety Dysregulation',
     riskLevel: 'MODERATE CAUTION',
     score: 58,

@@ -127,6 +127,12 @@ function generateFallbackCounselling(input: any): RiskAssessmentItem[] {
 
   // 11. Risk of Hyperuricemia & Gout calculation
   let uricScore = 22;
+  const uricAcidNum = Number(input.uricAcid);
+  if (uricAcidNum > 0) {
+    if (uricAcidNum > 8.5) uricScore += 45;
+    else if (uricAcidNum > 7.0) uricScore += 30;
+    else if (uricAcidNum > 6.0) uricScore += 15;
+  }
   if (egfr < 45) uricScore += 35;
   else if (egfr < 60) uricScore += 22;
   else if (egfr < 75) uricScore += 12;
@@ -361,7 +367,7 @@ function generateFallbackCounselling(input: any): RiskAssessmentItem[] {
     },
     {
       id: 'weightGainObesityRisk',
-      title: 'Risk of Weight Gain / Obesity (Metabolic Adiposity & Caloric Imbalance)',
+      title: 'Risk of Weight Gain & Metabolic Adiposity (Caloric Imbalance & Adipose Accretion)',
       subtitle: 'Visceral Fat Accumulation, Insulin Resistance & Satiety Dysregulation',
       riskLevel: weightMeta.riskLevel,
       score: weightScore,
@@ -431,6 +437,7 @@ export async function POST(req: Request) {
       dbp,
       hba1c,
       egfr,
+      uricAcid,
       sensationLoss,
       footGrade
     } = body;
@@ -460,7 +467,7 @@ Evaluate the following patient and generate comprehensive chronic risk counselli
 7. "bleedingRisk" - Risk of Bleeding (Antiplatelet / Anticoagulant & Hemorrhagic Risk)
 8. "giddinessRisk" - Risk of Giddiness (Orthostatic Hypotension, Dizziness & Fall Risk)
 9. "hypoglycaemiaRisk" - Risk of Hypoglycaemia (Acute Low Blood Glucose & Autonomic Surge)
-10. "weightGainObesityRisk" - Risk of Weight Gain / Obesity (Metabolic Adiposity & Caloric Imbalance)
+10. "weightGainObesityRisk" - Risk of Weight Gain & Metabolic Adiposity (Caloric Imbalance & Adipose Accretion)
 11. "hyperuricemiaRisk" - Risk of Hyperuricemia & Gout (Elevated Serum Uric Acid & Joint Microcrystallopathy)
 
 Patient Details:
@@ -473,7 +480,7 @@ Patient Details:
 - HbA1c: ${hba1c}%
 - eGFR: ${egfr} mL/min/1.73m²
 - Monofilament Sensation: ${sensationLoss || 'Normal'}
-- Wagner Foot Ulcer Grade: ${footGrade || 'Grade 0 (Intact Skin)'}
+- Wagner Foot Ulcer Grade: ${footGrade || 'Grade 0 (Intact Skin)'}${uricAcid ? `\n- Serum Uric Acid: ${uricAcid} mg/dL` : ''}
 
 For EACH of the 11 factors, return an object in the JSON array:
 - "id": one of "heartAttack", "stroke", "retinopathy", "nephropathy", "neuropathy", "footRisk", "bleedingRisk", "giddinessRisk", "hypoglycaemiaRisk", "weightGainObesityRisk", "hyperuricemiaRisk"

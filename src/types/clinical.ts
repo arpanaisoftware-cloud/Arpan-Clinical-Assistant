@@ -28,6 +28,9 @@ export interface PatientInput {
   // Lab Values — Renal & Electrolytes
   creatinine?: number | string;
   egfr?: number | string;
+
+
+  uricAcid?: number | string;
   sodiumNa?: number | string;
   potassiumK?: number | string;
 
@@ -275,6 +278,7 @@ export type RiskCategoryType =
   | 'giddinessRisk'
   | 'hypoglycaemiaRisk'
   | 'weightGainObesityRisk'
+  | 'hyperuricemiaRisk'
   | 'cardiovascular'
   | string;
 
@@ -336,7 +340,9 @@ export interface CounsellingHistoryRecord {
   dbp?: number | string;
   hba1c?: number | string;
   egfr?: number | string;
+
   sensationLoss?: string;
+  uricAcid?: number | string;
   footGrade?: string;
   riskFactors: RiskAssessmentItem[];
   highRiskCount?: number;

@@ -139,6 +139,7 @@ export default function CounsellingModule({
   const [dbp, setDbp] = useState<number | string>('');
   const [hba1c, setHba1c] = useState<number | string>('');
   const [egfr, setEgfr] = useState<number | string>('');
+  const [uricAcid, setUricAcid] = useState<number | string>('');
   const [sensationLoss, setSensationLoss] = useState<string>('');
   const [footGrade, setFootGrade] = useState<string>('');
 
@@ -152,6 +153,7 @@ export default function CounsellingModule({
     dbp: number | string;
     hba1c: number | string;
     egfr: number | string;
+    uricAcid?: number | string;
     sensationLoss?: string;
     footGrade?: string;
   }
@@ -261,6 +263,7 @@ export default function CounsellingModule({
     dbp: number | string;
     hba1c: number | string;
     egfr: number | string;
+    uricAcid?: number | string;
     sensationLoss?: string;
     footGrade?: string;
   }) => {
@@ -312,6 +315,7 @@ export default function CounsellingModule({
         dbp: formData.dbp,
         hba1c: formData.hba1c,
         egfr: formData.egfr,
+        uricAcid: formData.uricAcid,
         sensationLoss: formData.sensationLoss,
         footGrade: formData.footGrade
       });
@@ -338,6 +342,7 @@ export default function CounsellingModule({
             dbp: formData.dbp,
             hba1c: formData.hba1c,
             egfr: formData.egfr,
+            uricAcid: formData.uricAcid,
             sensationLoss: formData.sensationLoss,
             footGrade: formData.footGrade,
             riskFactors: updatedRiskFactors,
@@ -374,6 +379,7 @@ export default function CounsellingModule({
       dbp: record.dbp || '',
       hba1c: record.hba1c || '',
       egfr: record.egfr || '',
+      uricAcid: record.uricAcid || '',
       sensationLoss: record.sensationLoss || 'no',
       footGrade: record.footGrade || 'grade_0'
     });
@@ -447,6 +453,7 @@ export default function CounsellingModule({
       dbp,
       hba1c,
       egfr,
+      uricAcid,
       sensationLoss,
       footGrade
     });
@@ -531,6 +538,7 @@ export default function CounsellingModule({
           dbp: parsedDbp,
           hba1c: parsedHba1c,
           egfr: parsedEgfr,
+          uricAcid: uricAcid || '',
           sensationLoss: sensationLoss || 'Mild Loss',
           footGrade: footGrade || 'Grade 0 (Intact Skin)'
         });
@@ -1032,6 +1040,19 @@ export default function CounsellingModule({
                   onChange={(e) => setEgfr(e.target.value)}
                   error={!!formErrors.egfr}
                   helperText={formErrors.egfr}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
+                />
+              </Grid>
+              <Grid item xs={6} sm={4} md={2}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  type="number"
+                  inputProps={{ step: 0.1 }}
+                  label="Serum Uric Acid (mg/dL)"
+                  placeholder="e.g. 6.8"
+                  value={uricAcid}
+                  onChange={(e) => setUricAcid(e.target.value)}
                   sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
                 />
               </Grid>
@@ -1783,6 +1804,7 @@ export default function CounsellingModule({
                           dbp: historyPatient.dbp || 90,
                           hba1c: historyPatient.hba1c || 7.2,
                           egfr: historyPatient.egfr || 70,
+                          uricAcid: historyPatient.uricAcid || '',
                           sensationLoss: historyPatient.sensationLoss || 'Mild Loss',
                           footGrade: historyPatient.footGrade || 'Grade 0 (Intact Skin)'
                         })
@@ -1827,7 +1849,7 @@ export default function CounsellingModule({
               Counselling Report Not Generated Yet
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Fill in the patient details and vitals above, then click <strong>Generate Counselling Report</strong> to view all 10 risk category assessments.
+              Fill in the patient details and vitals above, then click <strong>Generate Counselling Report</strong> to view all 11 risk category assessments (including Risk of Hyperuricemia & Gout).
             </Typography>
           </Paper>
         )}
@@ -1988,6 +2010,7 @@ export default function CounsellingModule({
                   setDbp('');
                   setHba1c('');
                   setEgfr('');
+                  setUricAcid('');
                   setSensationLoss('');
                   setFootGrade('');
                 }}
@@ -2117,6 +2140,16 @@ export default function CounsellingModule({
                     </Typography>
                     <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#000000 !important', fontSize: '0.95rem', mt: 0.2 }}>
                       {counsellingPatient?.sbp || sbp}/{counsellingPatient?.dbp || dbp} mmHg
+                    </Typography>
+                  </Grid>
+                )}
+                {(counsellingPatient?.uricAcid || uricAcid) && (
+                  <Grid item xs={6} sm={2}>
+                    <Typography variant="caption" sx={{ color: '#000000 !important', fontWeight: 900, display: 'block', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.5px' }}>
+                      SERUM URIC ACID
+                    </Typography>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#000000 !important', fontSize: '0.95rem', mt: 0.2 }}>
+                      {counsellingPatient?.uricAcid || uricAcid} mg/dL
                     </Typography>
                   </Grid>
                 )}
