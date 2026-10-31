@@ -5,22 +5,7 @@ import { verifyAuthToken } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
-const isSuperAdminAccount = (u: any) => {
-  const name = (u.name || '').toLowerCase().trim();
-  const staffId = (u.staffId || '').toLowerCase().trim();
-  const email = (u.email || '').toLowerCase().trim();
-
-  return (
-    name.includes('super admin') ||
-    name.includes('superadmin') ||
-    name.includes('admin 1') ||
-    name.includes('admin 2') ||
-    staffId === 'admin' ||
-    staffId === 'stf005' ||
-    email === 'arpanaisoftware@gmail.com' ||
-    email === 'dikshajain9907580417@gmail.com'
-  );
-};
+import { isSuperAdminAccount } from '@/types/clinical';
 
 export async function GET(req: Request) {
   try {
@@ -35,17 +20,28 @@ export async function GET(req: Request) {
     const forwardedHost = req.headers.get('x-forwarded-host') || '';
     const directHost = req.headers.get('host') || '';
     const referer = req.headers.get('referer') || '';
-    const isProduction =
-      forwardedHost.toLowerCase().includes('arpanaisoftware.in') ||
-      directHost.toLowerCase().includes('arpanaisoftware.in') ||
-      referer.toLowerCase().includes('arpanaisoftware.in');
+    const hostToCheck = (forwardedHost || directHost || referer).toLowerCase();
+
+    const isLocalhost =
+      (hostToCheck.includes('localhost') || hostToCheck.includes('127.0.0.1') || hostToCheck.includes('0.0.0.0')) &&
+      !hostToCheck.includes('arpanaisoftware.in');
+    const isLive = !isLocalhost || process.env.NODE_ENV === 'production' || hostToCheck.includes('arpanaisoftware.in');
+
+    const isCallerSuperAdmin = isSuperAdminAccount(auth.user);
 
     const staffMembers = await User.find()
       .select('name email role department staffId active modulePermissions rawPassword createdAt')
       .sort({ createdAt: -1 });
 
     const formattedStaff = staffMembers
-      .filter((u) => !isProduction || !isSuperAdminAccount(u))
+      .filter((u) => {
+        // If caller is NOT a super admin, NEVER return Admin accounts in their table!
+        if (!isCallerSuperAdmin) {
+          return !isSuperAdminAccount(u);
+        }
+        // If caller is super admin, in live production hide admin accounts from directory table
+        return !isLive || !isSuperAdminAccount(u);
+      })
       .map((u) => ({
         id: u._id.toString(),
         _id: u._id.toString(),

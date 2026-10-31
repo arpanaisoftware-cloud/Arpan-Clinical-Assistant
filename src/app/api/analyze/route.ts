@@ -363,8 +363,12 @@ export async function POST(req: Request) {
         );
       }
 
+      const { extractPrescriptionWithVision } = await import('@/lib/aiProvider');
+
+      // PDF / Image scanning ALWAYS uses Gemini Vision (DeepSeek does not support vision/OCR).
+      // The active AI provider setting does NOT apply here.
       if (!process.env.GEMINI_API_KEY) {
-        // Fallback to clinical engine if API key is not configured
+        console.warn('[analyze/upload] GEMINI_API_KEY missing — cannot process image/PDF. Falling back to clinical rules.');
         const enriched = enrichAnalysisResult(null);
         return NextResponse.json(enriched, { status: 200 });
       }
@@ -374,25 +378,27 @@ export async function POST(req: Request) {
       const base64Data = buffer.toString('base64');
       const mimeType = file.type || 'application/pdf';
 
-      const parts = [
-        { text: ANALYSIS_PROMPT },
-        {
-          inlineData: {
-            data: base64Data,
-            mimeType: mimeType
-          }
-        }
-      ];
-
       try {
-        const rawText = await callGeminiAPI(parts);
-        const parsedAI = parseJson(rawText);
+        let parsedAI: any = null;
+
+        // OCR extraction & clinical analysis via Gemini Vision (document upload uses Gemini)
+        const rawText = await extractPrescriptionWithVision(base64Data, mimeType, ANALYSIS_PROMPT);
+        parsedAI = parseJson(rawText);
+
         const enriched = enrichAnalysisResult(parsedAI);
-        return NextResponse.json(enriched, { status: 200 });
-      } catch (geminiError: any) {
-        console.warn('Gemini extraction failed, falling back to clinical rules analysis:', geminiError?.message);
+        return NextResponse.json({
+          ...enriched,
+          aiProvider: 'gemini',
+          aiModel: 'gemini-3.8-flash (Gemini Vision OCR)'
+        }, { status: 200 });
+      } catch (err: any) {
+        console.warn('[analyze/upload] Document AI extraction failed, falling back to clinical rules:', err?.message);
         const enriched = enrichAnalysisResult(null);
-        return NextResponse.json(enriched, { status: 200 });
+        return NextResponse.json({
+          ...enriched,
+          aiProvider: 'gemini',
+          aiModel: 'clinical-engine-rules (Vision Fallback)'
+        }, { status: 200 });
       }
     }
 
@@ -408,10 +414,7 @@ export async function POST(req: Request) {
         );
       }
 
-      if (!process.env.GEMINI_API_KEY) {
-        const enriched = enrichAnalysisResult(null, body);
-        return NextResponse.json(enriched, { status: 200 });
-      }
+      const { generateClinicalJsonAnalysis } = await import('@/lib/aiProvider');
 
       const manualPrompt = `
 ${ANALYSIS_PROMPT}
@@ -441,17 +444,30 @@ Prescribed Medications:
 ${JSON.stringify(medications, null, 2)}
 
 Perform full clinical review and return the complete JSON object matching the schema.
-      `;
+`;
 
       try {
-        const rawText = await callGeminiAPI([{ text: manualPrompt }]);
-        const parsedAI = parseJson(rawText);
-        const enriched = enrichAnalysisResult(parsedAI, body);
-        return NextResponse.json(enriched, { status: 200 });
-      } catch (geminiError: any) {
-        console.warn('Gemini manual review failed, falling back to clinical rules engine:', geminiError?.message);
+        const result = await generateClinicalJsonAnalysis({
+          prompt: manualPrompt,
+          systemPrompt: 'You are Prof. Dr. Arpan AI, MD, DM, Senior Clinical Pharmacologist. Return only valid JSON conforming strictly to the requested schema.'
+        });
+
+        const enriched = enrichAnalysisResult(result.data, body);
+        return NextResponse.json({
+          ...enriched,
+          aiProvider: result.provider,
+          aiModel: result.model
+        }, { status: 200 });
+      } catch (aiErr: any) {
+        console.warn('[analyze/json] AI review failed, falling back to clinical rules engine:', aiErr?.message);
+        const { getActiveAiProvider } = await import('@/lib/aiProvider');
+        const activeProvider = await getActiveAiProvider().catch(() => 'gemini');
         const enriched = enrichAnalysisResult(null, body);
-        return NextResponse.json(enriched, { status: 200 });
+        return NextResponse.json({
+          ...enriched,
+          aiProvider: activeProvider,
+          aiModel: 'clinical-engine-fallback'
+        }, { status: 200 });
       }
     }
 

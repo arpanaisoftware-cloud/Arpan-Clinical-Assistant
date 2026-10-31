@@ -31,10 +31,12 @@ import Logout from '@mui/icons-material/Logout';
 import VpnKey from '@mui/icons-material/VpnKey';
 import AutoAwesome from '@mui/icons-material/AutoAwesome';
 import { useRouter } from 'next/navigation';
-import { AuthUser } from '../types/clinical';
+import { AuthUser, isSuperAdminUser } from '../types/clinical';
 import { useAppDispatch } from '../redux/hooks';
 import { changePassword } from '../redux/slices/authSlice';
 import { toast } from 'react-toastify';
+import AdminAiSwitcherDialog from './AdminAiSwitcherDialog';
+import axiosClient from '../redux/api/axiosClient';
 
 interface HeaderProps {
   mode: PaletteMode;
@@ -63,11 +65,38 @@ export default function Header({
 }: HeaderProps) {
   const router = useRouter();
   const userRole = currentUser?.role || 'Doctor';
+  const isSuperAdmin = isSuperAdminUser(currentUser);
   const dispatch = useAppDispatch();
   const [changePasswordOpen, setChangePasswordOpen] = React.useState(false);
   const [currentPassword, setCurrentPassword] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
   const [isChangingPassword, setIsChangingPassword] = React.useState(false);
+
+  // Active AI Provider state ('gemini' | 'deepseek')
+  const [activeAiProvider, setActiveAiProvider] = React.useState<'gemini' | 'deepseek'>('gemini');
+  const [aiSwitcherOpen, setAiSwitcherOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    const fetchAiStatus = async () => {
+      try {
+        const res = await axiosClient.get('/api/admin/ai-settings');
+        if (res.data?.success && res.data.activeProvider) {
+          setActiveAiProvider(res.data.activeProvider);
+        }
+      } catch (e) {
+        // silent fallback
+      }
+    };
+    fetchAiStatus();
+
+    const handleAiChanged = (e: any) => {
+      if (e.detail?.provider) {
+        setActiveAiProvider(e.detail.provider);
+      }
+    };
+    window.addEventListener('ai-provider-changed', handleAiChanged);
+    return () => window.removeEventListener('ai-provider-changed', handleAiChanged);
+  }, []);
 
   const handleChangePasswordSubmit = async () => {
     if (!currentPassword || !newPassword) {
@@ -173,6 +202,56 @@ export default function Header({
           {/* User Role & Quick Actions */}
           {currentUser && (
             <Stack direction="row" alignItems="center" spacing={{ xs: 0.8, sm: 1.5 }}>
+
+              {/* Admin AI Switcher (Super-Admin Only Switcher Dialog Trigger) */}
+              {isSuperAdmin && (
+                <Tooltip title="Super Admin: Click to switch between Google Gemini and DeepSeek AI" arrow placement="bottom">
+                  <Box component="span" sx={{ display: 'inline-flex' }}>
+                    <Chip
+                      onClick={() => setAiSwitcherOpen(true)}
+                      icon={
+                        activeAiProvider === 'deepseek' ? (
+                          <Psychology sx={{ fontSize: '15px !important', color: '#818CF8 !important' }} />
+                        ) : (
+                          <AutoAwesome sx={{ fontSize: '14px !important', color: '#00C9A7 !important' }} />
+                        )
+                      }
+                      label={
+                        <Stack direction="row" alignItems="center" spacing={0.6}>
+                          <Box component="span" sx={{ display: { xs: 'none', md: 'inline' }, opacity: 0.85, fontWeight: 700 }}>
+                            AI:
+                          </Box>
+                          <Box component="span" sx={{ fontWeight: 900 }}>
+                            {activeAiProvider === 'deepseek' ? 'DeepSeek-V3' : 'Gemini 3.8'}
+                          </Box>
+                          <Box component="span" sx={{ fontSize: '9px', opacity: 0.75, display: { xs: 'none', sm: 'inline' } }}>
+                            ▼
+                          </Box>
+                        </Stack>
+                      }
+                      size="small"
+                      sx={{
+                        cursor: 'pointer',
+                        height: 30,
+                        fontSize: '0.74rem',
+                        fontWeight: 800,
+                        px: 0.5,
+                        bgcolor: activeAiProvider === 'deepseek' ? 'rgba(79, 70, 229, 0.16)' : 'rgba(0, 201, 167, 0.14)',
+                        color: activeAiProvider === 'deepseek' ? (mode === 'dark' ? '#C7D2FE' : '#4338CA') : '#00C9A7',
+                        border: '1.5px solid',
+                        borderColor: activeAiProvider === 'deepseek' ? 'rgba(79, 70, 229, 0.45)' : 'rgba(0, 201, 167, 0.45)',
+                        boxShadow: activeAiProvider === 'deepseek' ? '0 2px 10px rgba(79, 70, 229, 0.2)' : '0 2px 10px rgba(0, 201, 167, 0.2)',
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          bgcolor: activeAiProvider === 'deepseek' ? 'rgba(79, 70, 229, 0.28)' : 'rgba(0, 201, 167, 0.25)',
+                          borderColor: activeAiProvider === 'deepseek' ? '#4F46E5' : '#00C9A7',
+                          transform: 'translateY(-1px)'
+                        }
+                      }}
+                    />
+                  </Box>
+                </Tooltip>
+              )}
 
               {/* Doctor Manage Staff Button — icon-only on mobile, full button on sm+ */}
               {(userRole === 'Doctor' || currentUser.modulePermissions === 'Full Access') && (
@@ -411,6 +490,15 @@ export default function Header({
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Admin AI Engine Switcher Modal — Only rendered for Super Admin */}
+      {isSuperAdmin && (
+        <AdminAiSwitcherDialog
+          open={aiSwitcherOpen}
+          onClose={() => setAiSwitcherOpen(false)}
+          onProviderChanged={(newP) => setActiveAiProvider(newP)}
+        />
+      )}
     </AppBar>
   );
 }

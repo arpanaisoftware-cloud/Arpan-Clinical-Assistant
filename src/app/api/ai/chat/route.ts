@@ -42,18 +42,6 @@ export async function POST(req: Request) {
       );
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        {
-          success: true,
-          reply: generateClinicalFallback(message, patientContext),
-          isFallback: true
-        },
-        { status: 200 }
-      );
-    }
-
     // Build context string if patient data is attached
     let patientContextPrompt = '';
     if (patientContext && Object.keys(patientContext).length > 0) {
@@ -91,87 +79,34 @@ export async function POST(req: Request) {
       patientContextPrompt += `-----------------------------------------------------------\n`;
     }
 
-    // Format chat contents for Gemini API
-    const contents: any[] = [];
+    try {
+      const { generateClinicalAiChat } = await import('@/lib/aiProvider');
+      const result = await generateClinicalAiChat({
+        systemPrompt: SYSTEM_PROMPT,
+        userMessage: message.trim(),
+        conversationHistory: history,
+        doctorName: doctorName || auth.user?.name || auth.user?.email,
+        patientContextPrompt
+      });
 
-    // System instruction injected into the first user turn or system instruction
-    const systemInstructionText = `${SYSTEM_PROMPT}\n${patientContextPrompt}\nConsulting Doctor: ${doctorName || auth.user?.email || 'Attending Physician'}`;
+      return NextResponse.json({
+        success: true,
+        reply: result.reply.trim(),
+        model: result.model,
+        provider: result.provider,
+        timestamp: new Date().toISOString()
+      }, { status: 200 });
 
-    // Format prior conversation history
-    if (Array.isArray(history) && history.length > 0) {
-      for (const h of history) {
-        if (h.role === 'user' || h.role === 'client') {
-          contents.push({
-            role: 'user',
-            parts: [{ text: String(h.content || h.text || '') }]
-          });
-        } else if (h.role === 'assistant' || h.role === 'model' || h.role === 'ai') {
-          contents.push({
-            role: 'model',
-            parts: [{ text: String(h.content || h.text || '') }]
-          });
-        }
-      }
+    } catch (aiErr: any) {
+      console.warn('[ai/chat] AI generation fell back to clinical rules:', aiErr?.message);
+      return NextResponse.json({
+        success: true,
+        reply: generateClinicalFallback(message, patientContext),
+        isFallback: true,
+        model: 'clinical-engine-v2',
+        timestamp: new Date().toISOString()
+      }, { status: 200 });
     }
-
-    // Add current user query
-    contents.push({
-      role: 'user',
-      parts: [{ text: `${systemInstructionText}\n\nClinical Query from Colleague:\n${message.trim()}` }]
-    });
-
-    // Call Gemini 3.8 Flash model via Google Generative Language API
-    const geminiPayload = {
-      contents,
-      generationConfig: {
-        temperature: 0.25,
-        topP: 0.9,
-        maxOutputTokens: 2048,
-      }
-    };
-
-    const response = await fetch(GEMINI_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': apiKey
-      },
-      body: JSON.stringify(geminiPayload)
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.warn('Gemini Chat API returned non-200:', response.status, errText);
-      return NextResponse.json(
-        {
-          success: true,
-          reply: generateClinicalFallback(message, patientContext),
-          isFallback: true
-        },
-        { status: 200 }
-      );
-    }
-
-    const data = await response.json();
-    const replyText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!replyText) {
-      return NextResponse.json(
-        {
-          success: true,
-          reply: generateClinicalFallback(message, patientContext),
-          isFallback: true
-        },
-        { status: 200 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      reply: replyText.trim(),
-      model: 'gemini-3.8-flash',
-      timestamp: new Date().toISOString()
-    }, { status: 200 });
 
   } catch (error: any) {
     console.error('AI Doctor Chat Error:', error.message);

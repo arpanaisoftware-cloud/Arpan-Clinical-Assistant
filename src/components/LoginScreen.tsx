@@ -26,7 +26,8 @@ import {
   Tooltip,
   AppBar,
   Toolbar,
-  Container
+  Container,
+  Autocomplete
 } from '@mui/material';
 import LocalHospital from '@mui/icons-material/LocalHospital';
 import Lock from '@mui/icons-material/Lock';
@@ -46,7 +47,7 @@ import Brightness4 from '@mui/icons-material/Brightness4';
 import Brightness7 from '@mui/icons-material/Brightness7';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
-import { StaffUser, UserRole, AuthUser } from '../types/clinical';
+import { StaffUser, UserRole, AuthUser, isSuperAdminAccount } from '../types/clinical';
 import { toast } from 'react-toastify';
 import { ColorModeContext } from '../theme/ThemeRegistry';
 import * as Yup from 'yup';
@@ -59,23 +60,7 @@ const loginSchema = Yup.object({
   password: Yup.string().required('Password is required.').min(8, 'Password must be at least 8 characters.')
 });
 
-// Helper to identify Super Admin accounts (Super Admin 1 & 2)
-const isSuperAdminAccount = (user: { id?: string; staffId?: string; name?: string; email?: string }): boolean => {
-  const name = (user.name || '').toLowerCase().trim();
-  const staffId = (user.staffId || user.id || '').toLowerCase().trim();
-  const email = (user.email || '').toLowerCase().trim();
 
-  return (
-    name.includes('super admin') ||
-    name.includes('superadmin') ||
-    name.includes('admin 1') ||
-    name.includes('admin 2') ||
-    staffId === 'admin' ||
-    staffId === 'stf005' ||
-    email === 'arpanaisoftware@gmail.com' ||
-    email === 'dikshajain9907580417@gmail.com'
-  );
-};
 
 interface LoginScreenProps {
   staffList?: StaffUser[];
@@ -108,7 +93,7 @@ export default function LoginScreen({ staffList = [], onLoginSuccess, onUpdatePa
   const [isSending, setIsSending] = useState<boolean>(false);
   const [resetErrorMsg, setResetErrorMsg] = useState<string>('');
 
-  // Detect whether running locally or on production (https://www.arpanaisoftware.in/)
+  // Detect whether running locally on localhost vs live production
   const [isLocalHost, setIsLocalHost] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       const host = window.location.hostname.toLowerCase();
@@ -116,13 +101,10 @@ export default function LoginScreen({ staffList = [], onLoginSuccess, onUpdatePa
       return (
         host === 'localhost' ||
         host === '127.0.0.1' ||
-        host === '0.0.0.0' ||
-        host.endsWith('.local') ||
-        host.startsWith('192.168.') ||
-        host.startsWith('10.')
+        host === '0.0.0.0'
       );
     }
-    return true;
+    return false;
   });
 
   useEffect(() => {
@@ -134,10 +116,7 @@ export default function LoginScreen({ staffList = [], onLoginSuccess, onUpdatePa
         const local =
           host === 'localhost' ||
           host === '127.0.0.1' ||
-          host === '0.0.0.0' ||
-          host.endsWith('.local') ||
-          host.startsWith('192.168.') ||
-          host.startsWith('10.');
+          host === '0.0.0.0';
         setIsLocalHost(local);
       }
     }
@@ -215,10 +194,39 @@ export default function LoginScreen({ staffList = [], onLoginSuccess, onUpdatePa
       }
     }
 
-    let userToLogin = availableUsers.find(u => u.id === selectedStaffId || u.email === selectedStaffId);
+    const trimmedInput = (selectedStaffId || '').trim();
+    const findMatchedUser = (input: string) => {
+      const lower = input.toLowerCase().trim();
+      if (!lower) return undefined;
+      return (
+        availableUsers.find(
+          u =>
+            u.id?.toLowerCase() === lower ||
+            u.email?.toLowerCase() === lower ||
+            u.name?.toLowerCase() === lower ||
+            (lower.length >= 3 && (
+              lower.includes(u.id?.toLowerCase()) ||
+              lower.includes(u.email?.toLowerCase()) ||
+              u.name?.toLowerCase().includes(lower)
+            ))
+        ) ||
+        allAvailableUsers.find(
+          u =>
+            u.id?.toLowerCase() === lower ||
+            u.email?.toLowerCase() === lower ||
+            u.name?.toLowerCase() === lower ||
+            (lower.length >= 3 && (
+              lower.includes(u.id?.toLowerCase()) ||
+              lower.includes(u.email?.toLowerCase()) ||
+              u.name?.toLowerCase().includes(lower)
+            ))
+        )
+      );
+    };
 
-    const actualStaffId = userToLogin?.id || (selectedStaffId && !selectedStaffId.includes('@') ? selectedStaffId : undefined);
-    const actualEmail = userToLogin?.email || (selectedStaffId && selectedStaffId.includes('@') ? selectedStaffId : undefined);
+    const userToLogin = findMatchedUser(trimmedInput);
+    const actualStaffId = userToLogin?.id || (!trimmedInput.includes('@') ? trimmedInput : undefined);
+    const actualEmail = userToLogin?.email || (trimmedInput.includes('@') ? trimmedInput : undefined);
 
     setIsSubmitting(true);
     try {
@@ -252,9 +260,39 @@ export default function LoginScreen({ staffList = [], onLoginSuccess, onUpdatePa
   };
 
   const handleForceLogin = async () => {
-    let userToLogin = availableUsers.find(u => u.id === selectedStaffId || u.email === selectedStaffId);
-    const actualStaffId = userToLogin?.id || (selectedStaffId && !selectedStaffId.includes('@') ? selectedStaffId : undefined);
-    const actualEmail = userToLogin?.email || (selectedStaffId && selectedStaffId.includes('@') ? selectedStaffId : undefined);
+    const trimmedInput = (selectedStaffId || '').trim();
+    const findMatchedUser = (input: string) => {
+      const lower = input.toLowerCase().trim();
+      if (!lower) return undefined;
+      return (
+        availableUsers.find(
+          u =>
+            u.id?.toLowerCase() === lower ||
+            u.email?.toLowerCase() === lower ||
+            u.name?.toLowerCase() === lower ||
+            (lower.length >= 3 && (
+              lower.includes(u.id?.toLowerCase()) ||
+              lower.includes(u.email?.toLowerCase()) ||
+              u.name?.toLowerCase().includes(lower)
+            ))
+        ) ||
+        allAvailableUsers.find(
+          u =>
+            u.id?.toLowerCase() === lower ||
+            u.email?.toLowerCase() === lower ||
+            u.name?.toLowerCase() === lower ||
+            (lower.length >= 3 && (
+              lower.includes(u.id?.toLowerCase()) ||
+              lower.includes(u.email?.toLowerCase()) ||
+              u.name?.toLowerCase().includes(lower)
+            ))
+        )
+      );
+    };
+
+    const userToLogin = findMatchedUser(trimmedInput);
+    const actualStaffId = userToLogin?.id || (!trimmedInput.includes('@') ? trimmedInput : undefined);
+    const actualEmail = userToLogin?.email || (trimmedInput.includes('@') ? trimmedInput : undefined);
 
     setIsSubmitting(true);
     try {
@@ -673,55 +711,119 @@ export default function LoginScreen({ staffList = [], onLoginSuccess, onUpdatePa
                   >
                     Select Registered {selectedRole}:
                   </Typography>
-                  <TextField
-                    fullWidth
-                    select
-                    size="medium"
-                    value={selectedStaffId}
-                    onChange={(e) => setSelectedStaffId(e.target.value)}
-                    required
-                    SelectProps={{
-                      displayEmpty: true,
-                      renderValue: (selected) => {
-                        if (!selected || selected === '') {
-                          return (
-                            <Typography sx={{ color: isDark ? '#64748B' : '#94A3B8', fontSize: '0.95rem' }}>
-                              {isLoadingPublicStaff
-                                ? 'Loading registered roster...'
-                                : `Select registered ${selectedRole} from roster (${availableUsers.length} active)`}
+                  <Autocomplete
+                    freeSolo
+                    options={availableUsers}
+                    getOptionLabel={(option) => {
+                      if (typeof option === 'string') return option;
+                      return `${option.name} (${option.id}) — ${option.email}`;
+                    }}
+                    filterOptions={(options, state) => {
+                      const input = state.inputValue.toLowerCase().trim();
+                      if (!input) return options;
+                      return options.filter(
+                        (u) =>
+                          u.name.toLowerCase().includes(input) ||
+                          u.id.toLowerCase().includes(input) ||
+                          u.email.toLowerCase().includes(input)
+                      );
+                    }}
+                    value={
+                      availableUsers.find(
+                        (u) =>
+                          u.id.toLowerCase() === selectedStaffId.trim().toLowerCase() ||
+                          u.email.toLowerCase() === selectedStaffId.trim().toLowerCase()
+                      ) || selectedStaffId
+                    }
+                    isOptionEqualToValue={(option: any, val: any) => {
+                      if (!val) return false;
+                      if (typeof val === 'string') {
+                        const s = val.toLowerCase().trim();
+                        return (
+                          option.id?.toLowerCase() === s ||
+                          option.email?.toLowerCase() === s ||
+                          option.name?.toLowerCase() === s
+                        );
+                      }
+                      return option.id === val?.id;
+                    }}
+                    onChange={(_, newValue) => {
+                      if (!newValue) {
+                        setSelectedStaffId('');
+                      } else if (typeof newValue === 'string') {
+                        setSelectedStaffId(newValue);
+                      } else {
+                        setSelectedStaffId(newValue.id || newValue.email || '');
+                      }
+                    }}
+                    onInputChange={(_, newInputValue, reason) => {
+                      if (reason === 'input') {
+                        setSelectedStaffId(newInputValue);
+                      } else if (reason === 'clear') {
+                        setSelectedStaffId('');
+                      }
+                    }}
+                    renderOption={(props, option) => (
+                      <Box component="li" {...props} key={option.id} sx={{ py: 1, px: 1.5 }}>
+                        <Stack direction="row" alignItems="center" spacing={1.2}>
+                          <Box
+                            sx={{
+                              width: 32,
+                              height: 32,
+                              borderRadius: 1,
+                              bgcolor: isDark ? 'rgba(0, 201, 167, 0.15)' : 'rgba(0, 201, 167, 0.1)',
+                              color: primaryAccent,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: 800,
+                              fontSize: '0.75rem'
+                            }}
+                          >
+                            {selectedRole === 'Doctor' ? 'DR' : 'ST'}
+                          </Box>
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 800, color: 'text.primary', fontSize: '0.88rem' }}>
+                              {option.name} <span style={{ opacity: 0.65, fontWeight: 600 }}>({option.id})</span>
                             </Typography>
-                          );
+                            <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.75rem', display: 'block' }}>
+                              {option.email}
+                            </Typography>
+                          </Box>
+                        </Stack>
+                      </Box>
+                    )}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        placeholder={
+                          isLoadingPublicStaff
+                            ? 'Loading registered roster...'
+                            : `Select ${selectedRole} from roster or type Name / ID / Email...`
                         }
-                        const found = availableUsers.find(u => u.id === selected || u.email === selected);
-                        return found ? `${found.name} (${found.id})` : (selected as string);
-                      }
-                    }}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <Person sx={{ color: primaryAccent, fontSize: 20 }} />
-                        </InputAdornment>
-                      ),
-                      sx: {
-                        borderRadius: 2,
-                        bgcolor: isDark ? 'rgba(255, 255, 255, 0.03)' : '#FFFFFF',
-                        '&:hover fieldset': {
-                          borderColor: `${primaryAccent} !important`
-                        }
-                      }
-                    }}
-                    error={!!formErrors.selectedStaffId}
-                    helperText={formErrors.selectedStaffId}
-                  >
-                    <MenuItem value="" disabled sx={{ color: 'text.secondary' }}>
-                      <em>Select registered {selectedRole} from roster</em>
-                    </MenuItem>
-                    {availableUsers.map((u) => (
-                      <MenuItem key={u.id} value={u.id}>
-                        {u.name} ({u.id}) — {u.email}
-                      </MenuItem>
-                    ))}
-                  </TextField>
+                        error={!!formErrors.selectedStaffId}
+                        helperText={formErrors.selectedStaffId}
+                        InputProps={{
+                          ...params.InputProps,
+                          startAdornment: (
+                            <>
+                              <InputAdornment position="start">
+                                <Person sx={{ color: primaryAccent, fontSize: 20 }} />
+                              </InputAdornment>
+                              {params.InputProps.startAdornment}
+                            </>
+                          ),
+                          sx: {
+                            borderRadius: 2,
+                            bgcolor: isDark ? 'rgba(255, 255, 255, 0.03)' : '#FFFFFF',
+                            '&:hover fieldset': {
+                              borderColor: `${primaryAccent} !important`
+                            }
+                          }
+                        }}
+                      />
+                    )}
+                  />
                 </Box>
 
                 <Box>

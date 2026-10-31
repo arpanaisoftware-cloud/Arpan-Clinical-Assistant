@@ -332,6 +332,8 @@ export async function POST(req: Request) {
 
     let parsedResult: any = null;
 
+    // PDF / Image scanning ALWAYS uses Gemini Vision — DeepSeek is text-only and cannot read images.
+    // The active AI provider switch does NOT apply to image/document scanning.
     if (process.env.GEMINI_API_KEY) {
       try {
         const rawText = await callGeminiVision(imageBase64, mimeType, dietaryPreference, language);
@@ -339,6 +341,8 @@ export async function POST(req: Request) {
       } catch (geminiErr: any) {
         console.warn("[diet/parse-rx] Gemini Vision API call had issues:", geminiErr?.message);
       }
+    } else {
+      console.warn('[diet/parse-rx] GEMINI_API_KEY missing — cannot process image/PDF scan.');
     }
 
     // Extract patientInfo and dietPlan
@@ -367,9 +371,11 @@ export async function POST(req: Request) {
       dietPlan = buildClinicalIndianFallbackDiet(patientInfo, language);
     }
 
-    // Return single unified response containing both patientInfo and dietPlan
+    // Return single unified response containing both patientInfo and dietPlan via Gemini Vision OCR
     return NextResponse.json({
       success: true,
+      provider: 'gemini',
+      model: 'gemini-3.8-flash (Vision OCR)',
       data: {
         ...patientInfo,
         patientInfo,

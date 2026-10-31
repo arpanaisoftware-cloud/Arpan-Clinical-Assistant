@@ -40,7 +40,8 @@ import History from '@mui/icons-material/History';
 import OpenInNew from '@mui/icons-material/OpenInNew';
 import { toast } from 'react-toastify';
 import { useAppSelector } from '../redux/hooks';
-import { PatientInput, AuthUser, AnalysisResult, HistoryRecord } from '../types/clinical';
+import { PatientInput, AuthUser, AnalysisResult, HistoryRecord, isSuperAdminUser } from '../types/clinical';
+import axiosClient from '../redux/api/axiosClient';
 
 interface Message {
   sender: 'user' | 'ai';
@@ -248,12 +249,41 @@ export default function DoctorCopilotChat({
     : 'Ready to assist with your diabetic & metabolic pharmacotherapy, glycemic titration, and organ protection cases colleague-to-colleague.'
     }\n\nWhat clinical dilemma would you like to review?`;
 
+  const reduxUser = useAppSelector((state) => state.auth.currentUser);
+  const effectiveUser = currentUser || reduxUser;
+  const isSuperAdmin = isSuperAdminUser(effectiveUser);
+
+  const [activeAiProvider, setActiveAiProvider] = useState<'gemini' | 'deepseek'>('deepseek');
+
+  useEffect(() => {
+    const fetchAiStatus = async () => {
+      try {
+        const res = await fetch('/api/admin/ai-settings');
+        const data = await res.json();
+        if (data?.success && data.activeProvider) {
+          setActiveAiProvider(data.activeProvider);
+        }
+      } catch (e) {
+        // silent
+      }
+    };
+    fetchAiStatus();
+
+    const handleAiChanged = (e: any) => {
+      if (e.detail?.provider) {
+        setActiveAiProvider(e.detail.provider);
+      }
+    };
+    window.addEventListener('ai-provider-changed', handleAiChanged);
+    return () => window.removeEventListener('ai-provider-changed', handleAiChanged);
+  }, []);
+
   const [messages, setMessages] = useState<Message[]>([
     {
       sender: 'ai',
       text: initialGreeting,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      model: 'gemini-3.8-flash'
+      model: 'deepseek-chat'
     }
   ]);
   const [input, setInput] = useState<string>('');
@@ -367,7 +397,7 @@ export default function DoctorCopilotChat({
         sender: 'ai',
         text: generalGreeting,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        model: 'gemini-3.8-flash'
+        model: activeAiProvider === 'deepseek' ? 'deepseek-chat' : 'gemini-3.8-flash'
       }
     ]);
     toast.info('Consultation reset to General Clinical Consultation Mode.');
@@ -385,7 +415,7 @@ export default function DoctorCopilotChat({
         sender: 'ai',
         text: `🌐 **General Clinical Consultation Mode Enabled**\n\nNo specific patient record attached. You can ask any question regarding diabetic pharmacotherapy, drug mechanisms, generic bio-equivalents, organ-adjusted dosing, or drug interactions.`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        model: 'gemini-3.8-flash'
+        model: activeAiProvider === 'deepseek' ? 'deepseek-chat' : 'gemini-3.8-flash'
       };
       setMessages((prev) => [...prev, switchMsg]);
       toast.info('Switched to General Consultation mode.');
@@ -403,7 +433,7 @@ export default function DoctorCopilotChat({
         sender: 'ai',
         text: `🔄 **Consultation Context Switched: ${name}**\n\n* 📋 **Diagnosis**: ${disease}\n* 🛡️ **Pre-analyzed Safety Score**: ${score}/100 (${risk})\n* 💊 **Prescribed Drugs**: ${medList.length} medications loaded.\n\nAll pre-analyzed patient data (vitals, lab biomarkers, flagged drug interactions) is now active in context. What would you like to review or modify regarding this patient?`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        model: 'gemini-3.8-flash'
+        model: activeAiProvider === 'deepseek' ? 'deepseek-chat' : 'gemini-3.8-flash'
       };
       setMessages((prev) => [...prev, switchMsg]);
       toast.info(`AI context loaded for ${name}`);
@@ -497,7 +527,7 @@ export default function DoctorCopilotChat({
           sender: 'ai',
           text: aiReply,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          model: resData.model || 'gemini-3.8-flash',
+          model: resData.model || (activeAiProvider === 'deepseek' ? 'deepseek-chat' : 'gemini-3.8-flash'),
         },
       ]);
     } catch (err: any) {
@@ -593,19 +623,27 @@ export default function DoctorCopilotChat({
 
         {/* Status & Capabilities Pill */}
         <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-          <Chip
-            icon={<AutoAwesome sx={{ fontSize: '12px !important', color: '#10B981 !important' }} />}
-            label="Gemini 3.8 Flash • Extreme Medical AI"
-            size="small"
-            sx={{
-              bgcolor: 'rgba(16, 185, 129, 0.2)',
-              color: '#A7F3D0',
-              fontWeight: 800,
-              fontSize: '0.7rem',
-              height: 22,
-              border: '1px solid rgba(16, 185, 129, 0.3)',
-            }}
-          />
+          {isSuperAdmin && (
+            <Chip
+              icon={
+                activeAiProvider === 'deepseek' ? (
+                  <Psychology sx={{ fontSize: '13px !important', color: '#818CF8 !important' }} />
+                ) : (
+                  <AutoAwesome sx={{ fontSize: '12px !important', color: '#10B981 !important' }} />
+                )
+              }
+              label={activeAiProvider === 'deepseek' ? 'DeepSeek-V3 • Extreme Medical AI' : 'Gemini 3.8 Flash • Extreme Medical AI'}
+              size="small"
+              sx={{
+                bgcolor: activeAiProvider === 'deepseek' ? 'rgba(79, 70, 229, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+                color: activeAiProvider === 'deepseek' ? '#C7D2FE' : '#A7F3D0',
+                fontWeight: 800,
+                fontSize: '0.7rem',
+                height: 22,
+                border: activeAiProvider === 'deepseek' ? '1px solid rgba(79, 70, 229, 0.4)' : '1px solid rgba(16, 185, 129, 0.3)',
+              }}
+            />
+          )}
           {activePatientName && (
             <Chip
               icon={<VerifiedUser sx={{ fontSize: '12px !important', color: '#FBBF24 !important' }} />}
@@ -871,6 +909,20 @@ export default function DoctorCopilotChat({
                     <Typography variant="caption" sx={{ fontWeight: 800, color: '#4F46E5', fontSize: '0.74rem' }}>
                       Prof. Dr. Arpan AI
                     </Typography>
+                    {isSuperAdmin && (
+                      <Chip
+                        label={m.model?.includes('deepseek') || activeAiProvider === 'deepseek' ? 'DeepSeek-V3' : 'Gemini 3.8'}
+                        size="small"
+                        sx={{
+                          height: 16,
+                          fontSize: '0.62rem',
+                          fontWeight: 800,
+                          px: 0.2,
+                          bgcolor: (m.model?.includes('deepseek') || activeAiProvider === 'deepseek') ? 'rgba(79, 70, 229, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+                          color: (m.model?.includes('deepseek') || activeAiProvider === 'deepseek') ? '#818CF8' : '#34D399',
+                        }}
+                      />
+                    )}
                     <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.68rem' }}>
                       {m.timestamp}
                     </Typography>
@@ -958,9 +1010,11 @@ export default function DoctorCopilotChat({
                   borderColor: '#6366F1',
                 }}
               >
-                <CircularProgress size={16} sx={{ color: '#4F46E5' }} />
-                <Typography variant="caption" sx={{ fontWeight: 700, color: '#4F46E5', fontStyle: 'italic' }}>
-                  Consulting pharmacology protocols & Gemini 3.8 Flash engine...
+                <CircularProgress size={16} sx={{ color: isSuperAdmin && activeAiProvider === 'deepseek' ? '#818CF8' : '#4F46E5' }} />
+                <Typography variant="caption" sx={{ fontWeight: 700, color: isSuperAdmin && activeAiProvider === 'deepseek' ? '#818CF8' : '#4F46E5', fontStyle: 'italic' }}>
+                  {isSuperAdmin && activeAiProvider === 'deepseek'
+                    ? 'Consulting pharmacology protocols & DeepSeek-V3 reasoning engine...'
+                    : 'Consulting pharmacology protocols & clinical reasoning engine...'}
                 </Typography>
               </Paper>
             </Box>
