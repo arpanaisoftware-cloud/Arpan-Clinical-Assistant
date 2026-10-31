@@ -249,6 +249,31 @@ export const COUNSELLING_RISK_DATABASE: RiskAssessmentItem[] = [
       'Completely eliminate refined sugars, sweetened cold drinks, deep-fried fast foods, and late-night snacking.'
     ],
     screeningSchedule: 'Monthly Body Weight & BMI monitoring; 3-monthly Waist Circumference & Body Composition Analysis.'
+  },
+  {
+    id: 'hyperuricemiaRisk',
+    title: 'Risk of Hyperuricemia & Gout (Elevated Serum Uric Acid & Joint Microcrystallopathy)',
+    subtitle: 'Monosodium Urate Deposition, Renal Tubular Clearance & Acute Inflammatory Arthropathy',
+    riskLevel: 'MODERATE CAUTION',
+    score: 52,
+    color: '#FFB703',
+    keyIndicators: [
+      'Renal tubular filtration clearance vulnerability predisposing to uric acid underexcretion',
+      'Cardiometabolic hemodynamic loading from elevated blood pressure associated with metabolic hyperuricemia',
+      'Purine metabolism turnover and dietary exposure to high-purine foods (red meats, seafood, alcohol)',
+      'Potential pharmacological uric acid retention from diuretics or low-dose salicylates'
+    ],
+    clinicalGuidance: [
+      'Quantify baseline Serum Uric Acid (maintain target < 6.0 mg/dL; < 5.0 mg/dL if tophi or frequent attacks present).',
+      'Review antihypertensive regimen: favor Losartan (demonstrates distinctive uricosuric action) and SGLT2 inhibitors; avoid or minimize Thiazide and Loop diuretics.',
+      'Consider Xanthine Oxidase Inhibitor therapy (Allopurinol or Febuxostat) with low-dose anti-inflammatory prophylaxis (Colchicine 0.5mg) during initiation.'
+    ],
+    patientAdvice: [
+      'Maintain rigorous daily fluid intake (2.5L to 3L water) to prevent supersaturation and promote renal uric acid flushing.',
+      'Strictly curb high-purine foods: red meats, organ meats (liver/kidney), shellfish, yeast extracts, high-fructose sweetened beverages, and alcohol (especially beer).',
+      'Promptly notify physician if experiencing acute, excruciating pain, redness, or heat at the great toe (podagra), ankle, or knee joints.'
+    ],
+    screeningSchedule: 'Serum Uric Acid & Serum Creatinine/eGFR every 6 months; Renal Ultrasound if history of nephrolithiasis.'
   }
 ];
 

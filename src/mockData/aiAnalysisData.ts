@@ -393,6 +393,10 @@ export function analyzePrescription(patientData: PatientInput, medications: Medi
     let cardiovascularConsideration = 'No direct cardiovascular contraindications.';
     let cognitiveFunction = 'No significant adverse cognitive or psychomotor effects noted.';
     let sexualDysfunction = 'No documented risk of sexual dysfunction or endocrine disruption.';
+    let respiratorySuitability = 'Safe; no adverse pulmonary effects or bronchospasm risk.';
+    let skinSuitability = 'Well tolerated; low risk of dermatological hypersensitivity.';
+    let obesityWeightSuitability = 'Weight neutral profile; does not promote metabolic adiposity.';
+    let electrolyteStatus = 'No direct adverse impact on serum sodium, potassium, or calcium.';
     let overallSuitability: 'Safe' | 'Caution' | 'Avoid' = 'Safe';
 
     if (nameLow.includes('metformin')) {
@@ -403,6 +407,10 @@ export function analyzePrescription(patientData: PatientInput, medications: Medi
       cardiovascularConsideration = 'Beneficial — associated with reduced CV events in T2DM.';
       cognitiveFunction = 'Neuroprotective potential; improves cerebral glucose metabolism, low cognitive risk.';
       sexualDysfunction = 'Does not impair sexual function; may improve endothelial erectile health in T2DM.';
+      respiratorySuitability = 'Safe; monitor for dyspnea only in acute lactic acidosis suspicion.';
+      skinSuitability = 'Well tolerated; rare transient pruritus or allergic erythema.';
+      obesityWeightSuitability = 'Favorable: weight-neutral to modest weight loss (1-3 kg) via appetite suppression and improved insulin sensitivity.';
+      electrolyteStatus = 'Safe; no direct effect on Na+/K+; annual B12 level monitoring recommended.';
       overallSuitability = 'Safe';
     } else if (nameLow.includes('lisinopril') || nameLow.includes('ramipril') || nameLow.includes('ace')) {
       indication = 'ACE inhibitor — first-line antihypertensive; also reduces diabetic nephropathy progression.';
@@ -412,6 +420,10 @@ export function analyzePrescription(patientData: PatientInput, medications: Medi
       cardiovascularConsideration = 'Cardioprotective — reduces cardiac remodelling post-MI.';
       cognitiveFunction = 'Safe; central ACE inhibition associated with reduced rate of cognitive decline.';
       sexualDysfunction = 'Low risk of erectile dysfunction compared to older antihypertensives; sexually neutral.';
+      respiratorySuitability = 'Caution: bradykinin accumulation triggers persistent dry cough in 10-15% of patients; switch to ARB if intolerable.';
+      skinSuitability = 'Rare but critical risk of life-threatening angioedema (mucocutaneous facial/laryngeal swelling); discontinue immediately.';
+      obesityWeightSuitability = 'Weight neutral; does not affect resting metabolic rate or adiposity.';
+      electrolyteStatus = 'Risk of hyperkalemia (K+ > 5.0 mEq/L) via aldosterone inhibition; avoid potassium supplements & monitor serum K+.';
       overallSuitability = 'Safe';
     } else if (nameLow.includes('ibuprofen') || nameLow.includes('nsaid') || nameLow.includes('diclofenac')) {
       indication = 'NSAID — anti-inflammatory and analgesic for musculoskeletal pain management.';
@@ -422,6 +434,10 @@ export function analyzePrescription(patientData: PatientInput, medications: Medi
       cardiovascularConsideration = 'Increases CV risk (MI, stroke) especially in patients with existing hypertension.';
       cognitiveFunction = 'Rare CNS effects: headache, dizziness, or confusion in vulnerable elderly patients.';
       sexualDysfunction = 'Generally low acute risk; prolonged high doses may suppress testosterone synthesis.';
+      respiratorySuitability = 'Caution: may precipitate severe bronchospasm in patients with Aspirin-Exacerbated Respiratory Disease (AERD) / asthma.';
+      skinSuitability = 'Risk of fixed drug eruptions, photosensitivity, urticaria, and rare severe cutaneous reactions (SJS/TEN).';
+      obesityWeightSuitability = 'May induce rapid fluid and sodium retention mimicking sudden 1-2 kg weight gain; worsens congestive edema.';
+      electrolyteStatus = 'Promotes sodium/water retention; can induce hyperkalemia and acute interstitial nephritis; monitor electrolytes.';
       overallSuitability = 'Caution';
     } else if (nameLow.includes('atorvastatin') || nameLow.includes('statin') || nameLow.includes('rosuvastatin')) {
       indication = 'HMG-CoA reductase inhibitor — lowers LDL cholesterol; reduces CV event risk.';
@@ -431,6 +447,10 @@ export function analyzePrescription(patientData: PatientInput, medications: Medi
       cardiovascularConsideration = 'Primary & secondary CV prevention — reduces MI and stroke mortality.';
       cognitiveFunction = 'Clinical trials demonstrate no persistent adverse memory effects; supports vascular brain health.';
       sexualDysfunction = 'Generally safe; rare reports of transient libido reduction or erectile changes.';
+      respiratorySuitability = 'Safe; very rare idiosyncratic reports of interstitial pneumonitis with high-dose long-term therapy.';
+      skinSuitability = 'Generally well tolerated; rare allergic rash or eczema-like eruptions.';
+      obesityWeightSuitability = 'Weight neutral profile; maintain alongside healthy therapeutic lifestyle changes.';
+      electrolyteStatus = 'Neutral effect on serum electrolytes; check CK & electrolytes if myopathy is suspected.';
       overallSuitability = 'Safe';
     } else if (nameLow.includes('insulin') || nameLow.includes('glipizide') || nameLow.includes('glimepiride') || nameLow.includes('sulfonylurea')) {
       indication = 'Insulin secretagogue / exogenous insulin — lowers blood glucose in T2DM.';
@@ -440,6 +460,10 @@ export function analyzePrescription(patientData: PatientInput, medications: Medi
       cardiovascularConsideration = 'Hypoglycemia episodes can trigger arrhythmias; monitor carefully.';
       cognitiveFunction = 'Alertness precaution: hypoglycemic episodes can trigger acute disorientation and confusion.';
       sexualDysfunction = 'Preserves long-term microvascular and autonomic nerve function critical for sexual health.';
+      respiratorySuitability = 'Safe; non-pulmonary clearance; caution with inhaled insulin formulations in asthma/COPD.';
+      skinSuitability = 'Potential for lipohypertrophy at repeated injection sites or mild local hypersensitivity.';
+      obesityWeightSuitability = 'High risk of weight gain (typically 2-4 kg) due to enhanced anabolic lipogenesis and defensive snacking.';
+      electrolyteStatus = 'Promotes intracellular potassium shift; monitor for hypokalemia, especially during intensive IV titration.';
       overallSuitability = 'Caution';
     }
 
@@ -459,6 +483,10 @@ export function analyzePrescription(patientData: PatientInput, medications: Medi
       cardiovascularConsideration,
       cognitiveFunction,
       sexualDysfunction,
+      respiratorySuitability,
+      skinSuitability,
+      obesityWeightSuitability,
+      electrolyteStatus,
       overallSuitability
     };
   });

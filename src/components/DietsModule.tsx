@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import Card from "@mui/material/Card";
@@ -79,6 +79,8 @@ import Translate from "@mui/icons-material/Translate";
 import LocalFireDepartment from "@mui/icons-material/LocalFireDepartment";
 import EditNote from "@mui/icons-material/EditNote";
 import Undo from "@mui/icons-material/Undo";
+import ArrowUpward from "@mui/icons-material/ArrowUpward";
+import ArrowDownward from "@mui/icons-material/ArrowDownward";
 import { toast } from "react-toastify";
 import confetti from "canvas-confetti";
 import { useAppSelector } from "../redux/hooks";
@@ -530,6 +532,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
   const [aiDietPlan, setAiDietPlan] = useState<AIDietPlan | null>(null);
   const [printOpen, setPrintOpen] = useState(false);
   const [dietRefreshKey, setDietRefreshKey] = useState<number>(0);
+  const [currentDietRecordId, setCurrentDietRecordId] = useState<string | null>(null);
   const [rxProgress, setRxProgress] = useState(0);
 
   // Editable Meal Schedule Popup State
@@ -800,7 +803,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
 
       // Persist to MongoDB archive via /api/diet/history (auto prunes to latest 2000 records)
       try {
-        await fetch("/api/diet/history", {
+        const histRes = await fetch("/api/diet/history", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -821,6 +824,10 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
             analysedBy: authUser?.name || "Dr. Yashwant Dubey",
           }),
         });
+        const histData = await histRes.json();
+        if (histData?.success && histData?.data) {
+          setCurrentDietRecordId(histData.data.dietId || histData.data.id || histData.data._id);
+        }
         setDietRefreshKey((prev) => prev + 1);
       } catch (saveErr) {
         console.warn("Failed to save diet plan history to MongoDB:", saveErr);
@@ -840,6 +847,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
 
   // Load saved diet plan record from MongoDB history table
   const handleLoadDietRecord = (record: DietHistoryRecord) => {
+    setCurrentDietRecordId(record.dietId || record.id || record._id || null);
     if (record.patientForm) {
       setForm((prev) => ({
         ...prev,
@@ -874,10 +882,61 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
 
   // Open printable diet sheet directly from history record
   const handlePrintDietRecord = (record: DietHistoryRecord) => {
+    setCurrentDietRecordId(record.dietId || record.id || record._id || null);
     if (record.dietPlan) {
       setAiDietPlan(record.dietPlan);
     }
     setPrintOpen(true);
+  };
+
+  // Central update function: whenever any changes are made to diet, this calls /api/diet/update
+  const syncDietPlanUpdate = async (
+    updatedPlan: AIDietPlan,
+    options?: {
+      patientFormOverride?: any;
+      customFields?: Record<string, any>;
+    }
+  ) => {
+    try {
+      const activeForm = options?.patientFormOverride || (inputMode === "history" ? historyForm : form);
+      const targetId = currentDietRecordId;
+
+      const payload = {
+        dietId: targetId,
+        patientName: activeForm?.patientName || "Patient",
+        age: activeForm?.age,
+        gender: activeForm?.gender,
+        disease: activeForm?.disease,
+        dietaryPreference: activeForm?.dietaryPreference,
+        targetCalories: updatedPlan.targetCalories,
+        language: activeForm?.language || "Hindi",
+        planName: updatedPlan.planName,
+        summary: updatedPlan.summary,
+        dietPlan: updatedPlan,
+        patientForm: activeForm,
+        analysedBy: authUser?.name || "Dr. Yashwant Dubey",
+        ...(options?.customFields || {})
+      };
+
+      const res = await fetch("/api/diet/update", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${getToken()}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const json = await res.json();
+      if (res.ok && json.success && json.data) {
+        if (!currentDietRecordId) {
+          setCurrentDietRecordId(json.data.dietId || json.data.id || json.data._id);
+        }
+        setDietRefreshKey((prev) => prev + 1);
+      }
+    } catch (err) {
+      console.warn("Failed to persist diet plan update to MongoDB:", err);
+    }
   };
 
   // =========================================================================
@@ -962,19 +1021,40 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
     });
   };
 
-  const handleAddTempMeal = () => {
-    setTempMealSchedule((prev) => [
-      ...prev,
-      {
-        time: "05:00 PM",
-        slotType: "Evening Snack",
-        mealName: "Evening Snack",
+  // Insert a blank meal slot anywhere in the schedule (middle, top, or bottom)
+  const handleInsertTempMeal = (index: number) => {
+    setTempMealSchedule((prev) => {
+      const copy = [...prev];
+      const blankSlot: EditableMealSlot = {
+        time: "",
+        slotType: "Custom",
+        mealName: "",
         customMealName: "",
-        portion: "1 Small Katori",
-        focus: "Roasted Chana / Sprouted Moong Chaat with fresh lemon & cucumber",
-        clinicalNote: "Clean Indian energy snack that keeps blood sugar steady"
-      }
-    ]);
+        portion: "",
+        focus: "",
+        clinicalNote: ""
+      };
+      const insertAt = Math.max(0, Math.min(index, copy.length));
+      copy.splice(insertAt, 0, blankSlot);
+      return copy;
+    });
+    toast.success(`Blank meal slot added at position #${index + 1}`);
+  };
+
+  // Add blank meal slot at the end
+  const handleAddTempMeal = () => {
+    handleInsertTempMeal(tempMealSchedule.length);
+  };
+
+  // Move meal slot up or down in order
+  const handleMoveTempMeal = (fromIndex: number, toIndex: number) => {
+    setTempMealSchedule((prev) => {
+      if (toIndex < 0 || toIndex >= prev.length) return prev;
+      const copy = [...prev];
+      const [item] = copy.splice(fromIndex, 1);
+      copy.splice(toIndex, 0, item);
+      return copy;
+    });
   };
 
   const handleDeleteTempMeal = (index: number) => {
@@ -983,6 +1063,55 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
       return;
     }
     setTempMealSchedule((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  /**
+   * Shared helper: calls /api/diet/recalculate with the updated schedule.
+   * Guarantees Protein*4 + Fat*9 + Carbs*4 === targetCalories exactly.
+   * Auto-invoked on every Save / Delete / explicit Recalculate action.
+   */
+  const recalculateForSchedule = async (
+    schedule: MealSlot[],
+    basePlan: AIDietPlan
+  ): Promise<AIDietPlan> => {
+    const activeForm = inputMode === "history" ? historyForm : form;
+    const optimized = schedule.map((m) => ({
+      mealName: m.mealName,
+      portion: m.portion,
+      focus: m.focus
+    }));
+    try {
+      const res = await fetch("/api/diet/recalculate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mealSchedule: optimized,
+          condition: activeForm?.disease || "General Health",
+          dietaryPreference: activeForm?.dietaryPreference || "Vegetarian",
+          targetCalories: basePlan.targetCalories
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        const updatedCalories = Number(data.data.calories) || basePlan.targetCalories;
+        const updatedMacro = {
+          carbs: data.data.carbs || basePlan.macroBreakdown?.carbs,
+          protein: data.data.protein || basePlan.macroBreakdown?.protein,
+          fats: data.data.fats || basePlan.macroBreakdown?.fats,
+          fiber: data.data.fiber || basePlan.macroBreakdown?.fiber || "25g"
+        };
+        return {
+          ...basePlan,
+          mealSchedule: schedule,
+          targetCalories: updatedCalories,
+          macroBreakdown: updatedMacro
+        };
+      }
+    } catch (err) {
+      console.warn("Auto-recalculate failed:", err);
+    }
+    // fallback: return plan with updated schedule but unchanged macros
+    return { ...basePlan, mealSchedule: schedule };
   };
 
   const handleSaveMealSchedule = async () => {
@@ -1007,69 +1136,35 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
       };
     });
 
-    setAiDietPlan({
-      ...aiDietPlan,
-      mealSchedule: sanitized
-    });
     setEditMealsOpen(false);
-    confetti({ particleCount: 35, spread: 50, origin: { y: 0.5 } });
-    toast.success("Meal schedule updated successfully!");
+    setIsRecalculating(true);
+    try {
+      // Auto-recalculate macros for the added/edited/deleted meal schedule
+      const newPlan = await recalculateForSchedule(sanitized, aiDietPlan);
+      setAiDietPlan(newPlan);
+      lastCalculatedScheduleRef.current = serializeMealSchedule(sanitized);
+      confetti({ particleCount: 35, spread: 50, origin: { y: 0.5 } });
+      toast.success("Meal schedule saved & macros recalculated!");
+      await syncDietPlanUpdate(newPlan);
+    } catch (err) {
+      console.warn("Save meal error:", err);
+      toast.error("Failed to save meal schedule.");
+    } finally {
+      setIsRecalculating(false);
+    }
   };
 
-  // Recalculate Calories & Macros on explicit button click (token-optimized & conditional)
+  // Recalculate Calories & Macros on explicit button click (uses shared recalculateForSchedule)
   const handleRecalculateMacros = async () => {
     if (!aiDietPlan) return;
-    const currentScheduleKey = serializeMealSchedule(aiDietPlan.mealSchedule);
-
-    // Only hit API if changes were detected in meal schedule & portions compared to previous
-    if (lastCalculatedScheduleRef.current && currentScheduleKey === lastCalculatedScheduleRef.current) {
-      toast.info("Meal schedule and portions have not changed. Macronutrients are already up to date.");
-      return;
-    }
-
     setIsRecalculating(true);
-    let updatedCalories = aiDietPlan.targetCalories;
-    let updatedMacro = { ...aiDietPlan.macroBreakdown };
-
     try {
-      const activeForm = inputMode === "history" ? historyForm : form;
-      // Token-optimized payload: only send relevant meal name, portion, and dishes (strip time, clinical notes, and irrelevant vitals)
-      const optimizedSchedule = (aiDietPlan.mealSchedule || []).map((m) => ({
-        mealName: m.mealName,
-        portion: m.portion,
-        focus: m.focus
-      }));
-
-      const res = await fetch("/api/diet/recalculate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mealSchedule: optimizedSchedule,
-          condition: activeForm?.disease || "General Health",
-          dietaryPreference: activeForm?.dietaryPreference || "Vegetarian",
-          targetCalories: aiDietPlan.targetCalories
-        })
-      });
-      const data = await res.json();
-      if (data.success && data.data) {
-        lastCalculatedScheduleRef.current = currentScheduleKey;
-        updatedCalories = Number(data.data.calories) || updatedCalories;
-        updatedMacro = {
-          carbs: data.data.carbs || updatedMacro.carbs,
-          protein: data.data.protein || updatedMacro.protein,
-          fats: data.data.fats || updatedMacro.fats,
-          fiber: data.data.fiber || updatedMacro.fiber || "25g"
-        };
-        setAiDietPlan((prev) => prev ? {
-          ...prev,
-          targetCalories: updatedCalories,
-          macroBreakdown: updatedMacro
-        } : null);
-        confetti({ particleCount: 45, spread: 60, origin: { y: 0.5 } });
-        toast.success("Calories & Macronutrient cards recalculated!");
-      } else {
-        toast.error("Could not recalculate macros, please try again.");
-      }
+      const newPlan = await recalculateForSchedule(aiDietPlan.mealSchedule, aiDietPlan);
+      setAiDietPlan(newPlan);
+      lastCalculatedScheduleRef.current = serializeMealSchedule(aiDietPlan.mealSchedule);
+      confetti({ particleCount: 45, spread: 60, origin: { y: 0.5 } });
+      toast.success("Calories & Macronutrient cards recalculated!");
+      await syncDietPlanUpdate(newPlan);
     } catch (err) {
       console.warn("Recalculation error:", err);
       toast.error("Failed to recalculate macros");
@@ -1131,18 +1226,28 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
   };
 
   // Quick inline delete of a meal slot directly from the visual cards or table
-  const handleDeleteMealSlotDirect = (index: number) => {
+  const handleDeleteMealSlotDirect = async (index: number) => {
     if (!aiDietPlan?.mealSchedule) return;
     if (aiDietPlan.mealSchedule.length <= 1) {
       toast.warning("Keep at least one meal slot in the schedule.");
       return;
     }
     const updated = aiDietPlan.mealSchedule.filter((_, i) => i !== index);
-    setAiDietPlan({
-      ...aiDietPlan,
-      mealSchedule: updated
-    });
-    toast.info("Meal slot removed.");
+    // Auto-recalculate macros after deleting a meal slot
+    setIsRecalculating(true);
+    try {
+      const newPlan = await recalculateForSchedule(updated, aiDietPlan);
+      setAiDietPlan(newPlan);
+      lastCalculatedScheduleRef.current = serializeMealSchedule(updated);
+      toast.success("Meal removed & macros recalculated!");
+      await syncDietPlanUpdate(newPlan);
+    } catch (err) {
+      // fallback: still update the schedule
+      setAiDietPlan({ ...aiDietPlan, mealSchedule: updated });
+      toast.info("Meal slot removed.");
+    } finally {
+      setIsRecalculating(false);
+    }
   };
 
   // 1. Overview Edit Handlers
@@ -4040,7 +4145,28 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
           </DialogTitle>
 
           <DialogContent dividers sx={{ p: { xs: 1.5, sm: 2.5 }, overflowY: "auto" }}>
-            <Stack spacing={2.5}>
+            {/* Insert Blank Meal at Beginning */}
+            <Box sx={{ textAlign: "center", mb: 2 }}>
+              <Button
+                size="small"
+                variant="outlined"
+                color="secondary"
+                startIcon={<Add />}
+                onClick={() => handleInsertTempMeal(0)}
+                sx={{
+                  borderRadius: 2,
+                  fontWeight: 700,
+                  fontSize: "0.78rem",
+                  px: 2.5,
+                  py: 0.6,
+                  borderStyle: "dashed"
+                }}
+              >
+                + Insert Blank Meal at Beginning (Slot #1)
+              </Button>
+            </Box>
+
+            <Stack spacing={2}>
               {tempMealSchedule.map((meal, index) => {
                 const isCustom = meal.slotType === "Custom";
                 const selectValue = isCustom
@@ -4051,8 +4177,8 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                   : (meal.slotType || meal.mealName || `Meal Slot #${index + 1}`);
 
                 return (
-                  <Paper
-                    key={index}
+                  <React.Fragment key={index}>
+                    <Paper
                     variant="outlined"
                     sx={{
                       p: { xs: 1.8, sm: 2.2 },
@@ -4069,23 +4195,69 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                         size="small"
                         sx={{ fontWeight: 800, fontSize: "0.75rem" }}
                       />
-                      <Tooltip title="Delete this meal slot">
-                        <Button
-                          size="small"
-                          color="error"
-                          startIcon={<Delete />}
-                          onClick={() => handleDeleteTempMeal(index)}
-                          sx={{
-                            textTransform: "none",
-                            fontWeight: 700,
-                            fontSize: "0.75rem",
-                            borderRadius: 1.5,
-                            px: 1.2
-                          }}
-                        >
-                          Delete
-                        </Button>
-                      </Tooltip>
+                      <Stack direction="row" spacing={0.8} alignItems="center" flexWrap="wrap">
+                        <Tooltip title="Move slot up">
+                          <span>
+                            <IconButton
+                              size="small"
+                              disabled={index === 0}
+                              onClick={() => handleMoveTempMeal(index, index - 1)}
+                              sx={{ p: 0.5, border: "1px solid", borderColor: isDark ? "rgba(255,255,255,0.12)" : "#CBD5E1", borderRadius: 1.2 }}
+                            >
+                              <ArrowUpward fontSize="small" />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                        <Tooltip title="Move slot down">
+                          <span>
+                            <IconButton
+                              size="small"
+                              disabled={index === tempMealSchedule.length - 1}
+                              onClick={() => handleMoveTempMeal(index, index + 1)}
+                              sx={{ p: 0.5, border: "1px solid", borderColor: isDark ? "rgba(255,255,255,0.12)" : "#CBD5E1", borderRadius: 1.2 }}
+                            >
+                              <ArrowDownward fontSize="small" />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                        <Tooltip title="Insert a blank meal slot directly below this slot">
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            color="secondary"
+                            startIcon={<Add />}
+                            onClick={() => handleInsertTempMeal(index + 1)}
+                            sx={{
+                              textTransform: "none",
+                              fontWeight: 700,
+                              fontSize: "0.74rem",
+                              borderRadius: 1.5,
+                              px: 1.2,
+                              py: 0.4
+                            }}
+                          >
+                            + Add Meal Below
+                          </Button>
+                        </Tooltip>
+                        <Tooltip title="Delete this meal slot">
+                          <Button
+                            size="small"
+                            color="error"
+                            startIcon={<Delete />}
+                            onClick={() => handleDeleteTempMeal(index)}
+                            sx={{
+                              textTransform: "none",
+                              fontWeight: 700,
+                              fontSize: "0.74rem",
+                              borderRadius: 1.5,
+                              px: 1.2,
+                              py: 0.4
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        </Tooltip>
+                      </Stack>
                     </Stack>
 
                     <Grid container spacing={1.5}>
@@ -4172,17 +4344,45 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                       </Grid>
                     </Grid>
                   </Paper>
+                  {index < tempMealSchedule.length - 1 && (
+                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", my: 0.5 }}>
+                      <Button
+                        size="small"
+                        startIcon={<Add sx={{ fontSize: 15 }} />}
+                        onClick={() => handleInsertTempMeal(index + 1)}
+                        sx={{
+                          textTransform: "none",
+                          fontSize: "0.74rem",
+                          fontWeight: 700,
+                          color: isDark ? "#A78BFA" : "#6C5CE7",
+                          border: "1px dashed",
+                          borderColor: isDark ? "rgba(167, 139, 250, 0.4)" : "rgba(108, 92, 231, 0.4)",
+                          borderRadius: 2,
+                          px: 2,
+                          py: 0.3,
+                          bgcolor: isDark ? "rgba(108,92,231,0.06)" : "rgba(108,92,231,0.03)",
+                          "&:hover": {
+                            bgcolor: isDark ? "rgba(108,92,231,0.15)" : "rgba(108,92,231,0.1)",
+                            borderColor: "#6C5CE7"
+                          }
+                        }}
+                      >
+                        + Insert Blank Meal in Middle (Between Slot #{index + 1} &amp; #{index + 2})
+                      </Button>
+                    </Box>
+                  )}
+                  </React.Fragment>
                 );
               })}
             </Stack>
 
-            {/* Add New Meal Slot Button */}
+            {/* Add New Meal Slot Button (at End) */}
             <Box mt={2.5} textAlign="center">
               <Button
                 variant="outlined"
                 color="secondary"
                 startIcon={<Add />}
-                onClick={handleAddTempMeal}
+                onClick={() => handleInsertTempMeal(tempMealSchedule.length)}
                 sx={{
                   borderRadius: 2,
                   fontWeight: 800,
@@ -4191,7 +4391,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                   borderStyle: "dashed"
                 }}
               >
-                Add New Meal Slot
+                + Add New Blank Meal Slot (at End)
               </Button>
             </Box>
           </DialogContent>
@@ -4216,58 +4416,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
               color="primary"
               disabled={isRecalculating}
               startIcon={isRecalculating ? <CircularProgress size={16} color="inherit" /> : <Refresh />}
-              onClick={async () => {
-                if (!aiDietPlan) return;
-                const sanitized: MealSlot[] = tempMealSchedule.map((m, idx) => {
-                  let finalName = m.mealName?.trim();
-                  if (finalName && m.slotType && finalName !== m.slotType) {
-                    finalName = `${m.slotType} (${finalName})`;
-                  } else if (m.slotType) {
-                    finalName = m.slotType;
-                  }
-                  return {
-                    time: m.time?.trim() || "Flexible",
-                    mealName: finalName || `Meal Slot #${idx + 1}`,
-                    portion: m.portion?.trim() || "Standard Portion",
-                    focus: m.focus?.trim() || "Balanced Indian meal",
-                    clinicalNote: m.clinicalNote?.trim() || "Nutritional support"
-                  };
-                });
-                setIsRecalculating(true);
-                try {
-                  const res = await fetch("/api/diet/recalculate", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      mealSchedule: sanitized,
-                      patient: form,
-                      targetCalories: aiDietPlan.targetCalories
-                    })
-                  });
-                  const data = await res.json();
-                  if (data.success && data.data) {
-                    setAiDietPlan((prev) => prev ? {
-                      ...prev,
-                      mealSchedule: sanitized,
-                      targetCalories: Number(data.data.calories) || prev.targetCalories,
-                      macroBreakdown: {
-                        carbs: data.data.carbs || prev.macroBreakdown.carbs,
-                        protein: data.data.protein || prev.macroBreakdown.protein,
-                        fats: data.data.fats || prev.macroBreakdown.fats,
-                        fiber: data.data.fiber || prev.macroBreakdown.fiber || "25g"
-                      }
-                    } : null);
-                    setEditMealsOpen(false);
-                    confetti({ particleCount: 40, spread: 50, origin: { y: 0.5 } });
-                    toast.success("Meal schedule saved & calories/macros recalculated!");
-                  }
-                } catch (e) {
-                  console.error(e);
-                  toast.error("Failed to recalculate macros");
-                } finally {
-                  setIsRecalculating(false);
-                }
-              }}
+              onClick={handleSaveMealSchedule}
               sx={{
                 fontWeight: 700,
                 borderRadius: 2,
@@ -5204,7 +5353,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                   </Grid>
 
                   {/* DISTINCT HEADING 1: DAILY INDIAN MEAL SCHEDULE */}
-                  <Box sx={{ bgcolor: "#000000 !important", color: "#FFFFFF !important", px: 1.5, py: 0.6, borderRadius: 1, mb: 1, mt: 0.5 }}>
+                  <Box className="print-heading-box" sx={{ bgcolor: "#000000 !important", color: "#FFFFFF !important", px: 1.5, py: 0.6, borderRadius: 1, mb: 1, mt: 0.5 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 900, fontSize: "0.98rem", letterSpacing: "0.5px", textTransform: "uppercase", color: "#FFFFFF !important" }}>
                       1. DAILY INDIAN MEAL SCHEDULE &amp; PORTIONS
                     </Typography>
@@ -5264,7 +5413,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                 <>
                   {/* DOCTOR CLINICAL REMARKS & SPECIAL INSTRUCTIONS (SPLIT TO PAGE 2) */}
                   <Box className="print-avoid-break" sx={{ mb: 1.8 }}>
-                    <Box sx={{ bgcolor: "#000000 !important", color: "#FFFFFF !important", px: 1.5, py: 0.6, borderRadius: 1, mb: 0.8 }}>
+                    <Box className="print-heading-box" sx={{ bgcolor: "#000000 !important", color: "#FFFFFF !important", px: 1.5, py: 0.6, borderRadius: 1, mb: 0.8 }}>
                       <Typography variant="subtitle1" sx={{ fontWeight: 900, fontSize: "0.95rem", letterSpacing: "0.5px", textTransform: "uppercase", color: "#FFFFFF !important" }}>
                         DOCTOR CLINICAL REMARKS &amp; SPECIAL INSTRUCTIONS
                       </Typography>
@@ -5291,7 +5440,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                   {/* 2. ELECTROLYTES (IF PRESENT / NOT DELETED) */}
                   {visibleSections.electrolytes && aiDietPlan.electrolyteLimits && (
                     <Box className="print-avoid-break" sx={{ mb: 1.8 }}>
-                      <Box sx={{ bgcolor: "#000000 !important", color: "#FFFFFF !important", px: 1.5, py: 0.6, borderRadius: 1, mb: 0.8 }}>
+                      <Box className="print-heading-box" sx={{ bgcolor: "#000000 !important", color: "#FFFFFF !important", px: 1.5, py: 0.6, borderRadius: 1, mb: 0.8 }}>
                         <Typography variant="subtitle1" sx={{ fontWeight: 900, fontSize: "0.98rem", letterSpacing: "0.5px", textTransform: "uppercase", color: "#FFFFFF !important" }}>
                           ELECTROLYTE, MINERAL &amp; ORGAN SAFETY LIMITS (SALT, POTASSIUM &amp; MINERALS)
                         </Typography>
@@ -5323,7 +5472,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                     <Grid container spacing={1.5} className="print-avoid-break" sx={{ mb: 1.8 }}>
                       {visibleSections.recommendedFoods && aiDietPlan.recommendedFoods?.length > 0 && (
                         <Grid item xs={12} md={visibleSections.foodsToAvoid ? 6 : 12}>
-                          <Box sx={{ bgcolor: "#000000 !important", color: "#FFFFFF !important", px: 1.2, py: 0.5, borderRadius: 1, mb: 0.8 }}>
+                          <Box className="print-heading-box" sx={{ bgcolor: "#000000 !important", color: "#FFFFFF !important", px: 1.2, py: 0.5, borderRadius: 1, mb: 0.8 }}>
                             <Typography variant="subtitle1" sx={{ fontWeight: 900, fontSize: "0.9rem", letterSpacing: "0.5px", textTransform: "uppercase", color: "#FFFFFF !important" }}>
                               EAT MORE OF THESE WHOLESOME INDIAN FOODS
                             </Typography>
@@ -5343,7 +5492,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
 
                       {visibleSections.foodsToAvoid && aiDietPlan.foodsToAvoid?.length > 0 && (
                         <Grid item xs={12} md={visibleSections.recommendedFoods ? 6 : 12}>
-                          <Box sx={{ bgcolor: "#000000 !important", color: "#FFFFFF !important", px: 1.2, py: 0.5, borderRadius: 1, mb: 0.8 }}>
+                          <Box className="print-heading-box" sx={{ bgcolor: "#000000 !important", color: "#FFFFFF !important", px: 1.2, py: 0.5, borderRadius: 1, mb: 0.8 }}>
                             <Typography variant="subtitle1" sx={{ fontWeight: 900, fontSize: "0.9rem", letterSpacing: "0.5px", textTransform: "uppercase", color: "#FFFFFF !important" }}>
                               FOODS TO AVOID OR STRICTLY LIMIT
                             </Typography>
@@ -5366,7 +5515,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                   {/* HYDRATION & HEALTHY HABITS (IF PRESENT / NOT DELETED) */}
                   {(visibleSections.hydration || visibleSections.lifestyle) && (
                     <Box className="print-avoid-break" sx={{ mb: 1.8 }}>
-                      <Box sx={{ bgcolor: "#000000 !important", color: "#FFFFFF !important", px: 1.2, py: 0.5, borderRadius: 1, mb: 0.8 }}>
+                      <Box className="print-heading-box" sx={{ bgcolor: "#000000 !important", color: "#FFFFFF !important", px: 1.2, py: 0.5, borderRadius: 1, mb: 0.8 }}>
                         <Typography variant="subtitle1" sx={{ fontWeight: 900, fontSize: "0.92rem", letterSpacing: "0.5px", textTransform: "uppercase", color: "#FFFFFF !important" }}>
                           HYDRATION &amp; HEALTHY DAILY HABITS
                         </Typography>

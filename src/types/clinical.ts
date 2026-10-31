@@ -122,6 +122,10 @@ export interface DrugIndicationItem {
   cardiovascularConsideration: string;
   cognitiveFunction?: string;
   sexualDysfunction?: string;
+  respiratorySuitability?: string;
+  skinSuitability?: string;
+  obesityWeightSuitability?: string;
+  electrolyteStatus?: string;
   overallSuitability: 'Safe' | 'Caution' | 'Avoid';
 }
 

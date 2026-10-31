@@ -167,19 +167,38 @@ function generateClinicalIndianFallback(input: Record<string, any>) {
     ? `${input.patientName} (${input.age} वर्ष, ${input.gender}) के लिए विशेष रूप से तैयार की गई घर के बने शुद्ध भारतीय भोजन की पौष्टिक आहार योजना, जो ब्लड शुगर और बीपी को संतुलित रखने और दिन भर स्फूर्ति देने में मदद करती है।`
     : `Specially crafted Indian meal plan for ${input.patientName} (${input.age}Y, ${input.gender}) to keep blood sugar steady, manage blood pressure, and keep you feeling energetic all day with delicious home-cooked Indian foods.`;
 
+  const safeKcal = Math.max(1000, Math.round(targetCalories || 1750));
+  const targetRemainder = ((safeKcal % 4) + 4) % 4;
+  let fGrams = Math.round((safeKcal * 0.23) / 9);
+  while (((fGrams % 4) + 4) % 4 !== targetRemainder) {
+    fGrams++;
+  }
+  if (fGrams > 85) fGrams -= 4;
+  if (fGrams < 24) fGrams += 4;
+  const rem4Kcal = (safeKcal - (fGrams * 9)) / 4;
+  const pRatio = isCKD ? 0.13 : isDiabetes ? 0.18 : 0.17;
+  const desiredP = Math.round((safeKcal * pRatio) / 4);
+  const pGrams = Math.max(35, Math.min(desiredP, Math.round(rem4Kcal * 0.45)));
+  const cGrams = rem4Kcal - pGrams;
+  const fiberGrams = Math.max(20, Math.min(38, Math.round(safeKcal * 0.015)));
+
+  const pPct = Math.round((pGrams * 4 / safeKcal) * 100);
+  const fPct = Math.round((fGrams * 9 / safeKcal) * 100);
+  const cPct = 100 - pPct - fPct;
+
   return {
     planName,
-    targetCalories,
+    targetCalories: safeKcal,
     summary,
     macroBreakdown: {
       carbs: isDiabetes
-        ? (isHindi ? "48% दैनिक ऊर्जा — जटिल अनाज (ज्वार, बाजरा, मल्टीग्रेन रोटी, दलिया) अचानक शुगर बढ़ने से रोकने के लिए" : "48% Daily Energy — Complex grains (Jowar, Bajra, Multigrain Roti, Daliya) to prevent sudden blood sugar spikes")
-        : (isHindi ? "50% दैनिक ऊर्जा — पौष्टिक साबुत गेहूं, बाजरा और भूरा चावल स्वच्छ दिनभर की ऊर्जा के लिए" : "50% Daily Energy — Wholesome whole wheat, millets, and brown rice for clean all-day fuel"),
+        ? (isHindi ? `${cGrams}g (${cPct}% दैनिक ऊर्जा) — जटिल अनाज (ज्वार, बाजरा, मल्टीग्रेन रोटी, दलिया) अचानक शुगर बढ़ने से रोकने के लिए` : `${cGrams}g (${cPct}% Daily Energy) — Complex grains (Jowar, Bajra, Multigrain Roti, Daliya) to prevent sudden blood sugar spikes`)
+        : (isHindi ? `${cGrams}g (${cPct}% दैनिक ऊर्जा) — पौष्टिक साबुत गेहूं, बाजरा और भूरा चावल स्वच्छ दिनभर की ऊर्जा के लिए` : `${cGrams}g (${cPct}% Daily Energy) — Wholesome whole wheat, millets, and brown rice for clean all-day fuel`),
       protein: isCKD
-        ? (isHindi ? "18% दैनिक ऊर्जा — हल्की पीली मूंग दाल, नरम पनीर और दही किडनी पर कम दबाव के लिए" : "18% Daily Energy — Light yellow moong dal, soft paneer, and curd to go gentle on kidney filtration")
-        : (isHindi ? "25% दैनिक ऊर्जा — पीली मूंग दाल, अंकुरित अनाज, ताज़ा पनीर और दही प्राकृतिक ताकत के लिए" : "25% Daily Energy — Yellow moong dal, sprouts, fresh paneer, and curd for natural body strength and healing"),
-      fats: isHindi ? "18% दैनिक ऊर्जा — 3 से 4 चम्मच कच्ची घानी सरसों या मूंगफली तेल प्रतिदिन; तले हुए भोजन से बचें" : "18% Daily Energy — 3 to 4 teaspoons daily of cold-pressed mustard or groundnut oil; avoid deep-fried oils",
-      fiber: isHindi ? "10% दैनिक ऊर्जा — ताज़ा खीरा सलाद, उबली मेथी और अलसी सुगम पाचन के लिए" : "10% Daily Energy — Abundant fresh cucumber, steamed methi leaves, and flaxseeds for smooth digestion"
+        ? (isHindi ? `${pGrams}g (${pPct}% दैनिक ऊर्जा) — हल्की पीली मूंग दाल, नरम पनीर और दही किडनी पर कम दबाव के लिए` : `${pGrams}g (${pPct}% Daily Energy) — Light yellow moong dal, soft paneer, and curd to go gentle on kidney filtration`)
+        : (isHindi ? `${pGrams}g (${pPct}% दैनिक ऊर्जा) — पीली मूंग दाल, अंकुरित अनाज, ताज़ा पनीर और दही प्राकृतिक ताकत के लिए` : `${pGrams}g (${pPct}% Daily Energy) — Yellow moong dal, sprouts, fresh paneer, and curd for natural body strength and healing`),
+      fats: isHindi ? `${fGrams}g (${fPct}% दैनिक ऊर्जा) — 3 से 4 चम्मच कच्ची घानी सरसों या मूंगफली तेल प्रतिदिन; तले हुए भोजन से बचें` : `${fGrams}g (${fPct}% Daily Energy) — 3 to 4 teaspoons daily of cold-pressed mustard or groundnut oil; avoid deep-fried oils`,
+      fiber: isHindi ? `${fiberGrams}g — ताज़ा खीरा सलाद, उबली मेथी और अलसी सुगम पाचन के लिए` : `${fiberGrams}g — Abundant fresh cucumber, steamed methi leaves, and flaxseeds for smooth digestion`
     },
     electrolyteLimits: {
       sodium: isHypertension || isCKD

@@ -125,6 +125,18 @@ function generateFallbackCounselling(input: any): RiskAssessmentItem[] {
   weightScore = Math.min(95, Math.max(10, weightScore));
   const weightMeta = getRiskMeta(weightScore);
 
+  // 11. Risk of Hyperuricemia & Gout calculation
+  let uricScore = 22;
+  if (egfr < 45) uricScore += 35;
+  else if (egfr < 60) uricScore += 22;
+  else if (egfr < 75) uricScore += 12;
+  if (sbp > 145 || dbp > 90) uricScore += 15;
+  if (disease.toLowerCase().includes('gout') || disease.toLowerCase().includes('uric') || disease.toLowerCase().includes('arthrit')) uricScore += 35;
+  if (disease.toLowerCase().includes('hypertension') || disease.toLowerCase().includes('metabolic') || disease.toLowerCase().includes('ckd') || disease.toLowerCase().includes('kidney')) uricScore += 14;
+  if (age > 50) uricScore += 10;
+  uricScore = Math.min(95, Math.max(10, uricScore));
+  const uricMeta = getRiskMeta(uricScore);
+
   return [
     {
       id: 'heartAttack',
@@ -371,6 +383,31 @@ function generateFallbackCounselling(input: any): RiskAssessmentItem[] {
         'Completely eliminate refined sugars, sweetened cold drinks, deep-fried fast foods, and late-night snacking.'
       ],
       screeningSchedule: 'Monthly Body Weight & BMI monitoring; 3-monthly Waist Circumference & Body Composition Analysis.'
+    },
+    {
+      id: 'hyperuricemiaRisk',
+      title: 'Risk of Hyperuricemia & Gout (Elevated Serum Uric Acid & Joint Microcrystallopathy)',
+      subtitle: 'Monosodium Urate Deposition, Renal Tubular Clearance & Acute Inflammatory Arthropathy',
+      riskLevel: uricMeta.riskLevel,
+      score: uricScore,
+      color: uricMeta.color,
+      keyIndicators: [
+        `Renal tubular filtration capacity (eGFR: ${egfr} mL/min) directly influencing uric acid excretion`,
+        `Cardiometabolic hemodynamic strain from BP (${sbp}/${dbp} mmHg) associated with insulin-resistant hyperuricemia`,
+        `Patient age (${age} Y) and chronic condition profile (${disease})`,
+        'Purine turnover, organic acid retention, and diuretic/salicylate pharmacotherapy interactions'
+      ],
+      clinicalGuidance: [
+        'Quantify baseline Serum Uric Acid (maintain target < 6.0 mg/dL; < 5.0 mg/dL if tophi or frequent attacks present).',
+        'Review antihypertensive regimen: favor Losartan (demonstrates distinctive uricosuric action) and SGLT2 inhibitors; avoid or minimize Thiazide and Loop diuretics.',
+        'Consider Xanthine Oxidase Inhibitor therapy (Allopurinol or Febuxostat) with low-dose anti-inflammatory prophylaxis (Colchicine 0.5mg) during initiation.'
+      ],
+      patientAdvice: [
+        'Maintain rigorous daily fluid intake (2.5L to 3L water) to prevent supersaturation and promote renal uric acid flushing.',
+        'Strictly curb high-purine foods: red meats, organ meats (liver/kidney), shellfish, yeast extracts, high-fructose sweetened beverages, and alcohol (especially beer).',
+        'Promptly notify physician if experiencing acute, excruciating pain, redness, or heat at the great toe (podagra), ankle, or knee joints.'
+      ],
+      screeningSchedule: 'Serum Uric Acid & Serum Creatinine/eGFR every 6 months; Renal Ultrasound if history of nephrolithiasis.'
     }
   ];
 }
@@ -412,7 +449,7 @@ export async function POST(req: Request) {
     if (process.env.GEMINI_API_KEY) {
       const prompt = `
 You are an expert clinical endocrinologist, cardiologist, and patient counselling specialist.
-Evaluate the following patient and generate comprehensive chronic risk counselling across EXACTLY 10 DISTINCT FACTORS:
+Evaluate the following patient and generate comprehensive chronic risk counselling across EXACTLY 11 DISTINCT FACTORS:
 1. "heartAttack" - Heart Attack (Myocardial Infarction & Coronary Artery Risk)
 2. "stroke" - Stroke (Cerebrovascular Accident & Brain Health Risk)
 3. "retinopathy" - Diabetic Retinopathy (Eye & Retinal Vascular Damage)
@@ -423,6 +460,7 @@ Evaluate the following patient and generate comprehensive chronic risk counselli
 8. "giddinessRisk" - Risk of Giddiness (Orthostatic Hypotension, Dizziness & Fall Risk)
 9. "hypoglycaemiaRisk" - Risk of Hypoglycaemia (Acute Low Blood Glucose & Autonomic Surge)
 10. "weightGainObesityRisk" - Risk of Weight Gain / Obesity (Metabolic Adiposity & Caloric Imbalance)
+11. "hyperuricemiaRisk" - Risk of Hyperuricemia & Gout (Elevated Serum Uric Acid & Joint Microcrystallopathy)
 
 Patient Details:
 - Name: ${currPatientName}
@@ -436,8 +474,8 @@ Patient Details:
 - Monofilament Sensation: ${sensationLoss || 'Normal'}
 - Wagner Foot Ulcer Grade: ${footGrade || 'Grade 0 (Intact Skin)'}
 
-For EACH of the 10 factors, return an object in the JSON array:
-- "id": one of "heartAttack", "stroke", "retinopathy", "nephropathy", "neuropathy", "footRisk", "bleedingRisk", "giddinessRisk", "hypoglycaemiaRisk", "weightGainObesityRisk"
+For EACH of the 11 factors, return an object in the JSON array:
+- "id": one of "heartAttack", "stroke", "retinopathy", "nephropathy", "neuropathy", "footRisk", "bleedingRisk", "giddinessRisk", "hypoglycaemiaRisk", "weightGainObesityRisk", "hyperuricemiaRisk"
 - "title": factor title string (clearly stating the condition/risk)
 - "subtitle": factor subtitle string
 - "riskLevel": exactly one of "OPTIMAL / LOW", "MODERATE CAUTION", "HIGH RISK" (based on score: >=65 is HIGH RISK, 40-64 is MODERATE CAUTION, <40 is OPTIMAL / LOW)

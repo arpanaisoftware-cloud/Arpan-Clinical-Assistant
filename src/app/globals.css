@@ -208,4 +208,80 @@ body {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
+
+  /* Section Headings Base Print Style (Black & White default: solid black bar) */
+  .print-heading-box,
+  #printable-diets .print-heading-box,
+  #printable-prescription .print-heading-box,
+  #printable-counselling .print-heading-box {
+    background-color: #000000 !important;
+    color: #FFFFFF !important;
+    border-color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .print-heading-box *,
+  #printable-diets .print-heading-box *,
+  #printable-prescription .print-heading-box *,
+  #printable-counselling .print-heading-box * {
+    color: #FFFFFF !important;
+  }
+}
+
+/* Color Printing: Add 1 distinct clinical color (#00897B Medical Teal) to headings while color printing */
+@media print and (color) {
+  .print-heading-box,
+  #printable-diets .print-heading-box,
+  #printable-prescription .print-heading-box,
+  #printable-counselling .print-heading-box {
+    background-color: #00897B !important; /* Elegant Clinical Medical Teal */
+    color: #FFFFFF !important;
+    border-color: #00897B !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .print-heading-box *,
+  #printable-diets .print-heading-box *,
+  #printable-prescription .print-heading-box *,
+  #printable-counselling .print-heading-box * {
+    color: #FFFFFF !important;
+  }
+
+  /* Rx Table header in color print */
+  #printable-prescription thead,
+  #printable-prescription thead th {
+    background-color: #00897B !important;
+    color: #FFFFFF !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+/* Black and White Printing: Don't change anything for black and white print (keep pure #000000 black) */
+@media print and (monochrome) {
+  .print-heading-box,
+  #printable-diets .print-heading-box,
+  #printable-prescription .print-heading-box,
+  #printable-counselling .print-heading-box {
+    background-color: #000000 !important;
+    color: #FFFFFF !important;
+    border-color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .print-heading-box *,
+  #printable-diets .print-heading-box *,
+  #printable-prescription .print-heading-box *,
+  #printable-counselling .print-heading-box * {
+    color: #FFFFFF !important;
+  }
+
+  #printable-prescription thead,
+  #printable-prescription thead th {
+    background-color: #000000 !important;
+    color: #FFFFFF !important;
+  }
 }

@@ -24,7 +24,7 @@ FROM THE PRESCRIPTION, EXTRACT / ASSESS:
 THEN PERFORM FULL CLINICAL ANALYSIS:
 - Drug-drug interaction checks (flagged pairs with severity and clinical effect)
 - Drug-allergy conflict checks
-- Drug suitability & indication appropriateness per drug (organ matches, renal/hepatic/CV status)
+- Drug suitability & indication appropriateness per drug (organ matches, renal, hepatic, age, CV, cognitive, sexual, respiratory system, skin, obesity/weight gain, electrolyte status)
 - Dose & frequency appropriateness review
 - Drug-induced adverse effect analysis correlating medications with reported complaints
 - Alternative (generic/bioequivalent) options with estimated savings
@@ -101,6 +101,10 @@ Return a raw JSON object (without markdown code blocks, without any surrounding 
       "cardiovascularConsideration": "string",
       "cognitiveFunction": "string (impact/suitability for cognitive health, alertness, memory, CNS)",
       "sexualDysfunction": "string (impact/risk of sexual side effects, libido, ED, or sexual health considerations)",
+      "respiratorySuitability": "string (impact/suitability for respiratory system: bronchospasm risk, asthma/COPD safety, dry cough, pulmonary effects)",
+      "skinSuitability": "string (dermatological safety: rash risk, Stevens-Johnson syndrome, pruritus, photosensitivity, skin tolerance)",
+      "obesityWeightSuitability": "string (metabolic impact on obesity/weight gain: weight loss, weight neutrality, or weight gain risk)",
+      "electrolyteStatus": "string (impact on electrolyte status: sodium, potassium, calcium, magnesium, QT/arrhythmia risk, fluid balance)",
       "overallSuitability": "Safe"
     }
   ],

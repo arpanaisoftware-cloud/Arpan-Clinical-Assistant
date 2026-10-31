@@ -70,6 +70,7 @@ import Bloodtype from '@mui/icons-material/Bloodtype';
 import AirlineSeatReclineNormal from '@mui/icons-material/AirlineSeatReclineNormal';
 import Speed from '@mui/icons-material/Speed';
 import MonitorWeight from '@mui/icons-material/MonitorWeight';
+import Science from '@mui/icons-material/Science';
 import { COUNSELLING_RISK_DATABASE } from '../mockData/clinicalModulesData';
 import { RiskAssessmentItem, RiskCategoryType, HistoryRecord, CounsellingHistoryRecord } from '../types/clinical';
 import confetti from 'canvas-confetti';
@@ -1210,7 +1211,7 @@ export default function CounsellingModule({
                       ? 'Reading prescription text & medications...'
                       : rxProgress < 75
                         ? 'Extracting clinical vitals (BP, HbA1c, eGFR)...'
-                        : 'Generating personalized 10-point chronic risk evaluation...'}
+                        : 'Generating personalized 11-point chronic risk evaluation...'}
                   </Typography>
                   <Typography variant="caption" sx={{ fontWeight: 900, color: '#6C5CE7' }}>
                     {rxProgress}%
@@ -1833,7 +1834,7 @@ export default function CounsellingModule({
 
         {submitted && (
           <Box id="counselling-risk-section">
-            {/* Tabs for 10 Risk Categories */}
+            {/* Tabs for 11 Risk Categories */}
             <Tabs
               value={activeTab}
               onChange={(e, newValue) => setActiveTab(newValue)}
@@ -1861,8 +1862,9 @@ export default function CounsellingModule({
                     case 'giddinessRisk': return AirlineSeatReclineNormal;
                     case 'hypoglycaemiaRisk': return Speed;
                     case 'weightGainObesityRisk': return MonitorWeight;
+                    case 'hyperuricemiaRisk': return Science;
                     default: {
-                      const allIcons = [Favorite, Psychology, Visibility, WaterDrop, FlashOn, Pets, Bloodtype, AirlineSeatReclineNormal, Speed, MonitorWeight];
+                      const allIcons = [Favorite, Psychology, Visibility, WaterDrop, FlashOn, Pets, Bloodtype, AirlineSeatReclineNormal, Speed, MonitorWeight, Science];
                       return allIcons[idx] || Shield;
                     }
                   }
@@ -2120,14 +2122,14 @@ export default function CounsellingModule({
                 )}
               </Grid>
               <Typography variant="caption" sx={{ color: '#000000 !important', fontWeight: 700, display: 'block', mt: 1, pt: 0.8, borderTop: '1px dashed #000000 !important', fontSize: '0.78rem' }}>
-                Comprehensive 10-Point Clinical Complication &amp; Chronic Risk Prevention Protocol
+                Comprehensive 11-Point Clinical Complication &amp; Chronic Risk Prevention Protocol
               </Typography>
             </Paper>
 
             {/* DISTINCT SECTION HEADING: 10 RISK FACTORS */}
-            <Box sx={{ bgcolor: '#000000 !important', color: '#FFFFFF !important', px: 1.8, py: 0.8, borderRadius: 1, mb: 1.8 }}>
+            <Box className="print-heading-box" sx={{ bgcolor: '#000000 !important', color: '#FFFFFF !important', px: 1.8, py: 0.8, borderRadius: 1, mb: 1.8 }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 900, fontSize: "1.08rem", letterSpacing: "0.5px", textTransform: "uppercase", color: "#FFFFFF !important" }}>
-                KEY HEALTH ACTION STEPS FOR PATIENT (10 CHRONIC &amp; CLINICAL RISK FACTORS)
+                KEY HEALTH ACTION STEPS FOR PATIENT (11 CHRONIC &amp; CLINICAL RISK FACTORS)
               </Typography>
             </Box>
 

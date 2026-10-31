@@ -130,7 +130,7 @@ export default function PrescriptionPreviewModal({ open, onClose, analysisData }
           </Paper>
 
           {/* DISTINCT SECTION HEADING: PRESCRIBED MEDICATIONS */}
-          <Box sx={{ bgcolor: '#000000 !important', color: '#FFFFFF !important', px: 1.8, py: 0.8, borderRadius: 1, mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box className="print-heading-box" sx={{ bgcolor: '#000000 !important', color: '#FFFFFF !important', px: 1.8, py: 0.8, borderRadius: 1, mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography sx={{ fontWeight: 900, fontSize: '1.3rem', fontFamily: 'serif', fontStyle: 'italic', lineHeight: 1, color: '#FFFFFF !important' }}>
               ℞
             </Typography>
