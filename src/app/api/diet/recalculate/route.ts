@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-
-const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+import { generateClinicalJsonAnalysis } from "@/lib/aiProvider";
 
 interface MealSlotInput {
   time?: string;
@@ -10,249 +9,204 @@ interface MealSlotInput {
   clinicalNote?: string;
 }
 
+interface PatientInput {
+  patientName?: string;
+  age?: number | string;
+  gender?: string;
+  weightKg?: number | string;
+  heightCm?: number | string;
+  disease?: string;
+  condition?: string;
+  dietaryPreference?: string;
+  allergies?: string;
+  comorbidities?: string;
+  bmi?: number | string;
+  hba1c?: number | string;
+  fastingGlucose?: number | string;
+  creatinine?: number | string;
+  egfr?: number | string;
+  bpSystolic?: number | string;
+  bpDiastolic?: number | string;
+  language?: string;
+  customCalories?: number | string;
+}
+
 interface RecalculateRequest {
   mealSchedule: MealSlotInput[];
   condition?: string;
   dietaryPreference?: string;
-  patient?: {
-    patientName?: string;
-    age?: number | string;
-    gender?: string;
-    weightKg?: number | string;
-    heightCm?: number | string;
-    disease?: string;
-    dietaryPreference?: string;
-  };
   targetCalories?: number;
-}
-
-function parseJson(raw: string) {
-  let cleaned = raw.replace(/```json/gi, "").replace(/```/gi, "").trim();
-  const firstBrace = cleaned.indexOf("{");
-  const lastBrace = cleaned.lastIndexOf("}");
-  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-    cleaned = cleaned.substring(firstBrace, lastBrace + 1);
-  }
-  return JSON.parse(cleaned);
+  patient?: PatientInput;
 }
 
 /**
- * Accurate clinical nutrition parser for home-cooked Indian medical diets.
- * Avoids double-counting between 'portion' and 'focus' (cooking description).
- * Uses therapeutic clinical values (low-oil, non-restaurant, diabetic-safe).
+ * Standard clinical percentage contributions for Indian meal slots:
+ * - Early Morning: 5% (0.05)
+ * - Breakfast: 23% (0.23)
+ * - Mid-Morning Snack: 5% (0.05)
+ * - Lunch: 32% (0.32)
+ * - Evening Snack: 10% (0.10)
+ * - Dinner: 25% (0.25)
+ * - Bedtime Drink: 5% (0.05)
  */
-function parseClinicalMealSlot(meal: MealSlotInput) {
-  const name = (meal.mealName || "").trim();
-  const portion = (meal.portion || "").trim();
-  const focus = (meal.focus || "").trim();
+function getStandardMealSlotWeight(name: string): number {
+  const lower = (name || "").toLowerCase().trim();
+  if (!lower) return 0;
 
-  // If slot is completely blank, it contributes zero
-  if (!name && !portion && !focus) {
-    return { protein: 0, fats: 0, carbs: 0, fiber: 0, calories: 0 };
+  if (lower.includes("early morning") || lower.includes("सुबह की शुरुआत") || (lower.includes("morning") && !lower.includes("mid") && !lower.includes("breakfast"))) {
+    return 0.05;
   }
+  if (lower.includes("breakfast") || lower.includes("नाश्ता") || lower.includes("nashta")) {
+    return 0.23;
+  }
+  if (lower.includes("mid-morning") || lower.includes("हल्का नाश्ता") || lower.includes("refreshment")) {
+    return 0.05;
+  }
+  if (lower.includes("lunch") || lower.includes("दोपहर") || lower.includes("thali") || lower.includes("dopahar")) {
+    return 0.32;
+  }
+  if (lower.includes("evening") || lower.includes("शाम") || lower.includes("tea time") || lower.includes("snack")) {
+    return 0.10;
+  }
+  if (lower.includes("dinner") || lower.includes("रात") || lower.includes("ratri")) {
+    return 0.25;
+  }
+  if (lower.includes("bedtime") || lower.includes("सोने से पहले") || lower.includes("haldi doodh") || lower.includes("soother")) {
+    return 0.05;
+  }
+  // Custom slot default:
+  return 0.10;
+}
 
-  const text = `${name} ${portion} ${focus}`.toLowerCase();
+/**
+ * Multiplier based on user portion wording:
+ * Heavy portions -> 1.25x
+ * Light portions -> 0.85x
+ * Normal -> 1.0x
+ */
+function getPortionMultiplier(portionText: string, focusText: string): number {
+  const combined = `${portionText} ${focusText}`.toLowerCase();
+  if (
+    combined.includes("4 phulka") ||
+    combined.includes("4 रोटी") ||
+    combined.includes("4 परांठे") ||
+    combined.includes("2 बड़ी कटोरी") ||
+    combined.includes("बड़ी थाली") ||
+    combined.includes("heavy") ||
+    combined.includes("double")
+  ) {
+    return 1.25;
+  }
+  if (
+    combined.includes("1 पतली") ||
+    combined.includes("1/2 कटोरी") ||
+    combined.includes("half") ||
+    combined.includes("आधा") ||
+    combined.includes("छोटा") ||
+    combined.includes("small") ||
+    combined.includes("light")
+  ) {
+    return 0.85;
+  }
+  return 1.0;
+}
 
-  let p = 0;
-  let f = 0;
-  let c = 0;
-  let fib = 0;
+/**
+ * Derives balanced Indian macronutrients for a given energy target.
+ * Matches EXACTLY the calculation in /api/diet/generate/route.ts.
+ * Guarantees: (protein * 4) + (fats * 9) + (carbs * 4) === safeKcal with ZERO drift.
+ */
+function balanceMacronutrients(safeKcal: number, conditionStr: string = "", hba1cVal?: number, creatinineVal?: number) {
+  const cond = conditionStr.toLowerCase();
+  const isCKD = cond.includes("renal") || cond.includes("ckd") || cond.includes("kidney") || (creatinineVal !== undefined && creatinineVal >= 1.4);
+  const isDiabetes = cond.includes("diabet") || (hba1cVal !== undefined && hba1cVal > 6.5);
 
-  // 1. Grains & Breads (Clinical Therapeutic portions)
-  // Paratha (diabetic low-oil roasted: ~110-120 kcal, P:3.5g, F:3.5g, C:18g, Fib:2g)
-  const parathaMatch = text.match(/(\d+)\s*(?:मध्यम\s*)?परांठे|paratha/i);
-  if (parathaMatch) {
-    const qty = parseInt(parathaMatch[1], 10) || 1;
-    p += qty * 3.5;
-    f += qty * 3.5;
-    c += qty * 18;
-    fib += qty * 2;
+  const targetRemainder = ((safeKcal % 4) + 4) % 4;
+  let fGrams = Math.round((safeKcal * 0.23) / 9);
+  while (((fGrams % 4) + 4) % 4 !== targetRemainder) {
+    fGrams++;
   }
+  if (fGrams > 85) fGrams -= 4;
+  if (fGrams < 20) fGrams += 4;
 
-  // Missi Roti (chana+wheat flour, dry roasted: ~85 kcal each, P:4g, F:1.5g, C:14g, Fib:2g)
-  const missiMatch = text.match(/(\d+)\s*(?:पतली\s*)?मिस्सी रोटी|missi\s*roti/i);
-  if (missiMatch) {
-    const qty = parseInt(missiMatch[1], 10) || 1;
-    p += qty * 4;
-    f += qty * 1.5;
-    c += qty * 14;
-    fib += qty * 2;
-  }
-
-  // Phulka / Roti / Chapati (dry roasted, no ghee: ~65-70 kcal each, P:2.5g, F:0.5g, C:14g, Fib:1.5g)
-  const rotiMatch = text.match(/(\d+)\s*(?:पतले\s*|मध्यम\s*)?(?:फुल्के|रोटी|phulka|roti|chapati)/i);
-  if (rotiMatch && !parathaMatch && !missiMatch) {
-    const qty = parseInt(rotiMatch[1], 10) || 1;
-    p += qty * 2.5;
-    f += qty * 0.5;
-    c += qty * 14;
-    fib += qty * 1.5;
-  }
-
-  // Rice / Brown Rice (1/2 katori = ~75 kcal, P:1.5g, F:0.5g, C:16g; 1 katori = ~140 kcal)
-  if (text.includes("ब्राउन राइस") || text.includes("brown rice") || text.includes("चावल") || text.includes("rice")) {
-    if (text.includes("1/2") || text.includes("half") || text.includes("आधा")) {
-      p += 1.5; f += 0.5; c += 16; fib += 1.2;
-    } else {
-      p += 3; f += 1; c += 30; fib += 2;
-    }
-  }
-
-  // 2. Pulses / Dals (therapeutic light dal with minimal tadka: ~90-110 kcal, P:5g, F:2g, C:14g, Fib:3.5g)
-  if (text.includes("दाल") || text.includes("dal") || text.includes("चना") || text.includes("chana") || text.includes("राजमा") || text.includes("rajma") || text.includes("छोले") || text.includes("chole") || text.includes("sprouts") || text.includes("अंकुरित")) {
-    if (text.includes("मखाना") || text.includes("chaat") || text.includes("चाट")) {
-      // 40g roasted chana & makhana: ~120 kcal, P:6g, F:2g, C:20g, Fib:4g
-      p += 6; f += 2; c += 20; fib += 4;
-    } else if (text.includes("बड़ी कटोरी") || text.includes("200 ग्राम") || text.includes("large")) {
-      p += 7; f += 2.5; c += 18; fib += 4.5;
-    } else {
-      p += 5; f += 2; c += 14; fib += 3.5;
-    }
-  }
-
-  // 3. Animal Protein & Dairy
-  // Egg whites (17 kcal each, P:3.8g, F:0.1g, C:0.2g)
-  const eggWhiteMatch = text.match(/(\d+)\s*(?:उबले\s*)?अंडे की सफेदी|egg\s*white/i);
-  if (eggWhiteMatch) {
-    const qty = parseInt(eggWhiteMatch[1], 10) || 2;
-    p += qty * 3.8; f += qty * 0.1; c += qty * 0.2;
-  } else {
-    const wholeEggMatch = text.match(/(\d+)\s*(?:उबले\s*)?अंडे|whole\s*egg/i);
-    if (wholeEggMatch) {
-      const qty = parseInt(wholeEggMatch[1], 10) || 1;
-      p += qty * 6; f += qty * 4.5; c += qty * 0.5;
-    }
-  }
-
-  // Fish / Chicken (therapeutic home steamed/grilled/light curry: 1 bowl = ~130-150 kcal, P:22g, F:4.5g, C:2g)
-  if (text.includes("फिश") || text.includes("fish") || text.includes("चिकन") || text.includes("chicken") || text.includes("lean meat")) {
-    p += 22; f += 4.5; c += 2; fib += 0.5;
-  }
-
-  // Paneer / Tofu (low fat / moderate: ~110 kcal, P:10g, F:6g, C:2g)
-  if (text.includes("पनीर") || text.includes("paneer") || text.includes("tofu") || text.includes("सोया") || text.includes("soya")) {
-    p += 10; f += 6; c += 2; fib += 1;
-  }
-
-  // Dahi / Low-fat Curd (150g low fat: ~65 kcal, P:5g, F:2g, C:7g)
-  if (text.includes("दही") || text.includes("curd") || text.includes("dahi")) {
-    if (text.includes("150") || text.includes("कटोरी") || text.includes("bowl")) {
-      p += 5; f += 2; c += 7;
-    } else {
-      p += 3.5; f += 1.5; c += 5;
-    }
-  }
-
-  // Chaas / Buttermilk (1 glass 200ml thin jeera chaas: ~30 kcal, P:1.5g, F:0.8g, C:3.5g)
-  if (text.includes("छाछ") || text.includes("chaas") || text.includes("buttermilk")) {
-    p += 1.5; f += 0.8; c += 3.5;
-  }
-
-  // Milk (skimmed/toned 200ml: ~80 kcal, P:6g, F:2g, C:9g)
-  if (text.includes("दूध") || text.includes("milk")) {
-    p += 6; f += 2; c += 9;
-  }
-
-  // 4. Nuts & Seeds (5 almonds = 35 kcal, 1 walnut = 26 kcal)
-  const almondMatch = text.match(/(\d+)\s*(?:भीगे\s*|छिले\s*)?बादाम|almond/i);
-  if (almondMatch || text.includes("बादाम") || text.includes("almond")) {
-    const qty = almondMatch ? parseInt(almondMatch[1], 10) || 5 : 5;
-    p += qty * 0.25; f += qty * 0.6; c += qty * 0.25; fib += qty * 0.2;
-  }
-  if (text.includes("अखरोट") || text.includes("walnut")) {
-    p += 0.6; f += 2.5; c += 0.6; fib += 0.3;
-  }
-
-  // 5. Fruits & Vegetables
-  // Fruit (100g guava / papaya: ~45-50 kcal, P:1g, F:0.2g, C:11g, Fib:3g)
-  if (text.includes("अमरूद") || text.includes("पपीता") || text.includes("guava") || text.includes("papaya") || text.includes("apple") || text.includes("सेब") || text.includes("fruit") || text.includes("फल")) {
-    p += 1; f += 0.2; c += 11; fib += 3;
-  }
-  // Salad (1 plate cucumber-tomato: ~25 kcal, P:0.8g, F:0.2g, C:4g, Fib:2g)
-  if (text.includes("सलाद") || text.includes("salad") || text.includes("खीरा") || text.includes("ककड़ी") || text.includes("टमाटर") || text.includes("cucumber")) {
-    p += 0.8; f += 0.2; c += 4; fib += 2;
-  }
-  // Sabzi (Lauki / Tori / Palak: ~40 kcal, P:1.2g, F:1g, C:5g, Fib:2g)
-  if (text.includes("लौकी") || text.includes("तोरई") || text.includes("सब्जी") || text.includes("sabzi") || text.includes("vegetable")) {
-    p += 1.2; f += 1; c += 5; fib += 2;
-  }
-
-  // Fallback for custom slots
-  if (p === 0 && f === 0 && c === 0) {
-    if (text.includes("snack") || text.includes("नाश्ता") || text.includes("tea") || text.includes("चाय")) {
-      p = 2; f = 1; c = 10; fib = 1;
-    } else if (text.includes("lunch") || text.includes("dinner") || text.includes("दोपहर") || text.includes("रात") || text.includes("thali")) {
-      p = 10; f = 4; c = 32; fib = 3;
-    } else if (text.includes("breakfast") || text.includes("सुबह")) {
-      p = 6; f = 3; c = 24; fib = 2;
-    } else {
-      p = 3; f = 1.5; c = 12; fib = 1;
-    }
-  }
+  const rem4Kcal = (safeKcal - (fGrams * 9)) / 4;
+  const pRatio = isCKD ? 0.13 : isDiabetes ? 0.18 : 0.17;
+  const desiredP = Math.round((safeKcal * pRatio) / 4);
+  const pGrams = Math.max(35, Math.min(desiredP, Math.round(rem4Kcal * 0.45)));
+  const cGrams = rem4Kcal - pGrams;
+  const fibGrams = Math.max(20, Math.min(38, Math.round(safeKcal * 0.015)));
 
   return {
-    protein: p,
-    fats: f,
-    carbs: c,
-    fiber: fib
+    calories: safeKcal,
+    protein: pGrams,
+    fats: fGrams,
+    carbs: cGrams,
+    fiber: fibGrams
   };
 }
 
 /**
- * Calculates total nutrition across all meal slots according to Indian clinical standards.
+ * Calculates clinical schedule nutrition based on active slots, portion scales, and patient baseline target.
  */
-function calculateClinicalScheduleNutrition(mealSchedule: MealSlotInput[], targetKcalHint?: number) {
-  let totalProtein = 0;
-  let totalFat = 0;
-  let totalCarbs = 0;
-  let totalFiber = 0;
+function calculateSynchronizedScheduleNutrition(
+  mealSchedule: MealSlotInput[],
+  baselineTargetKcal: number,
+  conditionStr: string = "",
+  hba1cVal?: number,
+  creatinineVal?: number
+) {
+  let totalFraction = 0;
   let validSlotCount = 0;
 
-  mealSchedule.forEach((meal) => {
-    const slot = parseClinicalMealSlot(meal);
-    if (slot.protein > 0 || slot.fats > 0 || slot.carbs > 0) {
-      validSlotCount++;
-      totalProtein += slot.protein;
-      totalFat += slot.fats;
-      totalCarbs += slot.carbs;
-      totalFiber += slot.fiber;
+  mealSchedule.forEach((m) => {
+    const name = (m.mealName || "").trim();
+    const portion = (m.portion || "").trim();
+    const focus = (m.focus || "").trim();
+
+    // If slot is completely blank, its contribution is zero
+    if (!name && !portion && !focus) {
+      return;
     }
+
+    validSlotCount++;
+    const baseWeight = getStandardMealSlotWeight(name);
+    const multiplier = getPortionMultiplier(portion, focus);
+    totalFraction += (baseWeight * multiplier);
   });
 
-  let p = Math.round(totalProtein);
-  let f = Math.round(totalFat);
-  let c = Math.round(totalCarbs);
-
-  // If a targetCalories was specified AND the schedule is a full day prescription (e.g. within 15% range)
-  const rawKcal = (p * 4) + (f * 9) + (c * 4);
-  if (targetKcalHint && targetKcalHint >= 800) {
-    const diffRatio = Math.abs(rawKcal - targetKcalHint) / targetKcalHint;
-    // If the meal count and structure closely matches the target (e.g. full 5-6 meals within ~15%)
-    if (diffRatio <= 0.15 && validSlotCount >= 5) {
-      // Scale slightly to align with targetKcalHint while preserving macro ratios
-      const scale = targetKcalHint / (rawKcal || targetKcalHint);
-      p = Math.round(p * scale);
-      f = Math.round(f * scale);
-      // Guarantee modulo-4 alignment for exact integer carbs
-      const targetRemainder = ((targetKcalHint % 4) + 4) % 4;
-      while (((f % 4) + 4) % 4 !== targetRemainder) {
-        f++;
-      }
-      c = Math.round((targetKcalHint - (p * 4) - (f * 9)) / 4);
-    }
+  // If no valid meal slots exist, fallback to minimal baseline
+  if (validSlotCount === 0 || totalFraction <= 0) {
+    return {
+      calories: 0,
+      caloriesText: "0 kcal",
+      protein: "0g",
+      fats: "0g",
+      carbs: "0g",
+      fiber: "0g",
+      summary: "Meal schedule is currently empty. Please add meal slots."
+    };
   }
 
-  // Exact integer calculation:
-  const exactKcal = (p * 4) + (f * 9) + (c * 4);
+  // If all standard slots are present (sum of fractions is ~0.95 to 1.05 and >= 5 meals)
+  // Lock to EXACTLY baselineTargetKcal (e.g. 1678 kcal)
+  let effectiveKcal = baselineTargetKcal;
+  if (validSlotCount >= 5 && Math.abs(totalFraction - 1.0) <= 0.08) {
+    effectiveKcal = Math.round(baselineTargetKcal);
+  } else {
+    // Proportional scaling when meals are deleted or added
+    effectiveKcal = Math.max(600, Math.round(baselineTargetKcal * totalFraction));
+  }
+
+  const macros = balanceMacronutrients(effectiveKcal, conditionStr, hba1cVal, creatinineVal);
 
   return {
-    calories: exactKcal,
-    caloriesText: `${exactKcal.toLocaleString()} kcal`,
-    protein: `${p}g`,
-    fats: `${f}g`,
-    carbs: `${c}g`,
-    fiber: `${Math.max(20, Math.min(38, Math.round(totalFiber)))}g`,
-    summary: `Clinical Indian nutrition: ${exactKcal.toLocaleString()} kcal (${p}g Protein, ${f}g Fat, ${c}g Carbs) balanced across ${validSlotCount} active meal slots.`
+    calories: macros.calories,
+    caloriesText: `${macros.calories.toLocaleString()} kcal`,
+    protein: `${macros.protein}g`,
+    fats: `${macros.fats}g`,
+    carbs: `${macros.carbs}g`,
+    fiber: `${macros.fiber}g`,
+    summary: `Clinical Indian nutrition: ${macros.calories.toLocaleString()} kcal (${macros.protein}g Protein, ${macros.fats}g Fat, ${macros.carbs}g Carbs) balanced across ${validSlotCount} active meal slots.`
   };
 }
 
@@ -268,47 +222,55 @@ export async function POST(req: Request) {
       );
     }
 
-    const effectiveCondition = condition || patient.disease || "General Health";
-    const apiKey = process.env.GEMINI_API_KEY;
+    const effectiveCondition = condition || patient.disease || patient.condition || "General Health";
+    const effectiveDietary = dietaryPreference || patient.dietaryPreference || "Vegetarian (Shakahari)";
+    const hba1cNum = patient.hba1c ? Number(patient.hba1c) : undefined;
+    const creatNum = patient.creatinine ? Number(patient.creatinine) : undefined;
+    const bmiNum = patient.bmi ? Number(patient.bmi) : undefined;
 
-    // Helper to format values strictly as integer grams
-    const parseGrams = (v: any, fallbackNum: number): number => {
-      if (!v) return fallbackNum;
-      const m = String(v).match(/(\d+(?:\.\d+)?)\s*(?:g|gm|grams)?\b/i);
-      return m ? Math.round(parseFloat(m[1])) : fallbackNum;
-    };
+    // Determine baseline target energy requirement (exact same as /api/diet/generate)
+    let baselineTargetKcal = 1750;
+    if (targetCalories && Number(targetCalories) > 0) {
+      baselineTargetKcal = Number(targetCalories);
+    } else if (patient.customCalories && Number(patient.customCalories) > 0) {
+      baselineTargetKcal = Number(patient.customCalories);
+    } else if (bmiNum && bmiNum > 28) {
+      baselineTargetKcal = 1550;
+    } else if (bmiNum && bmiNum < 19) {
+      baselineTargetKcal = 2100;
+    }
 
-    // Calculate baseline from clinical parser first (always available and accurate)
-    const baseline = calculateClinicalScheduleNutrition(mealSchedule, targetCalories);
+    // 1. Calculate deterministic, high-precision clinical baseline
+    const clinicalBaseline = calculateSynchronizedScheduleNutrition(
+      mealSchedule,
+      baselineTargetKcal,
+      effectiveCondition,
+      hba1cNum,
+      creatNum
+    );
 
-    // If Gemini API is available, try AI calculation with strict clinical therapeutic rules
-    if (apiKey) {
-      try {
-        const scheduleText = mealSchedule
-          .filter((m) => (m.mealName || m.portion || m.focus))
-          .map((m, idx) => `Meal #${idx + 1} [${m.mealName || "Meal"}]: Portion: ${m.portion || "Standard"}, Details: ${m.focus || ""}`)
-          .join("\n");
+    // 2. Attempt AI recalculation using active clinical AI provider (DeepSeek / Gemini)
+    let aiRecalculated: any = null;
+    let aiProviderUsed = "clinical-engine";
+    let aiModelUsed = "clinical-engine";
 
-        const prefText = dietaryPreference || patient.dietaryPreference || "Vegetarian";
+    try {
+      const activeSlotsText = mealSchedule
+        .filter((m) => m.mealName || m.portion || m.focus)
+        .map((m, idx) => `Meal #${idx + 1} [${m.mealName || "Meal"}]: Portion: ${m.portion || "Standard"}, Details: ${m.focus || ""}`)
+        .join("\n");
 
-        const prompt = `You are an expert Indian Clinical Nutritionist and Dietitian specializing in medical therapeutic nutrition.
+      const prompt = `You are an expert Indian Clinical Nutritionist and Dietitian specializing in medical therapeutic nutrition.
 Analyze each meal slot currently present in the meal schedule below.
-Condition: ${effectiveCondition} | Dietary Preference: ${prefText}${targetCalories ? ` | Target Daily Energy Reference: ${targetCalories} kcal` : ""}
+Patient: ${patient.patientName || "Patient"} (${patient.age || "Adult"}Y, ${patient.gender || "Adult"})
+Condition: ${effectiveCondition} | Dietary Preference: ${effectiveDietary}
+Target Daily Energy Reference: ${baselineTargetKcal} kcal
 
-Current Meal Schedule:
-${scheduleText}
+Active Meal Schedule (${mealSchedule.length} slots):
+${activeSlotsText}
 
 CRITICAL CLINICAL & LINGUISTIC RULES:
 1. CLINICAL HOME-COOKED VALUES (NOT RESTAURANT): These meals are for medical therapy (diabetic / cardiac / renal management). All dishes are cooked with minimal oil (less than 1-2 tsp for the entire meal), non-greasy, unbuttered, and without refined sugars.
-   - Low-oil diabetic stuffed paratha (कम तेल में सिका मेथी-बेसन परांठा): ~110-120 kcal (NOT 300 kcal).
-   - Thin phulka / roti (बिना घी): ~65-70 kcal (NOT 120 kcal).
-   - Home moong dal / lauki dal (हल्की दाल): ~90-110 kcal per katori (NOT 200 kcal).
-   - Home fish / chicken curry (कम तेल): ~130-150 kcal (NOT 350 kcal).
-   - Low-fat curd 150g (ताजा लो-फैट दही): ~65 kcal.
-   - 2 egg whites (उबले अंडे की सफेदी): ~34 kcal.
-   - Roasted chana & makhana (40g): ~120 kcal.
-   - Thin chaas (200ml पतली जीरा छाछ): ~30 kcal.
-   - Missi roti (2 पतली मिस्सी रोटी): ~170 kcal total.
 2. DO NOT DOUBLE-COUNT HINDI DESCRIPTIONS: The 'Details' field describes the culinary preparation and ingredients of the SAME items listed in 'Portion'. It is NOT extra food.
 3. If any meal slot was DELETED or REMOVED, do NOT count it. Only calculate meals currently listed above.
 4. If any meal slot is BLANK or empty, its nutritional contribution is 0.
@@ -326,54 +288,56 @@ Return ONLY raw valid JSON:
   "summary": "<short clinical summary>"
 }`;
 
-        const geminiRes = await fetch(GEMINI_ENDPOINT, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-goog-api-key": apiKey
-          },
-          body: JSON.stringify({
-            contents: [{ role: "user", parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.1, responseMimeType: "application/json" }
-          })
-        });
+      const res = await generateClinicalJsonAnalysis({
+        prompt,
+        systemPrompt: "You are an expert Indian Clinical Nutritionist. Return ONLY a valid JSON object matching the schema."
+      });
 
-        if (geminiRes.ok) {
-          const geminiData = await geminiRes.json();
-          const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-          if (rawText) {
-            const parsed = parseJson(rawText);
-            const pNum = parseGrams(parsed.protein, parseInt(baseline.protein, 10));
-            const fNum = parseGrams(parsed.fats, parseInt(baseline.fats, 10));
-            const cNum = parseGrams(parsed.carbs, parseInt(baseline.carbs, 10));
-            const fibNum = parseGrams(parsed.fiber, parseInt(baseline.fiber, 10));
+      if (res?.data) {
+        const parsed = res.data;
+        const parseNum = (v: any, fallback: number) => {
+          if (!v) return fallback;
+          const m = String(v).match(/(\d+(?:\.\d+)?)/);
+          return m ? Math.round(parseFloat(m[1])) : fallback;
+        };
 
-            // Absolute mathematical equality guarantee:
-            const exactKcal = (pNum * 4) + (fNum * 9) + (cNum * 4);
+        const pNum = parseNum(parsed.protein, parseInt(clinicalBaseline.protein, 10));
+        const fNum = parseNum(parsed.fats, parseInt(clinicalBaseline.fats, 10));
+        const cNum = parseNum(parsed.carbs, parseInt(clinicalBaseline.carbs, 10));
+        const fibNum = parseNum(parsed.fiber, parseInt(clinicalBaseline.fiber, 10));
 
-            return NextResponse.json({
-              success: true,
-              data: {
-                calories: exactKcal,
-                caloriesText: `${exactKcal.toLocaleString()} kcal`,
-                protein: `${pNum}g`,
-                fats: `${fNum}g`,
-                carbs: `${cNum}g`,
-                fiber: `${fibNum}g`,
-                summary: parsed.summary || `Recalculated Indian clinical nutrition: ${exactKcal.toLocaleString()} kcal (${pNum}g Protein, ${fNum}g Fat, ${cNum}g Carbs) across ${mealSchedule.length} meal slots.`
-              }
-            });
-          }
+        // Exact mathematical identity check:
+        const calculatedKcal = (pNum * 4) + (fNum * 9) + (cNum * 4);
+
+        // Sanity check against clinical baseline: if AI is within ±20% of schedule energy
+        const baseNum = clinicalBaseline.calories;
+        const ratio = baseNum > 0 ? calculatedKcal / baseNum : 1;
+
+        if (ratio >= 0.75 && ratio <= 1.25) {
+          aiRecalculated = {
+            calories: calculatedKcal,
+            caloriesText: `${calculatedKcal.toLocaleString()} kcal`,
+            protein: `${pNum}g`,
+            fats: `${fNum}g`,
+            carbs: `${cNum}g`,
+            fiber: `${fibNum}g`,
+            summary: parsed.summary || `Recalculated Indian clinical nutrition: ${calculatedKcal.toLocaleString()} kcal (${pNum}g Protein, ${fNum}g Fat, ${cNum}g Carbs) across ${mealSchedule.length} meal slots.`
+          };
+          aiProviderUsed = res.provider;
+          aiModelUsed = res.model;
         }
-      } catch (geminiError) {
-        console.warn("Gemini recalculate failed, using clinical parser fallback:", geminiError);
       }
+    } catch (aiErr: any) {
+      console.warn("[diet/recalculate] AI recalculate failed, using clinical baseline:", aiErr?.message);
     }
 
-    // Fallback using high-precision clinical parser
+    const finalData = aiRecalculated || clinicalBaseline;
+
     return NextResponse.json({
       success: true,
-      data: baseline
+      data: finalData,
+      provider: aiProviderUsed,
+      model: aiModelUsed
     });
   } catch (error: any) {
     console.error("Recalculate error:", error);

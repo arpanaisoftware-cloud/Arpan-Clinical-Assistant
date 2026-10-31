@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import Card from "@mui/material/Card";
@@ -708,8 +708,8 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
       patientName: record.patientName || pi.patientName || "",
       age: String(record.age || pi.age || ""),
       gender: record.gender || pi.gender || "Male",
-      weightKg: String(pi.weight || ""),
-      heightCm: "",
+      weightKg: String((pi as any).weight || (pi as any).weightKg || ""),
+      heightCm: String((pi as any).height || (pi as any).heightCm || ""),
       disease: record.disease || pi.disease || "",
       dietaryPreference: "Vegetarian (Shakahari)",
       language: "Hindi",
@@ -741,8 +741,8 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
       patientName: pi.patientName || "",
       age: String(pi.age || ""),
       gender: pi.gender || "Male",
-      weightKg: String(pi.weight || ""),
-      heightCm: "",
+      weightKg: String((pi as any).weight || (pi as any).weightKg || ""),
+      heightCm: String((pi as any).height || (pi as any).heightCm || ""),
       disease: pi.disease || "",
       dietaryPreference: "Vegetarian (Shakahari)",
       language: "Hindi",
@@ -1074,11 +1074,15 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
     schedule: MealSlot[],
     basePlan: AIDietPlan
   ): Promise<AIDietPlan> => {
-    const activeForm = inputMode === "history" ? historyForm : form;
+    const activeForm = inputMode === "history" && historyForm ? historyForm : form;
+    const activeWeight = Number(activeForm?.weightKg) || 0;
+    const activeHeight = Number(activeForm?.heightCm) / 100 || 0;
+    const calculatedBmi = activeHeight > 0 && activeWeight > 0 ? (activeWeight / (activeHeight * activeHeight)).toFixed(1) : undefined;
     const optimized = schedule.map((m) => ({
       mealName: m.mealName,
       portion: m.portion,
-      focus: m.focus
+      focus: m.focus,
+      clinicalNote: m.clinicalNote
     }));
     try {
       const res = await fetch("/api/diet/recalculate", {
@@ -1087,8 +1091,30 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
         body: JSON.stringify({
           mealSchedule: optimized,
           condition: activeForm?.disease || "General Health",
-          dietaryPreference: activeForm?.dietaryPreference || "Vegetarian",
-          targetCalories: basePlan.targetCalories
+          dietaryPreference: activeForm?.dietaryPreference || "Vegetarian (Shakahari)",
+          targetCalories: basePlan.targetCalories || Number(activeForm?.customCalories) || 1750,
+          patient: {
+            patientName: activeForm?.patientName || "Patient",
+            age: activeForm?.age || "45",
+            gender: activeForm?.gender || "Male",
+            weightKg: activeForm?.weightKg,
+            heightCm: activeForm?.heightCm,
+            disease: activeForm?.disease || "General Health",
+            allergies: activeForm?.allergies,
+            comorbidities: activeForm?.comorbidities,
+            bmi: calculatedBmi ? parseFloat(calculatedBmi) : undefined,
+            hba1c: activeForm?.hba1c,
+            fastingGlucose: activeForm?.fastingGlucose,
+            creatinine: activeForm?.creatinine,
+            egfr: activeForm?.egfr,
+            sodiumNa: activeForm?.sodiumNa,
+            potassiumK: activeForm?.potassiumK,
+            totalCholesterol: activeForm?.totalCholesterol,
+            bpSystolic: activeForm?.bpSystolic,
+            bpDiastolic: activeForm?.bpDiastolic,
+            language: activeForm?.language || "Hindi",
+            customCalories: activeForm?.customCalories
+          }
         })
       });
       const data = await res.json();
@@ -1174,26 +1200,30 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
   };
 
   // Remarks Handlers
-  const handleAddRemark = () => {
+  const handleAddRemark = async () => {
     if (!remarkInput.trim()) return;
     if (!aiDietPlan) return;
     const currentRemarks = aiDietPlan.remarks || [];
-    setAiDietPlan({
+    const updatedPlan: AIDietPlan = {
       ...aiDietPlan,
       remarks: [...currentRemarks, remarkInput.trim()]
-    });
+    };
+    setAiDietPlan(updatedPlan);
     setRemarkInput("");
     toast.success("Remark added to diet plan!");
+    await syncDietPlanUpdate(updatedPlan);
   };
 
-  const handleDeleteRemark = (index: number) => {
+  const handleDeleteRemark = async (index: number) => {
     if (!aiDietPlan) return;
     const updated = (aiDietPlan.remarks || []).filter((_, i) => i !== index);
-    setAiDietPlan({
+    const updatedPlan: AIDietPlan = {
       ...aiDietPlan,
       remarks: updated
-    });
+    };
+    setAiDietPlan(updatedPlan);
     toast.info("Remark deleted.");
+    await syncDietPlanUpdate(updatedPlan);
   };
 
   // Section Deletion & Restoration Handlers
@@ -1267,15 +1297,17 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
     const caloriesChanged = newTargetCalories !== aiDietPlan.targetCalories;
 
     if (!caloriesChanged) {
-      setAiDietPlan({
+      const updatedPlan: AIDietPlan = {
         ...aiDietPlan,
         planName: tempOverview.planName.trim() || aiDietPlan.planName,
         targetCalories: newTargetCalories,
         summary: tempOverview.summary.trim() || aiDietPlan.summary
-      });
+      };
+      setAiDietPlan(updatedPlan);
       setEditOverviewOpen(false);
       confetti({ particleCount: 35, spread: 50, origin: { y: 0.5 } });
       toast.success("Diet plan overview updated!");
+      await syncDietPlanUpdate(updatedPlan);
       return;
     }
 
@@ -1420,24 +1452,28 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
       newLimits[item.key] = item.value.trim();
     });
 
-    setAiDietPlan({
+    const updatedPlan: AIDietPlan = {
       ...aiDietPlan,
       electrolyteLimits: newLimits as any
-    });
+    };
+    setAiDietPlan(updatedPlan);
     setEditElectrolytesOpen(false);
     confetti({ particleCount: 40, spread: 60, origin: { y: 0.5 } });
     toast.success("Electrolyte limits saved!");
+    syncDietPlanUpdate(updatedPlan);
   };
 
   const handleDeleteSingleElectrolyteDirect = (key: string) => {
     if (!aiDietPlan?.electrolyteLimits) return;
     const updated = { ...aiDietPlan.electrolyteLimits };
     delete updated[key];
-    setAiDietPlan({
+    const updatedPlan: AIDietPlan = {
       ...aiDietPlan,
       electrolyteLimits: updated
-    });
+    };
+    setAiDietPlan(updatedPlan);
     toast.info("Electrolyte section removed.");
+    syncDietPlanUpdate(updatedPlan);
   };
 
   // 3. Recommended Foods Edit Handlers
@@ -1454,12 +1490,14 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
       toast.warning("Keep at least one recommended food item.");
       return;
     }
-    setAiDietPlan({
+    const updatedPlan: AIDietPlan = {
       ...aiDietPlan,
       recommendedFoods: cleaned
-    });
+    };
+    setAiDietPlan(updatedPlan);
     setEditRecFoodsOpen(false);
     toast.success("Recommended foods list updated!");
+    syncDietPlanUpdate(updatedPlan);
   };
 
   // 4. Foods to Avoid Edit Handlers
@@ -1472,12 +1510,14 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
   const handleSaveAvoidFoods = () => {
     if (!aiDietPlan) return;
     const cleaned = tempAvoidFoods.map((f) => f.trim()).filter(Boolean);
-    setAiDietPlan({
+    const updatedPlan: AIDietPlan = {
       ...aiDietPlan,
       foodsToAvoid: cleaned
-    });
+    };
+    setAiDietPlan(updatedPlan);
     setEditAvoidFoodsOpen(false);
     toast.success("Foods to avoid list updated!");
+    syncDietPlanUpdate(updatedPlan);
   };
 
   // 5. Crucial Safety Alerts Edit Handlers
@@ -1490,12 +1530,14 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
   const handleSaveAlerts = () => {
     if (!aiDietPlan) return;
     const cleaned = tempAlerts.map((a) => a.trim()).filter(Boolean);
-    setAiDietPlan({
+    const updatedPlan: AIDietPlan = {
       ...aiDietPlan,
       avoidanceAlerts: cleaned
-    });
+    };
+    setAiDietPlan(updatedPlan);
     setEditAlertsOpen(false);
     toast.success("Safety alerts updated!");
+    syncDietPlanUpdate(updatedPlan);
   };
 
   // 6. Guidance & Habits Edit Handlers (Hydration, Lifestyle)
@@ -1510,13 +1552,15 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
 
   const handleSaveGuidance = () => {
     if (!aiDietPlan) return;
-    setAiDietPlan({
+    const updatedPlan: AIDietPlan = {
       ...aiDietPlan,
       hydrationGuidance: tempGuidance.hydrationGuidance.trim() || aiDietPlan.hydrationGuidance,
       lifestyleAdvice: tempGuidance.lifestyleAdvice.map((t) => t.trim()).filter(Boolean)
-    });
+    };
+    setAiDietPlan(updatedPlan);
     setEditGuidanceOpen(false);
     toast.success("Hydration & lifestyle habits updated!");
+    syncDietPlanUpdate(updatedPlan);
   };
 
   const handleResetAll = () => {
@@ -5272,34 +5316,42 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
               {aiDietPlan && (
                 <>
                   {/* Patient Information Box */}
-                  <Box sx={{ bgcolor: "#FFFFFF !important", border: "1.2px solid #000000 !important", borderRadius: 1.2, p: 1.2, mb: 1.5 }}>
-                    <Grid container spacing={1}>
-                      <Grid item xs={6} sm={3}>
-                        <Typography variant="caption" sx={{ color: "#000000 !important", fontWeight: 800, display: "block", fontSize: "0.7rem" }}>Patient Name:</Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 900, color: "#000000 !important", fontSize: "0.82rem" }}>{form.patientName || "Patient"}</Typography>
-                      </Grid>
-                      <Grid item xs={6} sm={3}>
-                        <Typography variant="caption" sx={{ color: "#000000 !important", fontWeight: 800, display: "block", fontSize: "0.7rem" }}>Age / Gender:</Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 900, color: "#000000 !important", fontSize: "0.82rem" }}>{form.age ? `${form.age} Years` : "Adult"} / {form.gender || "Other"}</Typography>
-                      </Grid>
-                      <Grid item xs={6} sm={3}>
-                        <Typography variant="caption" sx={{ color: "#000000 !important", fontWeight: 800, display: "block", fontSize: "0.7rem" }}>Primary Condition:</Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 900, color: "#000000 !important", fontSize: "0.82rem" }}>{form.disease || "Clinical Nutrition"}</Typography>
-                      </Grid>
-                      {form.weightKg && (
-                        <Grid item xs={6} sm={3}>
-                          <Typography variant="caption" sx={{ color: "#000000 !important", fontWeight: 800, display: "block", fontSize: "0.7rem" }}>Weight / BMI:</Typography>
-                          <Typography variant="body2" sx={{ fontWeight: 900, color: "#000000 !important", fontSize: "0.82rem" }}>{form.weightKg} kg {bmiVal > 0 ? `(${bmi} kg/m²)` : ""}</Typography>
+                  {(() => {
+                    const printPatientForm = inputMode === "history" && historyForm ? historyForm : form;
+                    const printWeight = Number(printPatientForm.weightKg) || 0;
+                    const printHeight = Number(printPatientForm.heightCm) / 100 || 0;
+                    const printBmi = printHeight > 0 && printWeight > 0 ? (printWeight / (printHeight * printHeight)).toFixed(1) : "";
+                    return (
+                      <Box sx={{ bgcolor: "#FFFFFF !important", border: "1.2px solid #000000 !important", borderRadius: 1.2, p: 1.2, mb: 1.5 }}>
+                        <Grid container spacing={1}>
+                          <Grid item xs={6} sm={3}>
+                            <Typography variant="caption" sx={{ color: "#000000 !important", fontWeight: 800, display: "block", fontSize: "0.7rem" }}>Patient Name:</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 900, color: "#000000 !important", fontSize: "0.82rem" }}>{printPatientForm.patientName || "Patient"}</Typography>
+                          </Grid>
+                          <Grid item xs={6} sm={3}>
+                            <Typography variant="caption" sx={{ color: "#000000 !important", fontWeight: 800, display: "block", fontSize: "0.7rem" }}>Age / Gender:</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 900, color: "#000000 !important", fontSize: "0.82rem" }}>{printPatientForm.age ? `${printPatientForm.age} Years` : "Adult"} / {printPatientForm.gender || "Other"}</Typography>
+                          </Grid>
+                          <Grid item xs={6} sm={3}>
+                            <Typography variant="caption" sx={{ color: "#000000 !important", fontWeight: 800, display: "block", fontSize: "0.7rem" }}>Primary Condition:</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 900, color: "#000000 !important", fontSize: "0.82rem" }}>{printPatientForm.disease || "Clinical Nutrition"}</Typography>
+                          </Grid>
+                          <Grid item xs={6} sm={3}>
+                            <Typography variant="caption" sx={{ color: "#000000 !important", fontWeight: 800, display: "block", fontSize: "0.7rem" }}>Height / Weight / BMI:</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 900, color: "#000000 !important", fontSize: "0.82rem" }}>
+                              {printPatientForm.heightCm ? `${printPatientForm.heightCm} cm` : "—"} / {printPatientForm.weightKg ? `${printPatientForm.weightKg} kg` : "—"} {printBmi ? `(${printBmi} kg/m²)` : ""}
+                            </Typography>
+                          </Grid>
+                          <Grid item xs={12} sm={6}>
+                            <Typography variant="caption" sx={{ color: "#000000 !important", fontWeight: 800, display: "block", fontSize: "0.7rem" }}>Prescribed Protocol &amp; Target:</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 900, color: "#000000 !important", fontSize: "0.82rem" }}>
+                              {aiDietPlan.planName} — Target: {(aiDietPlan.targetCalories || 1750).toLocaleString()} kcal/day
+                            </Typography>
+                          </Grid>
                         </Grid>
-                      )}
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="caption" sx={{ color: "#000000 !important", fontWeight: 800, display: "block", fontSize: "0.7rem" }}>Prescribed Protocol &amp; Target:</Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 900, color: "#000000 !important", fontSize: "0.82rem" }}>
-                          {aiDietPlan.planName} — Target: {(aiDietPlan.targetCalories || 1750).toLocaleString()} kcal/day
-                        </Typography>
-                      </Grid>
-                    </Grid>
-                  </Box>
+                      </Box>
+                    );
+                  })()}
 
                   {/* Clinical Summary */}
                   <Box sx={{ mb: 1.5, p: 0.9, bgcolor: "#FFFFFF !important", border: "1.2px solid #000000 !important", borderRadius: 1.2 }}>

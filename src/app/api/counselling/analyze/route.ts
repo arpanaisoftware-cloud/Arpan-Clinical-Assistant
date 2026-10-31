@@ -487,12 +487,12 @@ For EACH of the 11 factors, return an object in the JSON array:
 - "patientAdvice": array of 3 practical instructions for the patient
 - "screeningSchedule": string describing frequency of tests
 
-Return a RAW JSON array of exactly 10 items with no markdown code blocks or surrounding text.
+Return a RAW JSON array of exactly 11 items with no markdown code blocks or surrounding text.
 `;
 
       const aiRes = await generateClinicalJsonAnalysis<any[]>({
         prompt,
-        systemPrompt: 'You are an expert clinical endocrinologist, cardiologist, and patient counselling specialist. Return only a valid JSON array of 10 items.'
+        systemPrompt: 'You are an expert clinical endocrinologist, cardiologist, and patient counselling specialist. Return only a valid JSON array of 11 items.'
       });
 
       let factorsList: any[] = [];
@@ -506,6 +506,11 @@ Return a RAW JSON array of exactly 10 items with no markdown code blocks or surr
       }
 
       if (factorsList.length >= 6) {
+        const existingIds = new Set(factorsList.map((f: any) => f.id));
+        if (!existingIds.has('hyperuricemiaRisk')) {
+          const uricFallback = fallbackFactors.find((f: any) => f.id === 'hyperuricemiaRisk');
+          if (uricFallback) factorsList.push(uricFallback);
+        }
         return NextResponse.json({
           success: true,
           data: factorsList,
