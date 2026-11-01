@@ -58,6 +58,46 @@ interface MealSlotResult {
   confidence: "high" | "medium" | "low";
 }
 
+const r1 = (n: number) => Math.round(n * 10) / 10;
+
+function sumMeals(meals: any[]) {
+  const perMeal = (meals || []).map((m) => {
+    const items = Array.isArray(m.items) ? m.items : [];
+    const t = items.reduce(
+      (a: any, i: any) => ({
+        kcal: a.kcal + (Number(i.kcal) || 0),
+        protein: a.protein + (Number(i.protein_g) || 0),
+        fat: a.fat + (Number(i.fat_g) || 0),
+        carbs: a.carbs + (Number(i.carbs_g) || 0),
+        fiber: a.fiber + (Number(i.fiber_g) || 0),
+      }),
+      { kcal: 0, protein: 0, fat: 0, carbs: 0, fiber: 0 }
+    );
+    return { slot: m.slot, time: m.time, confidence: m.confidence, ...t };
+  });
+
+  const day = perMeal.reduce(
+    (a, m) => ({
+      kcal: a.kcal + m.kcal,
+      protein: a.protein + m.protein,
+      fat: a.fat + m.fat,
+      carbs: a.carbs + m.carbs,
+      fiber: a.fiber + m.fiber,
+    }),
+    { kcal: 0, protein: 0, fat: 0, carbs: 0, fiber: 0 }
+  );
+
+  // Sanity check: Atwater estimate vs reported kcal (flag, don't overwrite)
+  const atwater = day.protein * 4 + day.fat * 9 + day.carbs * 4;
+  const drift = day.kcal ? Math.abs(atwater - day.kcal) / day.kcal : 0;
+
+  return {
+    perMeal: perMeal.map((m) => ({ ...m, kcal: Math.round(m.kcal), protein: r1(m.protein), fat: r1(m.fat), carbs: r1(m.carbs), fiber: r1(m.fiber) })),
+    total: { kcal: Math.round(day.kcal), protein: r1(day.protein), fat: r1(day.fat), carbs: r1(day.carbs), fiber: r1(day.fiber) },
+    needsReview: drift > 0.15, // AI numbers are internally inconsistent
+  };
+}
+
 /**
  * Deterministic IFCT 2017 (Indian Food Composition Tables) bottom-up food item parser.
  * Calculates nutrition item-by-item from actual cooked household measures.
@@ -436,31 +476,14 @@ Return JSON in exactly this shape:
       console.warn("[diet/recalculate] AI bottom-up IFCT call failed, using IFCT parser fallback:", aiErr?.message);
     }
 
-    // If AI generation succeeded, sum all items across meals in code:
+    // If AI generation succeeded, sum all items across meals using sumMeals:
     if (parsedAiMeals?.meals && Array.isArray(parsedAiMeals.meals)) {
-      let sumKcal = 0;
-      let sumP = 0;
-      let sumF = 0;
-      let sumC = 0;
-      let sumFib = 0;
-
-      for (const meal of parsedAiMeals.meals) {
-        if (Array.isArray(meal.items)) {
-          for (const item of meal.items) {
-            sumKcal += Number(item.kcal) || 0;
-            sumP += Number(item.protein_g) || 0;
-            sumF += Number(item.fat_g) || 0;
-            sumC += Number(item.carbs_g) || 0;
-            sumFib += Number(item.fiber_g) || 0;
-          }
-        }
-      }
-
-      const finalKcal = Math.round(sumKcal);
-      const finalP = Math.round(sumP);
-      const finalF = Math.round(sumF);
-      const finalC = Math.round(sumC);
-      const finalFib = Math.round(sumFib);
+      const summaryStats = sumMeals(parsedAiMeals.meals);
+      const finalKcal = summaryStats.total.kcal;
+      const finalP = Math.round(summaryStats.total.protein);
+      const finalF = Math.round(summaryStats.total.fat);
+      const finalC = Math.round(summaryStats.total.carbs);
+      const finalFib = Math.round(summaryStats.total.fiber);
 
       return NextResponse.json({
         success: true,
@@ -475,6 +498,9 @@ Return JSON in exactly this shape:
           fiber: `${finalFib}g`,
           summary: `IFCT 2017 bottom-up clinical nutrition: ${finalKcal.toLocaleString()} kcal (${finalP}g Protein, ${finalF}g Fat, ${finalC}g Carbs, ${finalFib}g Fiber) across ${parsedAiMeals.meals.length} meal slots.`,
           meals: parsedAiMeals.meals,
+          perMeal: summaryStats.perMeal,
+          totals: summaryStats.total,
+          needsReview: summaryStats.needsReview,
           assumptions: parsedAiMeals.assumptions || []
         }
       });
@@ -482,27 +508,12 @@ Return JSON in exactly this shape:
 
     // Deterministic Fallback: compute bottom-up IFCT for each slot
     const fallbackMeals: MealSlotResult[] = mealSchedule.map(parseSlotBottomUpIFCT);
-    let fallbackKcal = 0;
-    let fallbackP = 0;
-    let fallbackF = 0;
-    let fallbackC = 0;
-    let fallbackFib = 0;
-
-    for (const meal of fallbackMeals) {
-      for (const it of meal.items) {
-        fallbackKcal += it.kcal;
-        fallbackP += it.protein_g;
-        fallbackF += it.fat_g;
-        fallbackC += it.carbs_g;
-        fallbackFib += it.fiber_g;
-      }
-    }
-
-    const roundKcal = Math.round(fallbackKcal);
-    const roundP = Math.round(fallbackP);
-    const roundF = Math.round(fallbackF);
-    const roundC = Math.round(fallbackC);
-    const roundFib = Math.round(fallbackFib);
+    const fallbackSummary = sumMeals(fallbackMeals);
+    const roundKcal = fallbackSummary.total.kcal;
+    const roundP = Math.round(fallbackSummary.total.protein);
+    const roundF = Math.round(fallbackSummary.total.fat);
+    const roundC = Math.round(fallbackSummary.total.carbs);
+    const roundFib = Math.round(fallbackSummary.total.fiber);
 
     return NextResponse.json({
       success: true,
@@ -517,6 +528,9 @@ Return JSON in exactly this shape:
         fiber: `${roundFib}g`,
         summary: `IFCT 2017 bottom-up clinical nutrition: ${roundKcal.toLocaleString()} kcal (${roundP}g Protein, ${roundF}g Fat, ${roundC}g Carbs, ${roundFib}g Fiber) across ${fallbackMeals.length} meal slots.`,
         meals: fallbackMeals,
+        perMeal: fallbackSummary.perMeal,
+        totals: fallbackSummary.total,
+        needsReview: fallbackSummary.needsReview,
         assumptions: [
           "Standard household measures: 1 katori = 150ml, 1 glass = 200ml, 1 phulka = 30g atta.",
           "Minimal therapeutic cooking oil: 1 tsp oil (5g, 45 kcal) assumed per katori cooked sabzi/dal/curry.",

@@ -103,6 +103,7 @@ interface EditableMealSlot extends MealSlot {
 
 interface AIDietPlan {
   planName: string;
+  patientName?: string;
   targetCalories: number;
   summary: string;
   macroBreakdown: { carbs: string; protein: string; fats: string; fiber: string };
@@ -796,7 +797,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
         toast.error(json.message || "Failed to generate diet plan.");
         return;
       }
-      setAiDietPlan(json.data);
+      setAiDietPlan({ ...json.data, patientName: activeForm.patientName });
       lastCalculatedScheduleRef.current = serializeMealSchedule(json.data?.mealSchedule);
       confetti({ particleCount: 90, spread: 100, origin: { y: 0.5 } });
       toast.success("Indian Diet & Electrolyte Plan ready!");
@@ -883,8 +884,31 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
   // Open printable diet sheet directly from history record
   const handlePrintDietRecord = (record: DietHistoryRecord) => {
     setCurrentDietRecordId(record.dietId || record.id || record._id || null);
+    if (record.patientForm) {
+      setForm((prev) => ({
+        ...prev,
+        ...record.patientForm,
+      }));
+      setHistoryForm(record.patientForm);
+    } else {
+      const restored = {
+        ...EMPTY_FORM,
+        patientName: record.patientName || "",
+        age: String(record.age || ""),
+        gender: record.gender || "Male",
+        disease: record.disease || "",
+        dietaryPreference: record.dietaryPreference || "Vegetarian (Shakahari)",
+        language: record.language || "Hindi",
+        customCalories: String(record.targetCalories || "1750"),
+      };
+      setForm(restored);
+      setHistoryForm(restored);
+    }
     if (record.dietPlan) {
-      setAiDietPlan(record.dietPlan);
+      setAiDietPlan({
+        ...record.dietPlan,
+        patientName: record.patientName || record.dietPlan?.patientName || "",
+      });
     }
     setPrintOpen(true);
   };
@@ -1068,7 +1092,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
   /**
    * Shared helper: calls /api/diet/recalculate with the updated schedule.
    * Guarantees Protein*4 + Fat*9 + Carbs*4 === targetCalories exactly.
-   * Auto-invoked on every Save / Delete / explicit Recalculate action.
+   * Invoked only on explicit Recalculate button click and Save button click.
    */
   const recalculateForSchedule = async (
     schedule: MealSlot[],
@@ -1263,21 +1287,13 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
       return;
     }
     const updated = aiDietPlan.mealSchedule.filter((_, i) => i !== index);
-    // Auto-recalculate macros after deleting a meal slot
-    setIsRecalculating(true);
-    try {
-      const newPlan = await recalculateForSchedule(updated, aiDietPlan);
-      setAiDietPlan(newPlan);
-      lastCalculatedScheduleRef.current = serializeMealSchedule(updated);
-      toast.success("Meal removed & macros recalculated!");
-      await syncDietPlanUpdate(newPlan);
-    } catch (err) {
-      // fallback: still update the schedule
-      setAiDietPlan({ ...aiDietPlan, mealSchedule: updated });
-      toast.info("Meal slot removed.");
-    } finally {
-      setIsRecalculating(false);
-    }
+    const updatedPlan: AIDietPlan = {
+      ...aiDietPlan,
+      mealSchedule: updated
+    };
+    setAiDietPlan(updatedPlan);
+    toast.info("Meal slot removed. Click 'Recalculate Macros' to update calories.");
+    await syncDietPlanUpdate(updatedPlan);
   };
 
   // 1. Overview Edit Handlers
@@ -5317,7 +5333,8 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                 <>
                   {/* Patient Information Box */}
                   {(() => {
-                    const printPatientForm = inputMode === "history" && historyForm ? historyForm : form;
+                    const printPatientForm = (inputMode === "history" && historyForm) ? historyForm : (form.patientName ? form : (historyForm || form));
+                    const effectivePatientName = printPatientForm.patientName || (aiDietPlan as any)?.patientName || patientName || "Patient";
                     const printWeight = Number(printPatientForm.weightKg) || 0;
                     const printHeight = Number(printPatientForm.heightCm) / 100 || 0;
                     const printBmi = printHeight > 0 && printWeight > 0 ? (printWeight / (printHeight * printHeight)).toFixed(1) : "";
@@ -5326,7 +5343,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                         <Grid container spacing={1}>
                           <Grid item xs={6} sm={3}>
                             <Typography variant="caption" sx={{ color: "#000000 !important", fontWeight: 800, display: "block", fontSize: "0.7rem" }}>Patient Name:</Typography>
-                            <Typography variant="body2" sx={{ fontWeight: 900, color: "#000000 !important", fontSize: "0.82rem" }}>{printPatientForm.patientName || "Patient"}</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 900, color: "#000000 !important", fontSize: "0.82rem" }}>{effectivePatientName}</Typography>
                           </Grid>
                           <Grid item xs={6} sm={3}>
                             <Typography variant="caption" sx={{ color: "#000000 !important", fontWeight: 800, display: "block", fontSize: "0.7rem" }}>Age / Gender:</Typography>
@@ -5451,7 +5468,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                     ARPAN CLINICAL ASSISTANT
                   </Typography>
                   <Typography variant="caption" sx={{ color: "#000000 !important", fontWeight: 700, fontSize: "0.78rem" }}>
-                    Patient: {form.patientName || "Patient"} | Date: {new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })} | Clinical Protocol Continued
+                    Patient: {((inputMode === "history" && historyForm?.patientName) || form.patientName || historyForm?.patientName || (aiDietPlan as any)?.patientName || patientName || "Patient")} | Date: {new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })} | Clinical Protocol Continued
                   </Typography>
                 </Box>
                 <Box sx={{ textAlign: "right" }}>
@@ -5611,21 +5628,26 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
 
                       {/* Patient Signature Box */}
                       <Grid item xs={6}>
-                        <Box sx={{ border: "1px solid #000000 !important", borderRadius: 1, p: 1.2, bgcolor: "#FFFFFF !important" }}>
-                          <Typography variant="caption" sx={{ fontWeight: 900, color: "#000000 !important", display: "block", textTransform: "uppercase", letterSpacing: 0.5, mb: 0.5, fontSize: "0.72rem" }}>
-                            Patient / Caregiver Acknowledgement
-                          </Typography>
-                          <Typography variant="body2" sx={{ fontWeight: 900, color: "#000000 !important", mb: 1.5, fontSize: "0.84rem" }}>
-                            Name: {form.patientName || "Patient"}
-                          </Typography>
-                          <Box sx={{ borderBottom: "1.2px dashed #000000 !important", height: 20, mb: 0.5 }} />
-                          <Typography variant="caption" sx={{ color: "#000000 !important", fontWeight: 800, display: "block", fontSize: "0.72rem" }}>
-                            Signature of Patient
-                          </Typography>
-                          <Typography variant="caption" sx={{ color: "#000000 !important", fontWeight: 700, display: "block", mt: 0.2, fontSize: "0.7rem" }}>
-                            Date: {new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
-                          </Typography>
-                        </Box>
+                        {(() => {
+                          const sigPatientName = (inputMode === "history" && historyForm?.patientName) || form.patientName || historyForm?.patientName || (aiDietPlan as any)?.patientName || patientName || "Patient";
+                          return (
+                            <Box sx={{ border: "1px solid #000000 !important", borderRadius: 1, p: 1.2, bgcolor: "#FFFFFF !important" }}>
+                              <Typography variant="caption" sx={{ fontWeight: 900, color: "#000000 !important", display: "block", textTransform: "uppercase", letterSpacing: 0.5, mb: 0.5, fontSize: "0.72rem" }}>
+                                Patient / Caregiver Acknowledgement
+                              </Typography>
+                              <Typography variant="body2" sx={{ fontWeight: 900, color: "#000000 !important", mb: 1.2, fontSize: "0.84rem" }}>
+                                Name: {sigPatientName}
+                              </Typography>
+                              <Box sx={{ borderBottom: "1.2px dashed #000000 !important", height: 20, mb: 0.5 }} />
+                              <Typography variant="caption" sx={{ color: "#000000 !important", fontWeight: 800, display: "block", fontSize: "0.72rem" }}>
+                                Signature of Patient
+                              </Typography>
+                              <Typography variant="caption" sx={{ color: "#000000 !important", fontWeight: 700, display: "block", mt: 0.2, fontSize: "0.7rem" }}>
+                                Date: {new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                              </Typography>
+                            </Box>
+                          );
+                        })()}
                       </Grid>
                     </Grid>
 
