@@ -40,6 +40,8 @@ import TablePagination from "@mui/material/TablePagination";
 import { useTheme } from "@mui/material/styles";
 import Restaurant from "@mui/icons-material/Restaurant";
 import Scale from "@mui/icons-material/Scale";
+import Psychology from "@mui/icons-material/Psychology";
+import Shield from "@mui/icons-material/Shield";
 import Print from "@mui/icons-material/Print";
 import CheckCircle from "@mui/icons-material/CheckCircle";
 import Warning from "@mui/icons-material/Warning";
@@ -84,9 +86,11 @@ import ArrowDownward from "@mui/icons-material/ArrowDownward";
 import { toast } from "react-toastify";
 import confetti from "canvas-confetti";
 import { useAppSelector } from "../redux/hooks";
-import { HistoryRecord, DietHistoryRecord } from "../types/clinical";
+import { HistoryRecord, DietHistoryRecord, isSuperAdminUser } from "../types/clinical";
 import DietAnalysisLoader from "./DietAnalysisLoader";
 import DietHistoryTable from "./DietHistoryTable";
+import HinglishTextField from "./HinglishTextField";
+import { transliterateHinglishText, convertHindiDigitsToArabic, normalizeDietPlanDigits } from "@/lib/transliterate";
 
 interface MealSlot {
   time: string;
@@ -460,6 +464,31 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
 
   // Redux: Active analysis & History records
   const authUser = useAppSelector((s: any) => s.auth?.currentUser || s.auth?.user);
+  const isSuperAdmin = isSuperAdminUser(authUser);
+  const [activeAiProvider, setActiveAiProvider] = useState<'gemini' | 'deepseek'>('gemini');
+  const [aiPlanProvider, setAiPlanProvider] = useState<'gemini' | 'deepseek' | string>('gemini');
+  const [aiPlanModel, setAiPlanModel] = useState<string>('');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const handleAiChanged = (e: any) => {
+        if (e.detail?.provider) {
+          setActiveAiProvider(e.detail.provider);
+        }
+      };
+      window.addEventListener('ai-provider-changed', handleAiChanged);
+      fetch('/api/admin/ai-settings')
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.success && d.activeProvider) {
+            setActiveAiProvider(d.activeProvider);
+          }
+        })
+        .catch(() => { });
+      return () => window.removeEventListener('ai-provider-changed', handleAiChanged);
+    }
+  }, []);
+
   const activeAnalysis = useAppSelector((s: any) => s.clinical.analysisResult);
   const historyList: HistoryRecord[] = useAppSelector((s: any) => s.clinical.historyList) ?? [];
 
@@ -539,6 +568,8 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
   // Editable Meal Schedule Popup State
   const [editMealsOpen, setEditMealsOpen] = useState(false);
   const [tempMealSchedule, setTempMealSchedule] = useState<EditableMealSlot[]>([]);
+  const [phoneticHinglishEnabled, setPhoneticHinglishEnabled] = useState(false);
+  const [isTransliteratingAll, setIsTransliteratingAll] = useState(false);
 
   // Editable Overview (Plan Name, Daily Target Calories, Summary)
   const [editOverviewOpen, setEditOverviewOpen] = useState(false);
@@ -669,9 +700,11 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
           setIsParsingRx(false);
           return;
         }
+        if (json.provider) setAiPlanProvider(json.provider);
+        if (json.model) setAiPlanModel(json.model);
         const d = json.data;
         if (d.dietPlan) {
-          setAiDietPlan(d.dietPlan);
+          setAiDietPlan(normalizeDietPlanDigits(d.dietPlan));
           lastCalculatedScheduleRef.current = serializeMealSchedule(d.dietPlan?.mealSchedule);
           confetti({ particleCount: 80, spread: 90, origin: { y: 0.5 } });
           toast.success("Prescription scanned & Indian Diet Plan generated in a single step!");
@@ -797,7 +830,9 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
         toast.error(json.message || "Failed to generate diet plan.");
         return;
       }
-      setAiDietPlan({ ...json.data, patientName: activeForm.patientName });
+      if (json.provider) setAiPlanProvider(json.provider);
+      if (json.model) setAiPlanModel(json.model);
+      setAiDietPlan(normalizeDietPlanDigits({ ...json.data, patientName: activeForm.patientName }));
       lastCalculatedScheduleRef.current = serializeMealSchedule(json.data?.mealSchedule);
       confetti({ particleCount: 90, spread: 100, origin: { y: 0.5 } });
       toast.success("Indian Diet & Electrolyte Plan ready!");
@@ -870,7 +905,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
       setHistoryForm(restored);
     }
     if (record.dietPlan) {
-      setAiDietPlan(record.dietPlan);
+      setAiDietPlan(normalizeDietPlanDigits(record.dietPlan));
       lastCalculatedScheduleRef.current = serializeMealSchedule(record.dietPlan?.mealSchedule);
     }
     confetti({ particleCount: 50, spread: 70, origin: { y: 0.5 } });
@@ -969,33 +1004,40 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
   const handleOpenEditMeals = () => {
     if (!aiDietPlan?.mealSchedule) return;
     const initialList: EditableMealSlot[] = aiDietPlan.mealSchedule.map((m) => {
+      const cleanM = {
+        ...m,
+        portion: convertHindiDigitsToArabic(m.portion || ''),
+        focus: convertHindiDigitsToArabic(m.focus || ''),
+        clinicalNote: convertHindiDigitsToArabic(m.clinicalNote || ''),
+        mealName: convertHindiDigitsToArabic(m.mealName || '')
+      };
       const isExact = MEAL_SLOT_OPTIONS.some(
-        (opt) => opt.value.toLowerCase() === m.mealName.trim().toLowerCase()
+        (opt) => opt.value.toLowerCase() === cleanM.mealName.trim().toLowerCase()
       );
       if (isExact) {
         const found = MEAL_SLOT_OPTIONS.find(
-          (opt) => opt.value.toLowerCase() === m.mealName.trim().toLowerCase()
+          (opt) => opt.value.toLowerCase() === cleanM.mealName.trim().toLowerCase()
         )!;
         return {
-          ...m,
+          ...cleanM,
           slotType: found.value,
           mealName: found.value,
           customMealName: ""
         };
       }
-      const matched = matchStandardSlot(m.mealName);
+      const matched = matchStandardSlot(cleanM.mealName);
       if (matched) {
         return {
-          ...m,
+          ...cleanM,
           slotType: matched,
           mealName: matched,
           customMealName: ""
         };
       }
       return {
-        ...m,
+        ...cleanM,
         slotType: "Custom",
-        customMealName: m.mealName || ""
+        customMealName: cleanM.mealName || ""
       };
     });
     setTempMealSchedule(initialList);
@@ -1003,9 +1045,10 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
   };
 
   const handleUpdateTempMeal = (index: number, field: keyof EditableMealSlot, val: string) => {
+    const cleanVal = convertHindiDigitsToArabic(val);
     setTempMealSchedule((prev) => {
       const copy = [...prev];
-      copy[index] = { ...copy[index], [field]: val };
+      copy[index] = { ...copy[index], [field]: cleanVal };
       return copy;
     });
   };
@@ -1034,12 +1077,13 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
   };
 
   const handleCustomMealNameChange = (index: number, customName: string) => {
+    const cleanCustom = convertHindiDigitsToArabic(customName);
     setTempMealSchedule((prev) => {
       const copy = [...prev];
       copy[index] = {
         ...copy[index],
-        customMealName: customName,
-        mealName: customName
+        customMealName: cleanCustom,
+        mealName: cleanCustom
       };
       return copy;
     });
@@ -1087,6 +1131,39 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
       return;
     }
     setTempMealSchedule((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Transliterate all meal slots in tempMealSchedule from Hinglish to Devanagari Hindi
+  const handleTransliterateAllMeals = async () => {
+    if (tempMealSchedule.length === 0) return;
+    setIsTransliteratingAll(true);
+    try {
+      toast.info("Transliterating meal schedule to Devanagari Hindi (numbers stay like 100)...");
+      const updated = await Promise.all(
+        tempMealSchedule.map(async (m) => {
+          const [newPortion, newFocus, newNote, newCustom] = await Promise.all([
+            transliterateHinglishText(m.portion || ''),
+            transliterateHinglishText(m.focus || ''),
+            transliterateHinglishText(m.clinicalNote || ''),
+            m.customMealName ? transliterateHinglishText(m.customMealName) : ''
+          ]);
+          return {
+            ...m,
+            portion: convertHindiDigitsToArabic(newPortion || m.portion),
+            focus: convertHindiDigitsToArabic(newFocus || m.focus),
+            clinicalNote: convertHindiDigitsToArabic(newNote || m.clinicalNote),
+            customMealName: convertHindiDigitsToArabic(newCustom || m.customMealName)
+          };
+        })
+      );
+      setTempMealSchedule(updated);
+      confetti({ particleCount: 35, spread: 60, origin: { y: 0.5 } });
+      toast.success("Meal schedule transliterated to Hindi. Numbers kept like 100!");
+    } catch (err: any) {
+      toast.error("Error during transliteration: " + (err.message || 'Unknown error'));
+    } finally {
+      setIsTransliteratingAll(false);
+    }
   };
 
   /**
@@ -2126,7 +2203,9 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
               </Stack>
 
               <Alert severity="info" sx={{ mb: 2, borderRadius: 1.5 }} icon={<SmartToy fontSize="small" />}>
-                Take a clear picture of your doctor's prescription or upload a PDF. Our AI vision instantly reads the diagnosis, medicines, and vitals to customize your Indian diet plan.
+                {isSuperAdmin
+                  ? "Take a clear picture of your prescription or upload a PDF. Optical character reading & document parsing is processed by Gemini Vision OCR."
+                  : "Take a clear picture of your doctor's prescription or upload a PDF. Our AI vision instantly reads the diagnosis, medicines, and vitals to customize your Indian diet plan."}
               </Alert>
 
               <Box
@@ -2283,7 +2362,9 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                     "&:disabled": { background: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)" }
                   }}
                 >
-                  {isParsingRx ? `Analysing Prescription... ${rxProgress}%` : "Generate Indian Diet Plan"}
+                  {isParsingRx
+                    ? (isSuperAdmin ? `Scanning with Gemini Vision OCR... ${rxProgress}%` : `Analysing Prescription... ${rxProgress}%`)
+                    : (isSuperAdmin ? "Scan Rx with Gemini Vision & Generate Diet" : "Generate Indian Diet Plan")}
                 </Button>
                 {!uploadedFile && (
                   <Typography variant="caption" color="text.secondary" display="block" mt={1}>
@@ -2723,6 +2804,22 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                             color: isDark ? "#00E0BA" : "#00967D"
                           }}
                         />
+                        {isSuperAdmin && (
+                          <Chip
+                            icon={activeAiProvider === 'deepseek' ? <Psychology sx={{ fontSize: '13px !important', color: '#818CF8 !important' }} /> : <AutoAwesome sx={{ fontSize: '13px !important', color: '#00C9A7 !important' }} />}
+                            label={activeAiProvider === 'deepseek' ? 'DeepSeek AI Active' : 'Gemini AI Active'}
+                            size="small"
+                            sx={{
+                              fontWeight: 800,
+                              fontSize: "0.7rem",
+                              height: 22,
+                              bgcolor: activeAiProvider === 'deepseek' ? "rgba(79,70,229,0.18)" : "rgba(0,201,167,0.18)",
+                              color: activeAiProvider === 'deepseek' ? "#818CF8" : (isDark ? "#00E0BA" : "#00967D"),
+                              border: '1px solid',
+                              borderColor: activeAiProvider === 'deepseek' ? 'rgba(79,70,229,0.4)' : 'rgba(0,201,167,0.4)'
+                            }}
+                          />
+                        )}
                       </Stack>
 
                       <Button
@@ -2915,20 +3012,34 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                   size="large"
                   onClick={handleGenerateDiet}
                   disabled={isGenDisabled}
-                  startIcon={isGenerating ? <CircularProgress size={20} color="inherit" /> : <AutoAwesome />}
+                  startIcon={isGenerating ? <CircularProgress size={20} color="inherit" /> : (isSuperAdmin && activeAiProvider === 'deepseek' ? <Psychology /> : <AutoAwesome />)}
                   sx={{
                     borderRadius: "50px",
                     px: { xs: 4, sm: 6 },
                     py: 1.8,
                     fontSize: { xs: "0.95rem", sm: "1.05rem" },
                     fontWeight: 900,
-                    background: "linear-gradient(135deg, #00C9A7 0%, #6C5CE7 100%)",
-                    boxShadow: "0 8px 32px rgba(0,201,167,0.35)",
-                    "&:hover": { background: "linear-gradient(135deg, #00B395 0%, #5a4bd1 100%)" },
+                    background: isSuperAdmin && activeAiProvider === 'deepseek'
+                      ? "linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)"
+                      : "linear-gradient(135deg, #00C9A7 0%, #6C5CE7 100%)",
+                    boxShadow: isSuperAdmin && activeAiProvider === 'deepseek'
+                      ? "0 8px 32px rgba(79, 70, 229, 0.4)"
+                      : "0 8px 32px rgba(0,201,167,0.35)",
+                    "&:hover": {
+                      background: isSuperAdmin && activeAiProvider === 'deepseek'
+                        ? "linear-gradient(135deg, #4338CA 0%, #6D28D9 100%)"
+                        : "linear-gradient(135deg, #00B395 0%, #5a4bd1 100%)"
+                    },
                     "&:disabled": { background: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)" }
                   }}
                 >
-                  {isGenerating ? `Analysing Clinical Profile... ${genProgress}%` : "Generate Indian Diet Plan"}
+                  {isGenerating
+                    ? (isSuperAdmin
+                      ? `Generating Diet with ${activeAiProvider === 'deepseek' ? 'DeepSeek AI' : 'Gemini AI'}... ${genProgress}%`
+                      : `Analysing Clinical Profile... ${genProgress}%`)
+                    : (isSuperAdmin
+                      ? (activeAiProvider === 'deepseek' ? 'Generate Indian Diet Plan with DeepSeek AI' : 'Generate Indian Diet Plan with Gemini AI')
+                      : 'Generate Indian Diet Plan')}
                 </Button>
                 {(!activeForm || !activeForm.patientName || !activeForm.age || !activeForm.gender || !activeForm.disease) && (
                   <Typography variant="caption" color="text.secondary" display="block" mt={1}>
@@ -2991,26 +3102,55 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                       {aiDietPlan.summary}
                     </Typography>
 
-                    <Stack direction="row" spacing={1} mt={2} flexWrap="wrap">
+                    <Stack direction="row" spacing={1} mt={2} flexWrap="wrap" alignItems="center">
                       <Chip
                         icon={<CheckCircle sx={{ fontSize: "14px !important" }} />}
-                        label={`Patient: ${form.patientName} (${form.age}Y, ${form.gender})`}
+                        label={`Patient: ${aiDietPlan.patientName || form.patientName || (historyForm && historyForm.patientName) || "Patient"} (${form.age || (historyForm && historyForm.age) || "50"}Y, ${form.gender || (historyForm && historyForm.gender) || "Male"})`}
                         size="small"
                         sx={{ fontWeight: 700, bgcolor: isDark ? "rgba(255,255,255,0.08)" : "#FFF" }}
                       />
                       <Chip
                         icon={<Spa sx={{ fontSize: "14px !important" }} />}
-                        label={form.dietaryPreference}
+                        label={form.dietaryPreference || (historyForm && historyForm.dietaryPreference) || "Vegetarian"}
                         size="small"
                         color="secondary"
                         sx={{ fontWeight: 700 }}
                       />
                       <Chip
                         icon={<Translate sx={{ fontSize: "14px !important" }} />}
-                        label={`Language: ${form.language || "Hindi"}`}
+                        label={`Language: ${form.language || (historyForm && historyForm.language) || "Hindi"}`}
                         size="small"
                         sx={{ fontWeight: 700, bgcolor: "rgba(108,92,231,0.15)", color: "#6C5CE7" }}
                       />
+                      {isSuperAdmin ? (
+                        aiPlanProvider === 'deepseek' ? (
+                          <Chip
+                            icon={<Psychology sx={{ fontSize: '15px !important', color: '#FFF !important' }} />}
+                            label="DeepSeek AI (DeepSeek-V3)"
+                            size="small"
+                            sx={{
+                              bgcolor: '#4F46E5',
+                              color: '#FFF',
+                              fontWeight: 800,
+                              fontSize: '0.74rem',
+                              boxShadow: '0 2px 8px rgba(79, 70, 229, 0.4)'
+                            }}
+                          />
+                        ) : (
+                          <Chip
+                            icon={<AutoAwesome sx={{ fontSize: '14px !important', color: '#FFF !important' }} />}
+                            label={aiPlanModel?.includes('Vision') ? 'Gemini Vision OCR' : 'Google Gemini (3.8 Flash)'}
+                            size="small"
+                            sx={{
+                              bgcolor: '#00C9A7',
+                              color: '#FFF',
+                              fontWeight: 800,
+                              fontSize: '0.74rem',
+                              boxShadow: '0 2px 8px rgba(0, 201, 167, 0.4)'
+                            }}
+                          />
+                        )
+                      ) : null}
                     </Stack>
                   </Box>
 
@@ -3646,7 +3786,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                     onClick={handleAddRemark}
                     disabled={!remarkInput.trim()}
                     sx={{
-                      color:"white !important" ,
+                      color: "white !important",
                       fontWeight: 800,
                       borderRadius: 2,
                       px: 3,
@@ -3706,436 +3846,436 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                       </Button>
                     </Stack>
                   </Stack>
-                {ALL_ELECTROLYTE_CONFIG.filter((cfg) => aiDietPlan.electrolyteLimits && (cfg.key in aiDietPlan.electrolyteLimits) && (aiDietPlan.electrolyteLimits as any)[cfg.key] !== undefined && (aiDietPlan.electrolyteLimits as any)[cfg.key] !== "").length === 0 ? (
-                  <Paper sx={{ p: 3, textAlign: "center", bgcolor: isDark ? "rgba(255,255,255,0.02)" : "#F8FAFC", borderRadius: 2, border: "1px dashed #CBD5E1" }}>
-                    <Typography variant="body2" color="text.secondary">
-                      All individual electrolyte limits have been removed. Click <strong>Edit Limits</strong> to add or restore mineral sections.
-                    </Typography>
-                  </Paper>
-                ) : (
-                  <Grid container spacing={2}>
-                    {ALL_ELECTROLYTE_CONFIG
-                      .filter((cfg) => aiDietPlan.electrolyteLimits && (cfg.key in aiDietPlan.electrolyteLimits) && (aiDietPlan.electrolyteLimits as any)[cfg.key] !== undefined && (aiDietPlan.electrolyteLimits as any)[cfg.key] !== "")
-                      .map((el) => {
-                        const val = (aiDietPlan.electrolyteLimits as any)[el.key] || el.defaultText;
-                        return (
-                          <Grid item xs={12} sm={6} md={4} key={el.key}>
-                            <Paper
-                              variant="outlined"
-                              sx={{
-                                p: 2,
-                                borderRadius: 2,
-                                bgcolor: isDark ? `${el.statusColor}0C` : `${el.statusColor}08`,
-                                border: `1px solid ${el.statusColor}35`,
-                                height: "100%",
-                                display: "flex",
-                                flexDirection: "column",
-                                justifyContent: "space-between"
-                              }}
-                            >
-                              <Box>
-                                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
-                                  <Typography sx={{ fontSize: "1.3rem" }}>{el.icon}</Typography>
-                                  <Stack direction="row" spacing={0.5} alignItems="center">
-                                    <Chip
-                                      label={el.badge}
-                                      size="small"
-                                      sx={{
-                                        fontWeight: 800,
-                                        bgcolor: `${el.statusColor}20`,
-                                        color: el.statusColor,
-                                        fontSize: "0.7rem",
-                                        height: 22
-                                      }}
-                                    />
-                                    <Tooltip title={`Remove ${el.label}`}>
-                                      <IconButton
+                  {ALL_ELECTROLYTE_CONFIG.filter((cfg) => aiDietPlan.electrolyteLimits && (cfg.key in aiDietPlan.electrolyteLimits) && (aiDietPlan.electrolyteLimits as any)[cfg.key] !== undefined && (aiDietPlan.electrolyteLimits as any)[cfg.key] !== "").length === 0 ? (
+                    <Paper sx={{ p: 3, textAlign: "center", bgcolor: isDark ? "rgba(255,255,255,0.02)" : "#F8FAFC", borderRadius: 2, border: "1px dashed #CBD5E1" }}>
+                      <Typography variant="body2" color="text.secondary">
+                        All individual electrolyte limits have been removed. Click <strong>Edit Limits</strong> to add or restore mineral sections.
+                      </Typography>
+                    </Paper>
+                  ) : (
+                    <Grid container spacing={2}>
+                      {ALL_ELECTROLYTE_CONFIG
+                        .filter((cfg) => aiDietPlan.electrolyteLimits && (cfg.key in aiDietPlan.electrolyteLimits) && (aiDietPlan.electrolyteLimits as any)[cfg.key] !== undefined && (aiDietPlan.electrolyteLimits as any)[cfg.key] !== "")
+                        .map((el) => {
+                          const val = (aiDietPlan.electrolyteLimits as any)[el.key] || el.defaultText;
+                          return (
+                            <Grid item xs={12} sm={6} md={4} key={el.key}>
+                              <Paper
+                                variant="outlined"
+                                sx={{
+                                  p: 2,
+                                  borderRadius: 2,
+                                  bgcolor: isDark ? `${el.statusColor}0C` : `${el.statusColor}08`,
+                                  border: `1px solid ${el.statusColor}35`,
+                                  height: "100%",
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  justifyContent: "space-between"
+                                }}
+                              >
+                                <Box>
+                                  <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+                                    <Typography sx={{ fontSize: "1.3rem" }}>{el.icon}</Typography>
+                                    <Stack direction="row" spacing={0.5} alignItems="center">
+                                      <Chip
+                                        label={el.badge}
                                         size="small"
-                                        color="error"
-                                        onClick={() => handleDeleteSingleElectrolyteDirect(el.key)}
-                                        sx={{ p: 0.4 }}
-                                      >
-                                        <Delete sx={{ fontSize: "1rem" }} />
-                                      </IconButton>
-                                    </Tooltip>
+                                        sx={{
+                                          fontWeight: 800,
+                                          bgcolor: `${el.statusColor}20`,
+                                          color: el.statusColor,
+                                          fontSize: "0.7rem",
+                                          height: 22
+                                        }}
+                                      />
+                                      <Tooltip title={`Remove ${el.label}`}>
+                                        <IconButton
+                                          size="small"
+                                          color="error"
+                                          onClick={() => handleDeleteSingleElectrolyteDirect(el.key)}
+                                          sx={{ p: 0.4 }}
+                                        >
+                                          <Delete sx={{ fontSize: "1rem" }} />
+                                        </IconButton>
+                                      </Tooltip>
+                                    </Stack>
                                   </Stack>
-                                </Stack>
-                                <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 0.5 }}>
-                                  {el.label}
+                                  <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 0.5 }}>
+                                    {el.label}
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ fontSize: "0.82rem", fontWeight: 600, mb: 1, color: isDark ? "#CBD5E1" : "#475569" }}>
+                                    {val}
+                                  </Typography>
+                                </Box>
+                                <Typography variant="caption" sx={{ color: el.statusColor, fontWeight: 700, display: "block" }}>
+                                  👉 {el.simpleRule}
                                 </Typography>
-                                <Typography variant="body2" sx={{ fontSize: "0.82rem", fontWeight: 600, mb: 1, color: isDark ? "#CBD5E1" : "#475569" }}>
-                                  {val}
-                                </Typography>
-                              </Box>
-                              <Typography variant="caption" sx={{ color: el.statusColor, fontWeight: 700, display: "block" }}>
-                                👉 {el.simpleRule}
-                              </Typography>
-                            </Paper>
-                          </Grid>
-                        );
-                      })}
-                  </Grid>
-                )}
-              </Paper>
-            )}
+                              </Paper>
+                            </Grid>
+                          );
+                        })}
+                    </Grid>
+                  )}
+                </Paper>
+              )}
 
-            {/* 5. SIDE-BY-SIDE: "EAT THIS 🟢" vs "AVOID THIS 🔴" */}
-            {(visibleSections.recommendedFoods || visibleSections.foodsToAvoid) && (
-              <Grid container spacing={2.5} mb={3}>
-                {/* Eat This Card */}
-                {visibleSections.recommendedFoods && (
-                  <Grid item xs={12} md={visibleSections.foodsToAvoid ? 6 : 12}>
-                    <Paper
-                      variant="outlined"
-                      sx={{
-                        p: 2.8,
-                        borderRadius: 2.5,
-                        bgcolor: paperBg,
-                        border: "1.5px solid rgba(0, 201, 167, 0.4)",
-                        height: "100%"
-                      }}
-                    >
-                      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap" gap={1}>
-                        <Stack direction="row" alignItems="center" spacing={1}>
-                          <Box sx={{ bgcolor: "rgba(0, 201, 167, 0.15)", p: 0.8, borderRadius: 1.5 }}>
-                            <CheckCircle sx={{ color: "#00C9A7" }} />
-                          </Box>
-                          <Box>
-                            <Typography variant="subtitle1" sx={{ fontWeight: 900, color: "#00C9A7" }}>
-                              Eat More Of These Wholesome Indian Foods
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              Gentle on sugar, blood pressure, and digestion
-                            </Typography>
-                          </Box>
-                        </Stack>
-                        <Stack direction="row" spacing={1} alignItems="center">
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            startIcon={<Edit fontSize="small" />}
-                            onClick={handleOpenEditRecFoods}
-                            sx={{
-                              fontWeight: 800,
-                              borderRadius: 2,
-                              fontSize: "0.75rem",
-                              borderColor: "#00C9A7",
-                              color: "#00C9A7",
-                              "&:hover": { borderColor: "#00967D", bgcolor: "rgba(0,201,167,0.08)" }
-                            }}
-                          >
-                            Edit Foods
-                          </Button>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            color="error"
-                            startIcon={<Delete fontSize="small" />}
-                            onClick={() => handleDeleteSection("recommendedFoods")}
-                            sx={{ fontWeight: 800, borderRadius: 2, fontSize: "0.75rem" }}
-                          >
-                            Delete Section
-                          </Button>
-                        </Stack>
-                      </Stack>
-
-                      <Stack spacing={1.2}>
-                        {aiDietPlan.recommendedFoods.map((rf, i) => (
-                          <Paper
-                            key={i}
-                            variant="outlined"
-                            sx={{
-                              p: 1.3,
-                              borderRadius: 1.5,
-                              bgcolor: isDark ? "rgba(0, 201, 167, 0.06)" : "rgba(0, 201, 167, 0.04)",
-                              borderColor: "rgba(0, 201, 167, 0.2)",
-                              display: "flex",
-                              alignItems: "flex-start",
-                              gap: 1.2
-                            }}
-                          >
-                            <CheckCircle sx={{ color: "#00C9A7", fontSize: 18, mt: 0.2, flexShrink: 0 }} />
-                            <Typography variant="body2" sx={{ fontSize: "0.85rem", fontWeight: 600 }}>
-                              {rf}
-                            </Typography>
-                          </Paper>
-                        ))}
-                      </Stack>
-                    </Paper>
-                  </Grid>
-                )}
-
-                {/* Avoid This Card */}
-                {visibleSections.foodsToAvoid && (
-                  <Grid item xs={12} md={visibleSections.recommendedFoods ? 6 : 12}>
-                    <Paper
-                      variant="outlined"
-                      sx={{
-                        p: 2.8,
-                        borderRadius: 2.5,
-                        bgcolor: paperBg,
-                        border: "1.5px solid rgba(255, 77, 109, 0.4)",
-                        height: "100%"
-                      }}
-                    >
-                      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap" gap={1}>
-                        <Stack direction="row" alignItems="center" spacing={1}>
-                          <Box sx={{ bgcolor: "rgba(255, 77, 109, 0.15)", p: 0.8, borderRadius: 1.5 }}>
-                            <Warning sx={{ color: "#FF4D6D" }} />
-                          </Box>
-                          <Box>
-                            <Typography variant="subtitle1" sx={{ fontWeight: 900, color: "#FF4D6D" }}>
-                              Foods to Avoid Or Strictly Limit
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              High salt, deep-fried oil, or instant sugar spikes
-                            </Typography>
-                          </Box>
-                        </Stack>
-                        <Stack direction="row" spacing={1} alignItems="center">
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            startIcon={<Edit fontSize="small" />}
-                            onClick={handleOpenEditAvoidFoods}
-                            sx={{
-                              fontWeight: 800,
-                              borderRadius: 2,
-                              fontSize: "0.75rem",
-                              borderColor: "#FF4D6D",
-                              color: "#FF4D6D",
-                              "&:hover": { borderColor: "#E03E5D", bgcolor: "rgba(255,77,109,0.08)" }
-                            }}
-                          >
-                            Edit Avoid List
-                          </Button>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            color="error"
-                            startIcon={<Delete fontSize="small" />}
-                            onClick={() => handleDeleteSection("foodsToAvoid")}
-                            sx={{ fontWeight: 800, borderRadius: 2, fontSize: "0.75rem" }}
-                          >
-                            Delete Section
-                          </Button>
-                        </Stack>
-                      </Stack>
-
-                      <Stack spacing={1.2}>
-                        {aiDietPlan.foodsToAvoid.map((fa, i) => (
-                          <Paper
-                            key={i}
-                            variant="outlined"
-                            sx={{
-                              p: 1.3,
-                              borderRadius: 1.5,
-                              bgcolor: isDark ? "rgba(255, 77, 109, 0.06)" : "rgba(255, 77, 109, 0.04)",
-                              borderColor: "rgba(255, 77, 109, 0.2)",
-                              display: "flex",
-                              alignItems: "flex-start",
-                              gap: 1.2
-                            }}
-                          >
-                            <Warning sx={{ color: "#FF4D6D", fontSize: 18, mt: 0.2, flexShrink: 0 }} />
-                            <Typography variant="body2" sx={{ fontSize: "0.85rem", fontWeight: 600 }}>
-                              {fa}
-                            </Typography>
-                          </Paper>
-                        ))}
-                      </Stack>
-                    </Paper>
-                  </Grid>
-                )}
-              </Grid>
-            )}
-
-            {/* 7. HYDRATION & HEALTHY LIFESTYLE HABITS CARDS */}
-            {(visibleSections.hydration || visibleSections.lifestyle) && (
-              <Paper variant="outlined" sx={{ p: 2.8, mb: 3, borderRadius: 2.5, bgcolor: paperBg }}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1} mb={2}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 900, color: isDark ? "#A5B4FC" : "#4338CA" }}>
-                    Hydration &amp; Healthy Daily Lifestyle Habits
-                  </Typography>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    startIcon={<Edit fontSize="small" />}
-                    onClick={handleOpenEditGuidance}
-                    sx={{
-                      fontWeight: 800,
-                      borderRadius: 2,
-                      fontSize: "0.78rem",
-                      borderColor: "#6C5CE7",
-                      color: "#6C5CE7",
-                      "&:hover": { borderColor: "#5a4bd1", bgcolor: "rgba(108,92,231,0.08)" }
-                    }}
-                  >
-                    Edit Guidance &amp; Habits
-                  </Button>
-                </Stack>
-                <Grid container spacing={2.5}>
-                  {visibleSections.hydration && (
-                    <Grid item xs={12} sm={visibleSections.lifestyle ? 6 : 12}>
+              {/* 5. SIDE-BY-SIDE: "EAT THIS 🟢" vs "AVOID THIS 🔴" */}
+              {(visibleSections.recommendedFoods || visibleSections.foodsToAvoid) && (
+                <Grid container spacing={2.5} mb={3}>
+                  {/* Eat This Card */}
+                  {visibleSections.recommendedFoods && (
+                    <Grid item xs={12} md={visibleSections.foodsToAvoid ? 6 : 12}>
                       <Paper
                         variant="outlined"
                         sx={{
-                          p: 2.5,
+                          p: 2.8,
                           borderRadius: 2.5,
-                          bgcolor: isDark ? "rgba(0,180,216,0.05)" : "rgba(0,180,216,0.03)",
-                          borderColor: "rgba(0,180,216,0.3)",
-                          height: "100%",
-                          display: "flex",
-                          flexDirection: "column",
-                          justifyContent: "space-between"
+                          bgcolor: paperBg,
+                          border: "1.5px solid rgba(0, 201, 167, 0.4)",
+                          height: "100%"
                         }}
                       >
-                        <Box>
-                          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
-                            <Stack direction="row" alignItems="center" spacing={1}>
-                              <WaterDrop sx={{ color: "#00B4D8" }} />
-                              <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#00B4D8" }}>
-                                Hydration &amp; Healthy Fluids
+                        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap" gap={1}>
+                          <Stack direction="row" alignItems="center" spacing={1}>
+                            <Box sx={{ bgcolor: "rgba(0, 201, 167, 0.15)", p: 0.8, borderRadius: 1.5 }}>
+                              <CheckCircle sx={{ color: "#00C9A7" }} />
+                            </Box>
+                            <Box>
+                              <Typography variant="subtitle1" sx={{ fontWeight: 900, color: "#00C9A7" }}>
+                                Eat More Of These Wholesome Indian Foods
                               </Typography>
-                            </Stack>
+                              <Typography variant="caption" color="text.secondary">
+                                Gentle on sugar, blood pressure, and digestion
+                              </Typography>
+                            </Box>
+                          </Stack>
+                          <Stack direction="row" spacing={1} alignItems="center">
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<Edit fontSize="small" />}
+                              onClick={handleOpenEditRecFoods}
+                              sx={{
+                                fontWeight: 800,
+                                borderRadius: 2,
+                                fontSize: "0.75rem",
+                                borderColor: "#00C9A7",
+                                color: "#00C9A7",
+                                "&:hover": { borderColor: "#00967D", bgcolor: "rgba(0,201,167,0.08)" }
+                              }}
+                            >
+                              Edit Foods
+                            </Button>
                             <Button
                               size="small"
                               variant="outlined"
                               color="error"
                               startIcon={<Delete fontSize="small" />}
-                              onClick={() => handleDeleteSection("hydration")}
-                              sx={{ fontWeight: 800, borderRadius: 1.5, fontSize: "0.72rem", py: 0.2 }}
+                              onClick={() => handleDeleteSection("recommendedFoods")}
+                              sx={{ fontWeight: 800, borderRadius: 2, fontSize: "0.75rem" }}
                             >
                               Delete Section
                             </Button>
                           </Stack>
-                          <Typography variant="body2" sx={{ fontSize: "0.88rem", lineHeight: 1.6 }}>
-                            {aiDietPlan.hydrationGuidance}
-                          </Typography>
-                        </Box>
-                        <Stack direction="row" spacing={0.5} mt={2}>
-                          {Array.from({ length: 8 }).map((_, i) => (
-                            <Box
+                        </Stack>
+
+                        <Stack spacing={1.2}>
+                          {aiDietPlan.recommendedFoods.map((rf, i) => (
+                            <Paper
                               key={i}
+                              variant="outlined"
                               sx={{
-                                width: 22,
-                                height: 30,
-                                borderRadius: 1,
-                                bgcolor: "rgba(0, 180, 216, 0.2)",
-                                border: "1.5px solid #00B4D8",
+                                p: 1.3,
+                                borderRadius: 1.5,
+                                bgcolor: isDark ? "rgba(0, 201, 167, 0.06)" : "rgba(0, 201, 167, 0.04)",
+                                borderColor: "rgba(0, 201, 167, 0.2)",
                                 display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                fontSize: "10px",
-                                color: "#00B4D8",
-                                fontWeight: 800
+                                alignItems: "flex-start",
+                                gap: 1.2
                               }}
                             >
-                              💧
-                            </Box>
+                              <CheckCircle sx={{ color: "#00C9A7", fontSize: 18, mt: 0.2, flexShrink: 0 }} />
+                              <Typography variant="body2" sx={{ fontSize: "0.85rem", fontWeight: 600 }}>
+                                {rf}
+                              </Typography>
+                            </Paper>
                           ))}
                         </Stack>
                       </Paper>
                     </Grid>
                   )}
 
-                  {visibleSections.lifestyle && (
-                    <Grid item xs={12} sm={visibleSections.hydration ? 6 : 12}>
+                  {/* Avoid This Card */}
+                  {visibleSections.foodsToAvoid && (
+                    <Grid item xs={12} md={visibleSections.recommendedFoods ? 6 : 12}>
                       <Paper
                         variant="outlined"
                         sx={{
-                          p: 2.5,
+                          p: 2.8,
                           borderRadius: 2.5,
-                          bgcolor: isDark ? "rgba(6,214,160,0.05)" : "rgba(6,214,160,0.03)",
-                          borderColor: "rgba(6,214,160,0.3)",
-                          height: "100%",
-                          display: "flex",
-                          flexDirection: "column",
-                          justifyContent: "space-between"
+                          bgcolor: paperBg,
+                          border: "1.5px solid rgba(255, 77, 109, 0.4)",
+                          height: "100%"
                         }}
                       >
-                        <Box>
-                          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
-                            <Stack direction="row" alignItems="center" spacing={1}>
-                              <FitnessCenter sx={{ color: "#06D6A0", fontSize: 20 }} />
-                              <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#06D6A0" }}>
-                                Healthy Daily Habits
+                        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap" gap={1}>
+                          <Stack direction="row" alignItems="center" spacing={1}>
+                            <Box sx={{ bgcolor: "rgba(255, 77, 109, 0.15)", p: 0.8, borderRadius: 1.5 }}>
+                              <Warning sx={{ color: "#FF4D6D" }} />
+                            </Box>
+                            <Box>
+                              <Typography variant="subtitle1" sx={{ fontWeight: 900, color: "#FF4D6D" }}>
+                                Foods to Avoid Or Strictly Limit
                               </Typography>
-                            </Stack>
+                              <Typography variant="caption" color="text.secondary">
+                                High salt, deep-fried oil, or instant sugar spikes
+                              </Typography>
+                            </Box>
+                          </Stack>
+                          <Stack direction="row" spacing={1} alignItems="center">
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<Edit fontSize="small" />}
+                              onClick={handleOpenEditAvoidFoods}
+                              sx={{
+                                fontWeight: 800,
+                                borderRadius: 2,
+                                fontSize: "0.75rem",
+                                borderColor: "#FF4D6D",
+                                color: "#FF4D6D",
+                                "&:hover": { borderColor: "#E03E5D", bgcolor: "rgba(255,77,109,0.08)" }
+                              }}
+                            >
+                              Edit Avoid List
+                            </Button>
                             <Button
                               size="small"
                               variant="outlined"
                               color="error"
                               startIcon={<Delete fontSize="small" />}
-                              onClick={() => handleDeleteSection("lifestyle")}
-                              sx={{ fontWeight: 800, borderRadius: 1.5, fontSize: "0.72rem", py: 0.2 }}
+                              onClick={() => handleDeleteSection("foodsToAvoid")}
+                              sx={{ fontWeight: 800, borderRadius: 2, fontSize: "0.75rem" }}
                             >
                               Delete Section
                             </Button>
                           </Stack>
-                          <Stack spacing={0.8}>
-                            {aiDietPlan.lifestyleAdvice?.map((tip, i) => (
-                              <Stack key={i} direction="row" alignItems="flex-start" spacing={1}>
-                                <CheckCircle sx={{ color: "#06D6A0", fontSize: 16, mt: 0.3, flexShrink: 0 }} />
-                                <Typography variant="body2" sx={{ fontSize: "0.82rem", lineHeight: 1.4 }}>
-                                  {tip}
-                                </Typography>
-                              </Stack>
-                            ))}
-                          </Stack>
-                        </Box>
+                        </Stack>
+
+                        <Stack spacing={1.2}>
+                          {aiDietPlan.foodsToAvoid.map((fa, i) => (
+                            <Paper
+                              key={i}
+                              variant="outlined"
+                              sx={{
+                                p: 1.3,
+                                borderRadius: 1.5,
+                                bgcolor: isDark ? "rgba(255, 77, 109, 0.06)" : "rgba(255, 77, 109, 0.04)",
+                                borderColor: "rgba(255, 77, 109, 0.2)",
+                                display: "flex",
+                                alignItems: "flex-start",
+                                gap: 1.2
+                              }}
+                            >
+                              <Warning sx={{ color: "#FF4D6D", fontSize: 18, mt: 0.2, flexShrink: 0 }} />
+                              <Typography variant="body2" sx={{ fontSize: "0.85rem", fontWeight: 600 }}>
+                                {fa}
+                              </Typography>
+                            </Paper>
+                          ))}
+                        </Stack>
                       </Paper>
                     </Grid>
                   )}
                 </Grid>
-              </Paper>
-            )}
+              )}
 
-            {/* RESTORE BANNER IF ANY SECTION WAS DELETED */}
-            {(!visibleSections.electrolytes || !visibleSections.recommendedFoods || !visibleSections.foodsToAvoid || !visibleSections.hydration || !visibleSections.lifestyle) && (
-              <Paper
-                variant="outlined"
-                sx={{
-                  p: 2,
-                  mb: 3,
-                  borderRadius: 2.5,
-                  bgcolor: isDark ? "rgba(255, 183, 3, 0.08)" : "rgba(255, 183, 3, 0.05)",
-                  border: "1.5px dashed rgba(255, 183, 3, 0.4)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  flexWrap: "wrap",
-                  gap: 1.5
-                }}
-              >
-                <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
-                  <Undo sx={{ color: "#FFB703" }} />
-                  <Typography variant="body2" sx={{ fontWeight: 700, color: isDark ? "#FCD34D" : "#B45309" }}>
-                    Sections removed by doctor:
-                  </Typography>
-                  <Stack direction="row" spacing={0.8} flexWrap="wrap">
-                    {!visibleSections.electrolytes && (
-                      <Chip label="+ Restore Electrolytes" size="small" onClick={() => handleRestoreSection("electrolytes")} sx={{ cursor: "pointer", fontWeight: 700 }} />
-                    )}
-                    {!visibleSections.recommendedFoods && (
-                      <Chip label="+ Restore Eat More Foods" size="small" onClick={() => handleRestoreSection("recommendedFoods")} sx={{ cursor: "pointer", fontWeight: 700 }} />
-                    )}
-                    {!visibleSections.foodsToAvoid && (
-                      <Chip label="+ Restore Foods to Avoid" size="small" onClick={() => handleRestoreSection("foodsToAvoid")} sx={{ cursor: "pointer", fontWeight: 700 }} />
-                    )}
-                    {!visibleSections.hydration && (
-                      <Chip label="+ Restore Hydration" size="small" onClick={() => handleRestoreSection("hydration")} sx={{ cursor: "pointer", fontWeight: 700 }} />
-                    )}
-                    {!visibleSections.lifestyle && (
-                      <Chip label="+ Restore Habits" size="small" onClick={() => handleRestoreSection("lifestyle")} sx={{ cursor: "pointer", fontWeight: 700 }} />
-                    )}
+              {/* 7. HYDRATION & HEALTHY LIFESTYLE HABITS CARDS */}
+              {(visibleSections.hydration || visibleSections.lifestyle) && (
+                <Paper variant="outlined" sx={{ p: 2.8, mb: 3, borderRadius: 2.5, bgcolor: paperBg }}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1} mb={2}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 900, color: isDark ? "#A5B4FC" : "#4338CA" }}>
+                      Hydration &amp; Healthy Daily Lifestyle Habits
+                    </Typography>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={<Edit fontSize="small" />}
+                      onClick={handleOpenEditGuidance}
+                      sx={{
+                        fontWeight: 800,
+                        borderRadius: 2,
+                        fontSize: "0.78rem",
+                        borderColor: "#6C5CE7",
+                        color: "#6C5CE7",
+                        "&:hover": { borderColor: "#5a4bd1", bgcolor: "rgba(108,92,231,0.08)" }
+                      }}
+                    >
+                      Edit Guidance &amp; Habits
+                    </Button>
                   </Stack>
-                </Stack>
-                <Button size="small" variant="text" onClick={handleRestoreAllSections} sx={{ fontWeight: 800, color: "#FFB703" }}>
-                  Restore All Sections
-                </Button>
-              </Paper>
-            )}
+                  <Grid container spacing={2.5}>
+                    {visibleSections.hydration && (
+                      <Grid item xs={12} sm={visibleSections.lifestyle ? 6 : 12}>
+                        <Paper
+                          variant="outlined"
+                          sx={{
+                            p: 2.5,
+                            borderRadius: 2.5,
+                            bgcolor: isDark ? "rgba(0,180,216,0.05)" : "rgba(0,180,216,0.03)",
+                            borderColor: "rgba(0,180,216,0.3)",
+                            height: "100%",
+                            display: "flex",
+                            flexDirection: "column",
+                            justifyContent: "space-between"
+                          }}
+                        >
+                          <Box>
+                            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
+                              <Stack direction="row" alignItems="center" spacing={1}>
+                                <WaterDrop sx={{ color: "#00B4D8" }} />
+                                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#00B4D8" }}>
+                                  Hydration &amp; Healthy Fluids
+                                </Typography>
+                              </Stack>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                color="error"
+                                startIcon={<Delete fontSize="small" />}
+                                onClick={() => handleDeleteSection("hydration")}
+                                sx={{ fontWeight: 800, borderRadius: 1.5, fontSize: "0.72rem", py: 0.2 }}
+                              >
+                                Delete Section
+                              </Button>
+                            </Stack>
+                            <Typography variant="body2" sx={{ fontSize: "0.88rem", lineHeight: 1.6 }}>
+                              {aiDietPlan.hydrationGuidance}
+                            </Typography>
+                          </Box>
+                          <Stack direction="row" spacing={0.5} mt={2}>
+                            {Array.from({ length: 8 }).map((_, i) => (
+                              <Box
+                                key={i}
+                                sx={{
+                                  width: 22,
+                                  height: 30,
+                                  borderRadius: 1,
+                                  bgcolor: "rgba(0, 180, 216, 0.2)",
+                                  border: "1.5px solid #00B4D8",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: "10px",
+                                  color: "#00B4D8",
+                                  fontWeight: 800
+                                }}
+                              >
+                                💧
+                              </Box>
+                            ))}
+                          </Stack>
+                        </Paper>
+                      </Grid>
+                    )}
+
+                    {visibleSections.lifestyle && (
+                      <Grid item xs={12} sm={visibleSections.hydration ? 6 : 12}>
+                        <Paper
+                          variant="outlined"
+                          sx={{
+                            p: 2.5,
+                            borderRadius: 2.5,
+                            bgcolor: isDark ? "rgba(6,214,160,0.05)" : "rgba(6,214,160,0.03)",
+                            borderColor: "rgba(6,214,160,0.3)",
+                            height: "100%",
+                            display: "flex",
+                            flexDirection: "column",
+                            justifyContent: "space-between"
+                          }}
+                        >
+                          <Box>
+                            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
+                              <Stack direction="row" alignItems="center" spacing={1}>
+                                <FitnessCenter sx={{ color: "#06D6A0", fontSize: 20 }} />
+                                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#06D6A0" }}>
+                                  Healthy Daily Habits
+                                </Typography>
+                              </Stack>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                color="error"
+                                startIcon={<Delete fontSize="small" />}
+                                onClick={() => handleDeleteSection("lifestyle")}
+                                sx={{ fontWeight: 800, borderRadius: 1.5, fontSize: "0.72rem", py: 0.2 }}
+                              >
+                                Delete Section
+                              </Button>
+                            </Stack>
+                            <Stack spacing={0.8}>
+                              {aiDietPlan.lifestyleAdvice?.map((tip, i) => (
+                                <Stack key={i} direction="row" alignItems="flex-start" spacing={1}>
+                                  <CheckCircle sx={{ color: "#06D6A0", fontSize: 16, mt: 0.3, flexShrink: 0 }} />
+                                  <Typography variant="body2" sx={{ fontSize: "0.82rem", lineHeight: 1.4 }}>
+                                    {tip}
+                                  </Typography>
+                                </Stack>
+                              ))}
+                            </Stack>
+                          </Box>
+                        </Paper>
+                      </Grid>
+                    )}
+                  </Grid>
+                </Paper>
+              )}
+
+              {/* RESTORE BANNER IF ANY SECTION WAS DELETED */}
+              {(!visibleSections.electrolytes || !visibleSections.recommendedFoods || !visibleSections.foodsToAvoid || !visibleSections.hydration || !visibleSections.lifestyle) && (
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 2,
+                    mb: 3,
+                    borderRadius: 2.5,
+                    bgcolor: isDark ? "rgba(255, 183, 3, 0.08)" : "rgba(255, 183, 3, 0.05)",
+                    border: "1.5px dashed rgba(255, 183, 3, 0.4)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: 1.5
+                  }}
+                >
+                  <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
+                    <Undo sx={{ color: "#FFB703" }} />
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: isDark ? "#FCD34D" : "#B45309" }}>
+                      Sections removed by doctor:
+                    </Typography>
+                    <Stack direction="row" spacing={0.8} flexWrap="wrap">
+                      {!visibleSections.electrolytes && (
+                        <Chip label="+ Restore Electrolytes" size="small" onClick={() => handleRestoreSection("electrolytes")} sx={{ cursor: "pointer", fontWeight: 700 }} />
+                      )}
+                      {!visibleSections.recommendedFoods && (
+                        <Chip label="+ Restore Eat More Foods" size="small" onClick={() => handleRestoreSection("recommendedFoods")} sx={{ cursor: "pointer", fontWeight: 700 }} />
+                      )}
+                      {!visibleSections.foodsToAvoid && (
+                        <Chip label="+ Restore Foods to Avoid" size="small" onClick={() => handleRestoreSection("foodsToAvoid")} sx={{ cursor: "pointer", fontWeight: 700 }} />
+                      )}
+                      {!visibleSections.hydration && (
+                        <Chip label="+ Restore Hydration" size="small" onClick={() => handleRestoreSection("hydration")} sx={{ cursor: "pointer", fontWeight: 700 }} />
+                      )}
+                      {!visibleSections.lifestyle && (
+                        <Chip label="+ Restore Habits" size="small" onClick={() => handleRestoreSection("lifestyle")} sx={{ cursor: "pointer", fontWeight: 700 }} />
+                      )}
+                    </Stack>
+                  </Stack>
+                  <Button size="small" variant="text" onClick={handleRestoreAllSections} sx={{ fontWeight: 800, color: "#FFB703" }}>
+                    Restore All Sections
+                  </Button>
+                </Paper>
+              )}
 
               {/* Bottom Actions */}
               <Box textAlign="center" mt={3.5}>
@@ -4180,7 +4320,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
             sx={{
               display: "flex",
               justifyContent: "space-between",
-              alignItems: "flex-start",
+              alignItems: "center",
               pb: 1.5,
               gap: 1.5,
               borderBottom: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid #E2E8F0"
@@ -4199,12 +4339,51 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                 </Typography>
               </Box>
             </Stack>
-            <IconButton onClick={() => setEditMealsOpen(false)} size="small" sx={{ flexShrink: 0 }}>
-              <Close />
-            </IconButton>
+
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
+              <Tooltip title="Toggle Phonetic Hinglish: Type in English (e.g. '100 roti khana hai') and press Space to convert words to Hindi ('100 रोटी खाना है'). Numbers always stay in standard digits (100)!">
+                <Button
+                  size="small"
+                  variant={phoneticHinglishEnabled ? "contained" : "outlined"}
+                  onClick={() => {
+                    const next = !phoneticHinglishEnabled;
+                    setPhoneticHinglishEnabled(next);
+                    if (next) {
+                      toast.success("🇮🇳 Phonetic Hinglish ON: Numbers stay like 100, words convert to Hindi (100 रोटी)!");
+                    } else {
+                      toast.info("Phonetic Hinglish OFF");
+                    }
+                  }}
+                  startIcon={<Translate sx={{ fontSize: "16px !important", color: phoneticHinglishEnabled ? "#FFF" : "#6C5CE7" }} />}
+                  sx={{
+                    borderRadius: "20px",
+                    fontWeight: 800,
+                    fontSize: { xs: "0.72rem", sm: "0.8rem" },
+                    textTransform: "none",
+                    px: { xs: 1.2, sm: 2 },
+                    py: 0.6,
+                    bgcolor: phoneticHinglishEnabled ? "#6C5CE7" : "transparent",
+                    borderColor: "#6C5CE7",
+                    color: phoneticHinglishEnabled ? "#FFF" : "#6C5CE7",
+                    boxShadow: phoneticHinglishEnabled ? "0 4px 14px rgba(108,92,231,0.4)" : "none",
+                    "&:hover": {
+                      bgcolor: phoneticHinglishEnabled ? "#5848d4" : "rgba(108,92,231,0.08)",
+                      borderColor: "#6C5CE7"
+                    }
+                  }}
+                >
+                  {phoneticHinglishEnabled ? "🇮🇳 Phonetic Hinglish: ON" : "Phonetic Hinglish"}
+                </Button>
+              </Tooltip>
+
+              <IconButton onClick={() => setEditMealsOpen(false)} size="small" sx={{ flexShrink: 0 }}>
+                <Close />
+              </IconButton>
+            </Stack>
           </DialogTitle>
 
           <DialogContent dividers sx={{ p: { xs: 1.5, sm: 2.5 }, overflowY: "auto" }}>
+
             {/* Insert Blank Meal at Beginning */}
             <Box sx={{ textAlign: "center", mb: 2 }}>
               <Button
@@ -4222,7 +4401,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                   borderStyle: "dashed"
                 }}
               >
-                + Insert Blank Meal at Beginning (Slot #1)
+                Insert Blank Meal at Beginning (Slot #1)
               </Button>
             </Box>
 
@@ -4239,198 +4418,202 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                 return (
                   <React.Fragment key={index}>
                     <Paper
-                    variant="outlined"
-                    sx={{
-                      p: { xs: 1.8, sm: 2.2 },
-                      borderRadius: 2,
-                      bgcolor: isDark ? "rgba(255,255,255,0.02)" : "#F8FAFC",
-                      borderColor: isDark ? "rgba(255,255,255,0.08)" : "#E2E8F0",
-                      position: "relative"
-                    }}
-                  >
-                    <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5} flexWrap="wrap" gap={1}>
-                      <Chip
-                        label={`Meal Slot #${index + 1}: ${displayTitle}`}
-                        color="secondary"
-                        size="small"
-                        sx={{ fontWeight: 800, fontSize: "0.75rem" }}
-                      />
-                      <Stack direction="row" spacing={0.8} alignItems="center" flexWrap="wrap">
-                        <Tooltip title="Move slot up">
-                          <span>
-                            <IconButton
-                              size="small"
-                              disabled={index === 0}
-                              onClick={() => handleMoveTempMeal(index, index - 1)}
-                              sx={{ p: 0.5, border: "1px solid", borderColor: isDark ? "rgba(255,255,255,0.12)" : "#CBD5E1", borderRadius: 1.2 }}
-                            >
-                              <ArrowUpward fontSize="small" />
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                        <Tooltip title="Move slot down">
-                          <span>
-                            <IconButton
-                              size="small"
-                              disabled={index === tempMealSchedule.length - 1}
-                              onClick={() => handleMoveTempMeal(index, index + 1)}
-                              sx={{ p: 0.5, border: "1px solid", borderColor: isDark ? "rgba(255,255,255,0.12)" : "#CBD5E1", borderRadius: 1.2 }}
-                            >
-                              <ArrowDownward fontSize="small" />
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                        <Tooltip title="Insert a blank meal slot directly below this slot">
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            color="secondary"
-                            startIcon={<Add />}
-                            onClick={() => handleInsertTempMeal(index + 1)}
-                            sx={{
-                              textTransform: "none",
-                              fontWeight: 700,
-                              fontSize: "0.74rem",
-                              borderRadius: 1.5,
-                              px: 1.2,
-                              py: 0.4
-                            }}
-                          >
-                            + Add Meal Below
-                          </Button>
-                        </Tooltip>
-                        <Tooltip title="Delete this meal slot">
-                          <Button
-                            size="small"
-                            color="error"
-                            startIcon={<Delete />}
-                            onClick={() => handleDeleteTempMeal(index)}
-                            sx={{
-                              textTransform: "none",
-                              fontWeight: 700,
-                              fontSize: "0.74rem",
-                              borderRadius: 1.5,
-                              px: 1.2,
-                              py: 0.4
-                            }}
-                          >
-                            Delete
-                          </Button>
-                        </Tooltip>
-                      </Stack>
-                    </Stack>
-
-                    <Grid container spacing={1.5}>
-                      <Grid item xs={12} sm={4}>
-                        <TextField
-                          fullWidth
+                      variant="outlined"
+                      sx={{
+                        p: { xs: 1.8, sm: 2.2 },
+                        borderRadius: 2,
+                        bgcolor: isDark ? "rgba(255,255,255,0.02)" : "#F8FAFC",
+                        borderColor: isDark ? "rgba(255,255,255,0.08)" : "#E2E8F0",
+                        position: "relative"
+                      }}
+                    >
+                      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5} flexWrap="wrap" gap={1}>
+                        <Chip
+                          label={`Meal Slot #${index + 1}: ${displayTitle}`}
+                          color="secondary"
                           size="small"
-                          label="Time"
-                          placeholder="e.g. 06:30 AM"
-                          value={meal.time}
-                          onChange={(e) => handleUpdateTempMeal(index, "time", e.target.value)}
+                          sx={{ fontWeight: 800, fontSize: "0.75rem" }}
                         />
-                      </Grid>
-                      <Grid item xs={12} sm={isCustom ? 4 : 4}>
-                        <TextField
-                          select
-                          fullWidth
-                          size="small"
-                          label="Meal Slot Name"
-                          value={selectValue}
-                          onChange={(e) => handleSlotTypeChange(index, e.target.value)}
-                        >
-                          {MEAL_SLOT_OPTIONS.map((opt, i) => (
-                            <MenuItem key={opt.value} value={opt.value}>
-                              {i + 1}. {opt.label}
-                            </MenuItem>
-                          ))}
-                          <Divider sx={{ my: 0.5 }} />
-                          <MenuItem value="Custom" sx={{ fontWeight: 800, color: "#6C5CE7" }}>
-                            ✏️ Custom (Choose Custom to give it your own name)
-                          </MenuItem>
-                        </TextField>
-                      </Grid>
+                        <Stack direction="row" spacing={0.8} alignItems="center" flexWrap="wrap">
+                          <Tooltip title="Move slot up">
+                            <span>
+                              <IconButton
+                                size="small"
+                                disabled={index === 0}
+                                onClick={() => handleMoveTempMeal(index, index - 1)}
+                                sx={{ p: 0.5, border: "1px solid", borderColor: isDark ? "rgba(255,255,255,0.12)" : "#CBD5E1", borderRadius: 1.2 }}
+                              >
+                                <ArrowUpward fontSize="small" />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                          <Tooltip title="Move slot down">
+                            <span>
+                              <IconButton
+                                size="small"
+                                disabled={index === tempMealSchedule.length - 1}
+                                onClick={() => handleMoveTempMeal(index, index + 1)}
+                                sx={{ p: 0.5, border: "1px solid", borderColor: isDark ? "rgba(255,255,255,0.12)" : "#CBD5E1", borderRadius: 1.2 }}
+                              >
+                                <ArrowDownward fontSize="small" />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                          <Tooltip title="Insert a blank meal slot directly below this slot">
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              color="secondary"
+                              startIcon={<Add />}
+                              onClick={() => handleInsertTempMeal(index + 1)}
+                              sx={{
+                                textTransform: "none",
+                                fontWeight: 700,
+                                fontSize: "0.74rem",
+                                borderRadius: 1.5,
+                                px: 1.2,
+                                py: 0.4
+                              }}
+                            >
+                              Add Meal Below
+                            </Button>
+                          </Tooltip>
+                          <Tooltip title="Delete this meal slot">
+                            <Button
+                              size="small"
+                              color="error"
+                              startIcon={<Delete />}
+                              onClick={() => handleDeleteTempMeal(index)}
+                              sx={{
+                                textTransform: "none",
+                                fontWeight: 700,
+                                fontSize: "0.74rem",
+                                borderRadius: 1.5,
+                                px: 1.2,
+                                py: 0.4
+                              }}
+                            >
+                              Delete
+                            </Button>
+                          </Tooltip>
+                        </Stack>
+                      </Stack>
 
-                      {isCustom && (
+                      <Grid container spacing={1.5}>
                         <Grid item xs={12} sm={4}>
                           <TextField
                             fullWidth
                             size="small"
-                            label="Custom Meal Slot Name"
-                            placeholder="e.g. Post-Workout Snack"
-                            value={meal.customMealName ?? ""}
-                            onChange={(e) => handleCustomMealNameChange(index, e.target.value)}
-                            helperText="Custom name"
-                            sx={{
-                              bgcolor: isDark ? "rgba(108,92,231,0.08)" : "rgba(108,92,231,0.04)",
-                              borderRadius: 1
-                            }}
+                            label="Time"
+                            placeholder="e.g. 06:30 AM"
+                            value={meal.time}
+                            onChange={(e) => handleUpdateTempMeal(index, "time", e.target.value)}
                           />
                         </Grid>
-                      )}
+                        <Grid item xs={12} sm={isCustom ? 4 : 4}>
+                          <TextField
+                            select
+                            fullWidth
+                            size="small"
+                            label="Meal Slot Name"
+                            value={selectValue}
+                            onChange={(e) => handleSlotTypeChange(index, e.target.value)}
+                          >
+                            {MEAL_SLOT_OPTIONS.map((opt, i) => (
+                              <MenuItem key={opt.value} value={opt.value}>
+                                {i + 1}. {opt.label}
+                              </MenuItem>
+                            ))}
+                            <Divider sx={{ my: 0.5 }} />
+                            <MenuItem value="Custom" sx={{ fontWeight: 800, color: "#6C5CE7" }}>
+                              ✏️ Custom (Choose Custom to give it your own name)
+                            </MenuItem>
+                          </TextField>
+                        </Grid>
 
-                      <Grid item xs={12} sm={isCustom ? 12 : 4}>
-                        <TextField
-                          fullWidth
-                          size="small"
-                          label="Household Portion"
-                          placeholder="e.g. 2 Phulkas + 1 Katori Dal"
-                          value={meal.portion}
-                          onChange={(e) => handleUpdateTempMeal(index, "portion", e.target.value)}
-                        />
+                        {isCustom && (
+                          <Grid item xs={12} sm={4}>
+                            <HinglishTextField
+                              fullWidth
+                              size="small"
+                              label="Custom Meal Slot Name"
+                              placeholder="e.g. Post-Workout Snack"
+                              value={meal.customMealName ?? ""}
+                              onChangeValue={(val) => handleCustomMealNameChange(index, val)}
+                              phoneticEnabled={phoneticHinglishEnabled}
+                              helperText="Custom name"
+                              sx={{
+                                bgcolor: isDark ? "rgba(108,92,231,0.08)" : "rgba(108,92,231,0.04)",
+                                borderRadius: 1
+                              }}
+                            />
+                          </Grid>
+                        )}
+
+                        <Grid item xs={12} sm={isCustom ? 12 : 4}>
+                          <HinglishTextField
+                            fullWidth
+                            size="small"
+                            label="Household Portion"
+                            placeholder="e.g. 2 Phulkas + 1 Katori Dal"
+                            value={meal.portion}
+                            onChangeValue={(val) => handleUpdateTempMeal(index, "portion", val)}
+                            phoneticEnabled={phoneticHinglishEnabled}
+                          />
+                        </Grid>
+                        <Grid item xs={12}>
+                          <HinglishTextField
+                            fullWidth
+                            size="small"
+                            multiline
+                            minRows={2}
+                            label="Recommended Indian Food & Ingredients"
+                            placeholder="e.g. 2 Jowar Rotis (no ghee) + 1 Katori Yellow Moong Dal + Lauki Sabzi + Cucumber Salad + 1 Glass Spiced Chaas"
+                            value={meal.focus}
+                            onChangeValue={(val) => handleUpdateTempMeal(index, "focus", val)}
+                            phoneticEnabled={phoneticHinglishEnabled}
+                          />
+                        </Grid>
+                        <Grid item xs={12}>
+                          <HinglishTextField
+                            fullWidth
+                            size="small"
+                            label="Why This Helps (Plain Language Benefit)"
+                            placeholder="e.g. Delivers slow-burning morning energy and prevents sudden sugar jumps"
+                            value={meal.clinicalNote}
+                            onChangeValue={(val) => handleUpdateTempMeal(index, "clinicalNote", val)}
+                            phoneticEnabled={phoneticHinglishEnabled}
+                          />
+                        </Grid>
                       </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
+                    </Paper>
+                    {index < tempMealSchedule.length - 1 && (
+                      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", my: 0.5 }}>
+                        <Button
                           size="small"
-                          multiline
-                          minRows={2}
-                          label="Recommended Indian Food & Ingredients"
-                          placeholder="e.g. 2 Jowar Rotis (no ghee) + 1 Katori Yellow Moong Dal + Lauki Sabzi + Cucumber Salad + 1 Glass Spiced Chaas"
-                          value={meal.focus}
-                          onChange={(e) => handleUpdateTempMeal(index, "focus", e.target.value)}
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          size="small"
-                          label="Why This Helps (Plain Language Benefit)"
-                          placeholder="e.g. Delivers slow-burning morning energy and prevents sudden sugar jumps"
-                          value={meal.clinicalNote}
-                          onChange={(e) => handleUpdateTempMeal(index, "clinicalNote", e.target.value)}
-                        />
-                      </Grid>
-                    </Grid>
-                  </Paper>
-                  {index < tempMealSchedule.length - 1 && (
-                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", my: 0.5 }}>
-                      <Button
-                        size="small"
-                        startIcon={<Add sx={{ fontSize: 15 }} />}
-                        onClick={() => handleInsertTempMeal(index + 1)}
-                        sx={{
-                          textTransform: "none",
-                          fontSize: "0.74rem",
-                          fontWeight: 700,
-                          color: isDark ? "#A78BFA" : "#6C5CE7",
-                          border: "1px dashed",
-                          borderColor: isDark ? "rgba(167, 139, 250, 0.4)" : "rgba(108, 92, 231, 0.4)",
-                          borderRadius: 2,
-                          px: 2,
-                          py: 0.3,
-                          bgcolor: isDark ? "rgba(108,92,231,0.06)" : "rgba(108,92,231,0.03)",
-                          "&:hover": {
-                            bgcolor: isDark ? "rgba(108,92,231,0.15)" : "rgba(108,92,231,0.1)",
-                            borderColor: "#6C5CE7"
-                          }
-                        }}
-                      >
-                        + Insert Blank Meal in Middle (Between Slot #{index + 1} &amp; #{index + 2})
-                      </Button>
-                    </Box>
-                  )}
+                          startIcon={<Add sx={{ fontSize: 15 }} />}
+                          onClick={() => handleInsertTempMeal(index + 1)}
+                          sx={{
+                            textTransform: "none",
+                            fontSize: "0.74rem",
+                            fontWeight: 700,
+                            color: isDark ? "#A78BFA" : "#6C5CE7",
+                            border: "1px dashed",
+                            borderColor: isDark ? "rgba(167, 139, 250, 0.4)" : "rgba(108, 92, 231, 0.4)",
+                            borderRadius: 2,
+                            px: 2,
+                            py: 0.3,
+                            bgcolor: isDark ? "rgba(108,92,231,0.06)" : "rgba(108,92,231,0.03)",
+                            "&:hover": {
+                              bgcolor: isDark ? "rgba(108,92,231,0.15)" : "rgba(108,92,231,0.1)",
+                              borderColor: "#6C5CE7"
+                            }
+                          }}
+                        >
+                          Insert Blank Meal in Middle (Between Slot #{index + 1} &amp; #{index + 2})
+                        </Button>
+                      </Box>
+                    )}
                   </React.Fragment>
                 );
               })}
@@ -4451,7 +4634,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                   borderStyle: "dashed"
                 }}
               >
-                + Add New Blank Meal Slot (at End)
+                Add New Blank Meal Slot (at End)
               </Button>
             </Box>
           </DialogContent>
@@ -4780,7 +4963,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                     onClick={(e) => setAddMineralMenuAnchor(e.currentTarget)}
                     sx={{ textTransform: "none", fontWeight: 700, borderRadius: 2 }}
                   >
-                    + Add / Restore Mineral
+                    Add / Restore Mineral
                   </Button>
                   <Menu
                     anchorEl={addMineralMenuAnchor}
@@ -5447,7 +5630,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                         </Typography>
                         {ms.clinicalNote && (
                           <Typography variant="caption" sx={{ color: "#000000 !important", fontWeight: 600, display: "block", mt: 0.3, fontSize: "0.7rem", lineHeight: 1.2, wordBreak: "break-word" }}>
-                           {ms.clinicalNote}
+                            {ms.clinicalNote}
                           </Typography>
                         )}
                       </Box>

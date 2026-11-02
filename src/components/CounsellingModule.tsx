@@ -72,7 +72,7 @@ import Speed from '@mui/icons-material/Speed';
 import MonitorWeight from '@mui/icons-material/MonitorWeight';
 import Science from '@mui/icons-material/Science';
 import { COUNSELLING_RISK_DATABASE } from '../mockData/clinicalModulesData';
-import { RiskAssessmentItem, RiskCategoryType, HistoryRecord, CounsellingHistoryRecord } from '../types/clinical';
+import { RiskAssessmentItem, RiskCategoryType, HistoryRecord, CounsellingHistoryRecord, isSuperAdminUser } from '../types/clinical';
 import confetti from 'canvas-confetti';
 import { toast } from 'react-toastify';
 import CounsellingAnalysisLoader from './CounsellingAnalysisLoader';
@@ -175,6 +175,31 @@ export default function CounsellingModule({
 
   // Redux: Active analysis & History records
   const authUser = useAppSelector((s: any) => s.auth?.currentUser || s.auth?.user);
+  const isSuperAdmin = isSuperAdminUser(authUser);
+  const [activeAiProvider, setActiveAiProvider] = useState<'gemini' | 'deepseek'>('gemini');
+  const [counsellingAiProvider, setCounsellingAiProvider] = useState<'gemini' | 'deepseek' | string>('gemini');
+  const [counsellingAiModel, setCounsellingAiModel] = useState<string>('');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const handleAiChanged = (e: any) => {
+        if (e.detail?.provider) {
+          setActiveAiProvider(e.detail.provider);
+        }
+      };
+      window.addEventListener('ai-provider-changed', handleAiChanged);
+      fetch('/api/admin/ai-settings')
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.success && d.activeProvider) {
+            setActiveAiProvider(d.activeProvider);
+          }
+        })
+        .catch(() => {});
+      return () => window.removeEventListener('ai-provider-changed', handleAiChanged);
+    }
+  }, []);
+
   const activeAnalysis = useAppSelector((s: any) => s.clinical.analysisResult);
   const historyList: HistoryRecord[] = useAppSelector((s: any) => s.clinical.historyList) ?? [];
   const [historySearch, setHistorySearch] = useState<string>('');
@@ -298,6 +323,8 @@ export default function CounsellingModule({
       }
 
       const json = await res.json();
+      if (json.provider) setCounsellingAiProvider(json.provider);
+      if (json.model) setCounsellingAiModel(json.model);
       const updatedRiskFactors = (json.success && Array.isArray(json.data) && json.data.length > 0)
         ? json.data
         : riskFactors;
@@ -1099,14 +1126,33 @@ export default function CounsellingModule({
           <Box sx={{ mt: 2.5, textAlign: 'right' }}>
             <Button
               variant="contained"
-              color="secondary"
+              color={isSuperAdmin && activeAiProvider === 'deepseek' ? 'secondary' : 'primary'}
               size="large"
               disabled={isAnalyzing}
-              startIcon={isAnalyzing ? <CircularProgress size={20} color="inherit" /> : <Shield />}
+              startIcon={isAnalyzing ? <CircularProgress size={20} color="inherit" /> : (isSuperAdmin && activeAiProvider === 'deepseek' ? <Biotech /> : <Shield />)}
               onClick={handleSubmitForm}
-              sx={{ borderRadius: 1, px: 4, py: 1.2, fontWeight: 800, fontSize: '0.95rem' }}
+              sx={{
+                borderRadius: 1,
+                px: 4,
+                py: 1.2,
+                fontWeight: 800,
+                fontSize: '0.95rem',
+                bgcolor: isSuperAdmin && activeAiProvider === 'deepseek' ? '#4F46E5' : undefined,
+                '&:hover': {
+                  bgcolor: isSuperAdmin && activeAiProvider === 'deepseek' ? '#4338CA' : undefined,
+                },
+                boxShadow: isSuperAdmin && activeAiProvider === 'deepseek'
+                  ? '0 6px 20px rgba(79, 70, 229, 0.4)'
+                  : undefined
+              }}
             >
-              {isAnalyzing ? 'Generating Counselling Report...' : 'Generate Counselling Report'}
+              {isAnalyzing
+                ? (isSuperAdmin
+                    ? `Evaluating with ${activeAiProvider === 'deepseek' ? 'DeepSeek AI' : 'Gemini AI'}...`
+                    : 'Generating Counselling Report...')
+                : (isSuperAdmin
+                    ? (activeAiProvider === 'deepseek' ? 'Generate Counselling with DeepSeek AI' : 'Generate Counselling with Gemini AI')
+                    : 'Generate Counselling Report')}
             </Button>
           </Box>
         </Paper>
@@ -1132,7 +1178,9 @@ export default function CounsellingModule({
             </Stack>
 
             <Alert severity="info" sx={{ mb: 2, borderRadius: 1.5 }} icon={<SmartToy fontSize="small" />}>
-              Take a clear picture of your doctor&apos;s prescription or upload a PDF. Our AI vision instantly reads the diagnosis, medications, and clinical vitals to build your comprehensive 6-point chronic risk evaluation.
+              {isSuperAdmin
+                ? "Take a clear picture of your prescription or upload a PDF. Optical character reading & document parsing is processed by Gemini Vision OCR."
+                : "Take a clear picture of your doctor's prescription or upload a PDF. Our AI vision instantly reads the diagnosis, medications, and clinical vitals to build your comprehensive 6-point chronic risk evaluation."}
             </Alert>
 
             <Box
@@ -1214,7 +1262,17 @@ export default function CounsellingModule({
                   '&:disabled': { background: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)' }
                 }}
               >
-                {isParsingRx ? `Analysing Prescription... ${rxProgress}%` : isAnalyzing ? 'Generating Report...' : 'Extract & Generate Counselling Report'}
+                {isParsingRx
+                  ? (isSuperAdmin ? `Scanning with Gemini Vision OCR... ${rxProgress}%` : `Analysing Prescription... ${rxProgress}%`)
+                  : isAnalyzing
+                    ? (isSuperAdmin
+                        ? `Evaluating with ${activeAiProvider === 'deepseek' ? 'DeepSeek AI' : 'Gemini AI'}...`
+                        : 'Generating Report...')
+                    : (isSuperAdmin
+                        ? (activeAiProvider === 'deepseek'
+                            ? 'Scan with Gemini Vision & Evaluate with DeepSeek'
+                            : 'Scan & Evaluate with Gemini AI')
+                        : 'Extract & Generate Counselling Report')}
               </Button>
               {!uploadedFile && (
                 <Typography variant="caption" color="text.secondary" display="block" mt={1}>
@@ -1773,6 +1831,22 @@ export default function CounsellingModule({
                           color="secondary"
                           sx={{ fontWeight: 800, height: 24, fontSize: '0.75rem' }}
                         />
+                        {isSuperAdmin && (
+                          <Chip
+                            icon={activeAiProvider === 'deepseek' ? <Psychology sx={{ fontSize: '13px !important', color: '#818CF8 !important' }} /> : <AutoAwesome sx={{ fontSize: '13px !important', color: '#00C9A7 !important' }} />}
+                            label={activeAiProvider === 'deepseek' ? 'DeepSeek AI Active' : 'Gemini AI Active'}
+                            size="small"
+                            sx={{
+                              fontWeight: 800,
+                              fontSize: "0.7rem",
+                              height: 24,
+                              bgcolor: activeAiProvider === 'deepseek' ? "rgba(79,70,229,0.18)" : "rgba(0,201,167,0.18)",
+                              color: activeAiProvider === 'deepseek' ? "#818CF8" : (isDark ? "#00E0BA" : "#00967D"),
+                              border: '1px solid',
+                              borderColor: activeAiProvider === 'deepseek' ? 'rgba(79,70,229,0.4)' : 'rgba(0,201,167,0.4)'
+                            }}
+                          />
+                        )}
                       </Stack>
                     </Stack>
 
@@ -1809,19 +1883,33 @@ export default function CounsellingModule({
                           footGrade: historyPatient.footGrade || 'Grade 0 (Intact Skin)'
                         })
                       }
-                      startIcon={isAnalyzing ? <CircularProgress size={20} color="inherit" /> : <Shield />}
+                      startIcon={isAnalyzing ? <CircularProgress size={20} color="inherit" /> : (isSuperAdmin && activeAiProvider === 'deepseek' ? <Biotech /> : <Shield />)}
                       sx={{
                         borderRadius: '50px',
                         px: { xs: 4, sm: 6 },
                         py: 1.5,
                         fontSize: { xs: '0.95rem', sm: '1.05rem' },
                         fontWeight: 900,
-                        background: 'linear-gradient(135deg, #00C9A7 0%, #6C5CE7 100%)',
-                        boxShadow: '0 8px 32px rgba(0, 201, 167, 0.35)',
-                        '&:hover': { background: 'linear-gradient(135deg, #00B395 0%, #5a4bd1 100%)' }
+                        background: isSuperAdmin && activeAiProvider === 'deepseek'
+                          ? 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)'
+                          : 'linear-gradient(135deg, #00C9A7 0%, #6C5CE7 100%)',
+                        boxShadow: isSuperAdmin && activeAiProvider === 'deepseek'
+                          ? '0 8px 32px rgba(79, 70, 229, 0.4)'
+                          : '0 8px 32px rgba(0, 201, 167, 0.35)',
+                        '&:hover': {
+                          background: isSuperAdmin && activeAiProvider === 'deepseek'
+                            ? 'linear-gradient(135deg, #4338CA 0%, #6D28D9 100%)'
+                            : 'linear-gradient(135deg, #00B395 0%, #5a4bd1 100%)'
+                        }
                       }}
                     >
-                      {isAnalyzing ? 'Generating Counselling Report...' : 'Generate Counselling Report'}
+                      {isAnalyzing
+                        ? (isSuperAdmin
+                            ? `Evaluating with ${activeAiProvider === 'deepseek' ? 'DeepSeek AI' : 'Gemini AI'}...`
+                            : 'Generating Counselling Report...')
+                        : (isSuperAdmin
+                            ? (activeAiProvider === 'deepseek' ? 'Generate Counselling with DeepSeek AI' : 'Generate Counselling with Gemini AI')
+                            : 'Generate Counselling Report')}
                     </Button>
                   </Box>
                 </Paper>
@@ -1856,6 +1944,77 @@ export default function CounsellingModule({
 
         {submitted && (
           <Box id="counselling-risk-section">
+            {/* Header Advisory Banner with Active AI Chip */}
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              alignItems={{ xs: 'flex-start', sm: 'center' }}
+              justifyContent="space-between"
+              mb={2.5}
+              gap={1.5}
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                bgcolor: isDark ? 'rgba(255, 255, 255, 0.03)' : '#F8FAFC',
+                border: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #E2E8F0'
+              }}
+            >
+              <Box>
+                <Stack direction="row" alignItems="center" spacing={1} mb={0.5}>
+                  <Shield sx={{ color: '#00C9A7' }} />
+                  <Typography variant="h6" sx={{ fontWeight: 900 }}>
+                    11-Factor Chronic Risk Advisory
+                  </Typography>
+                </Stack>
+                <Typography variant="body2" color="text.secondary">
+                  Evidence-based risk stratification &amp; clinical guidance for <strong>{counsellingPatient?.name || currPatientName || 'Patient'}</strong> ({counsellingPatient?.age || currPatientAge || '58'}Y, {counsellingPatient?.gender || currPatientGender || 'Male'})
+                </Typography>
+              </Box>
+
+              <Stack direction="row" spacing={1} alignItems="center">
+                {isSuperAdmin ? (
+                  counsellingAiProvider === 'deepseek' ? (
+                    <Chip
+                      icon={<Psychology sx={{ fontSize: '15px !important', color: '#FFF !important' }} />}
+                      label="DeepSeek AI (DeepSeek-V3)"
+                      size="small"
+                      sx={{
+                        bgcolor: '#4F46E5',
+                        color: '#FFF',
+                        fontWeight: 800,
+                        fontSize: '0.74rem',
+                        boxShadow: '0 2px 8px rgba(79, 70, 229, 0.4)'
+                      }}
+                    />
+                  ) : (
+                    <Chip
+                      icon={<AutoAwesome sx={{ fontSize: '14px !important', color: '#FFF !important' }} />}
+                      label="Google Gemini (3.8 Flash)"
+                      size="small"
+                      sx={{
+                        bgcolor: '#00C9A7',
+                        color: '#FFF',
+                        fontWeight: 800,
+                        fontSize: '0.74rem',
+                        boxShadow: '0 2px 8px rgba(0, 201, 167, 0.4)'
+                      }}
+                    />
+                  )
+                ) : (
+                  <Chip
+                    icon={<Shield sx={{ color: '#FFF !important' }} />}
+                    label="Clinical Risk Advisory Engine"
+                    size="small"
+                    sx={{
+                      bgcolor: '#00C9A7',
+                      color: '#FFF',
+                      fontWeight: 800,
+                      fontSize: '0.74rem'
+                    }}
+                  />
+                )}
+              </Stack>
+            </Stack>
+
             {/* Tabs for 11 Risk Categories */}
             <Tabs
               value={activeTab}

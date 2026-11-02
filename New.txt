@@ -1,0 +1,47 @@
+When a user types phonetic Hinglish like "do roti khana hai", the application can automatically convert it on the fly into the Devanagari script ("दो रोटी खाना है").
+
+To add Hinglish-to-Hindi transliteration (like typing "do roti khana hai" and instantly getting "दो रोटी खाना है") in your Next.js app, you can use the @google/transliterate or transliteration packages, or integrate Google's client-side library cleanly inside a React component.
+
+Here is how you can implement this in your Next.js application using a React hook and a standard input or textarea:
+
+Step 1: Install a Transliteration Library
+You can use lightweight npm packages designed for Indic transliteration. Run this in your terminal:
+
+Bash
+npm install transliteration
+(Or you can use alternative libraries like indic-transliteration-js depending on your preference).
+
+Step 2: Create a Reusable Hinglish Input Component (HinglishInput.jsx / .tsx)
+Since Next.js renders components on the server by default, transliteration needs to happen on the client side ('use client').
+
+TypeScript
+'use client';
+
+import React, { useState } from 'react';
+import { transliterate } from 'transliteration';
+
+export default function HinglishInput({ value, onChange, placeholder, className }) {
+  const [text, setText] = useState(value || '');
+
+  const handleChange = (e) => {
+    const rawInput = e.target.value;
+    
+    // Transliterate the typing on the fly from English (Hinglish) to Hindi ('hi')
+    const hindiText = transliterate(rawInput, { language: 'hi' });
+    
+    setText(hindiText);
+    if (onChange) {
+      onChange(hindiText); // Pass the converted Hindi text back to your parent form state
+    }
+  };
+
+  return (
+    <input
+      type="text"
+      value={text}
+      onChange={handleChange}
+      placeholder={placeholder || "Type in Hinglish (e.g. do roti)..."}
+      className={className || "w-full p-2 border rounded-md"}
+    />
+  );
+}

@@ -34,7 +34,8 @@ CRITICAL LANGUAGE & WORDING INSTRUCTIONS:
    ${isHindi
      ? `- You MUST generate the diet plan in HINDI (हिंदी भाषा) using clear Devanagari script for patient readability.
    - All fields (planName, summary, meal dishes/focus, clinicalNote benefits, recommendedFoods, foodsToAvoid, hydrationGuidance, indianSpiceTherapy benefits, lifestyleAdvice, avoidanceAlerts, followUpNote) MUST be in natural, everyday Hindi (e.g. '2 फुल्के + 1 कटोरी मूंग दाल', 'ब्लड शुगर को नियंत्रित रखता है').
-   - For mealName in mealSchedule, you can use the standard slot names (e.g. 'Breakfast' or 'Breakfast (नाश्ता)').`
+   - For mealName in mealSchedule, you can use the standard slot names (e.g. 'Breakfast' or 'Breakfast (नाश्ता)').
+   - CRITICAL NUMBER FORMATTING: ALL numbers, portions, counts, dosages, and quantities (e.g. 100, 200, 1, 2, 50, 100ml, 100g, 1750 kcal) MUST ALWAYS be written in standard international Arabic digits (e.g. 100, 2, 1, 1500), NEVER in Devanagari numerals (like १००, १, २).`
      : isHinglish
      ? `- Generate the diet plan in friendly, casual HINGLISH (Conversational Hindi in English alphabet e.g. '2 Phulke + 1 Katori Dal aur Lauki Sabzi', 'Blood sugar ko steady rakhta hai').`
      : `- You MUST generate the entire diet plan strictly in simple, friendly ENGLISH.
@@ -411,9 +412,13 @@ export async function POST(req: Request) {
       aiModelUsed = active === 'deepseek' ? 'deepseek-chat' : 'gemini-3.8-flash';
     }
 
+    // Always normalize any Hindi/Devanagari numerals to standard Arabic digits (100, 1, 2)
+    const { normalizeDietPlanDigits } = await import('@/lib/transliterate');
+    const cleanDietPlan = normalizeDietPlanDigits(dietPlan);
+
     return NextResponse.json({
       success: true,
-      data: dietPlan,
+      data: cleanDietPlan,
       provider: aiProviderUsed,
       model: aiModelUsed
     });
