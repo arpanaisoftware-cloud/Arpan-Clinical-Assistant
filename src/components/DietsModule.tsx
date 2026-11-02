@@ -1149,10 +1149,10 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
           ]);
           return {
             ...m,
-            portion: convertHindiDigitsToArabic(newPortion || m.portion),
-            focus: convertHindiDigitsToArabic(newFocus || m.focus),
-            clinicalNote: convertHindiDigitsToArabic(newNote || m.clinicalNote),
-            customMealName: convertHindiDigitsToArabic(newCustom || m.customMealName)
+            portion: convertHindiDigitsToArabic(newPortion || m.portion || ''),
+            focus: convertHindiDigitsToArabic(newFocus || m.focus || ''),
+            clinicalNote: convertHindiDigitsToArabic(newNote || m.clinicalNote || ''),
+            customMealName: (newCustom || m.customMealName) ? convertHindiDigitsToArabic(newCustom || m.customMealName) : undefined
           };
         })
       );
