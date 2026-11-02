@@ -1275,10 +1275,10 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
           ]);
           return {
             ...m,
-            portion: convertHindiDigitsToArabic(newPortion || m.portion),
-            focus: convertHindiDigitsToArabic(newFocus || m.focus),
-            clinicalNote: convertHindiDigitsToArabic(newNote || m.clinicalNote),
-            customMealName: convertHindiDigitsToArabic(newCustom || m.customMealName || "")
+            portion: convertHindiDigitsToArabic(newPortion || m.portion || ''),
+            focus: convertHindiDigitsToArabic(newFocus || m.focus || ''),
+            clinicalNote: convertHindiDigitsToArabic(newNote || m.clinicalNote || ''),
+            customMealName: (newCustom || m.customMealName) ? convertHindiDigitsToArabic(newCustom || m.customMealName) : undefined
           };
         })
       );
@@ -6147,7 +6147,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
           </DialogActions>
         </Dialog>
 
-                {/* Full Page Diet Recalculate Loader (matches Diet Prescription styling) */}
+        {/* Full Page Diet Recalculate Loader (matches Diet Prescription styling) */}
         <DietRecalculateLoader open={isRecalculating} />
 
         {/* Full Page Analysis Loader for Diet Generation */}

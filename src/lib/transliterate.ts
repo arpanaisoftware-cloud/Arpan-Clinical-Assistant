@@ -267,8 +267,10 @@ const HINDI_DIGITS_MAP: Record<string, string> = {
 /**
  * Normalizes any Devanagari numerals back into standard Arabic digits (30, 100, 250).
  */
-export function convertHindiDigitsToArabic(str: string): string {
-  if (!str) return str;
+export function convertHindiDigitsToArabic(str: string): string;
+export function convertHindiDigitsToArabic(str?: string | null): string;
+export function convertHindiDigitsToArabic(str?: string | null): string {
+  if (!str) return str ?? '';
   if (!/[०-९]/.test(str)) return str;
   return str.replace(/[०-९]/g, (ch) => HINDI_DIGITS_MAP[ch] || ch);
 }
