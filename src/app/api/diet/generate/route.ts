@@ -26,7 +26,8 @@ PATIENT PROFILE:
 - Allergies: ${input.allergies ?? "None reported"}
 - Comorbidities: ${input.comorbidities ?? "None"}
 - HbA1c: ${input.hba1c ?? "NA"} | FBS: ${input.fastingGlucose ?? "NA"} mg/dL | Creatinine: ${input.creatinine ?? "NA"} | eGFR: ${input.egfr ?? "NA"}
-- Na: ${input.sodiumNa ?? "NA"} mEq/L | K: ${input.potassiumK ?? "NA"} mEq/L | Cholesterol: ${input.totalCholesterol ?? "NA"} mg/dL
+- Na: ${input.sodiumNa ?? "NA"} mEq/L | K: ${input.potassiumK ?? "NA"} mEq/L | Total Cholesterol: ${input.totalCholesterol ?? "NA"} mg/dL
+- Triglyceride: ${input.triglyceride ?? "NA"} mg/dL | LDL: ${input.ldl ?? "NA"} mg/dL | HDL: ${input.hdl ?? "NA"} mg/dL | TSH: ${input.tsh ?? "NA"} mIU/L
 - BP: ${input.bpSystolic ?? "NA"}/${input.bpDiastolic ?? "NA"} mmHg${targetCalorieInstruction}
 
 CRITICAL LANGUAGE & WORDING INSTRUCTIONS:
@@ -74,7 +75,9 @@ Generate a comprehensive Indian clinical diet plan. Return ONLY raw JSON (absolu
     "iron": "string e.g. Haemoglobin Booster Iron - Steamed palak dal, roasted chana, beetroot & amla with Vitamin C",
     "vitaminD": "string e.g. Bone & Immunity Vitamin D - 15 mins gentle morning sun exposure, fortified curd/milk & mushrooms",
     "vitaminB12": "string e.g. Nerve & Energy Vitamin B12 - Low-fat paneer, curd, fortified milk, or clinical supplement",
-    "uricAcid": "string e.g. Purine & Uric Acid Control - Drink 2.5-3L water, avoid sugary sodas & purine-heavy foods, enjoy amla & cherries"
+    "uricAcid": "string e.g. Purine & Uric Acid Control - Drink 2.5-3L water, avoid sugary sodas & purine-heavy foods, enjoy amla & cherries",
+    "hypothyroidism": "string e.g. Thyroid-Friendly Diet (Hypothyroidism) - Include selenium-rich foods, iodized salt, cook raw goitrogens (cabbage, broccoli) before eating",
+    "hyperthyroidism": "string e.g. Thyroid-Calm Diet (Hyperthyroidism) - High-protein and calcium-rich foods, avoid kelp/seaweed, limit caffeine and excess iodine"
   },
   "recommendedFoods": [
     "string - Indian food name followed by simple 1-line reason, minimum 8 foods"
@@ -142,6 +145,11 @@ function generateClinicalIndianFallback(input: Record<string, any>) {
   const isDiabetes = disease.includes("diabet") || comorbidities.includes("diabet") || Number(input.hba1c) > 6.5;
   const isHypertension = disease.includes("hypertens") || comorbidities.includes("hypertens") || Number(input.bpSystolic) >= 140;
   const isCKD = disease.includes("renal") || disease.includes("ckd") || disease.includes("kidney") || Number(input.creatinine) >= 1.4;
+  const isHighTriglycerides = Number(input.triglyceride) >= 150;
+  const isHighLDL = Number(input.ldl) >= 100;
+  const isLowHDL = Number(input.hdl) > 0 && Number(input.hdl) < 40;
+  const isHypothyroid = disease.includes("hypothyroid") || comorbidities.includes("hypothyroid") || Number(input.tsh) > 4.5;
+  const isHyperthyroid = disease.includes("hyperthyroid") || comorbidities.includes("hyperthyroid") || Number(input.tsh) > 0 && Number(input.tsh) < 0.4;
 
   let targetCalories = 1750;
   if (input.customCalories && Number(input.customCalories) > 0) {
@@ -228,7 +236,13 @@ function generateClinicalIndianFallback(input: Record<string, any>) {
         : "Nerve & Energy Vitamin B12 — Low-fat paneer, fermented curd, fortified foods, or clinical supplement",
       uricAcid: isHindi
         ? "यूरिक एसिड नियंत्रण — भरपूर पानी (2.5-3 लीटर), तली चीजें और मीठे शरबत बंद, आंवला और चेरी खाएं"
-        : "Purine & Uric Acid Control — Drink 2.5-3L water daily, avoid purine-heavy foods/sugary sodas, enjoy amla & cherries"
+        : "Purine & Uric Acid Control — Drink 2.5-3L water daily, avoid purine-heavy foods/sugary sodas, enjoy amla & cherries",
+      hypothyroidism: isHindi
+        ? "हाइपोथायरायडिज्म थायराइड देखभाल — सेलेनियम युक्त आहार (सूरजमुखी के बीज), आयोडीन युक्त नमक लें; कच्ची गोभी व ब्रोकली सीमित रखें"
+        : "Thyroid-Friendly Diet (Hypothyroidism) — Include selenium-rich foods, iodized salt, and cook goitrogens (cabbage, broccoli) before eating",
+      hyperthyroidism: isHindi
+        ? "हाइपरथायरायडिज्म शांत आहार — उच्च प्रोटीन और कैल्शियम युक्त भोजन लें; अत्यधिक आयोडीन व कैफीन से बचें"
+        : "Thyroid-Calm Diet (Hyperthyroidism) — High protein & calcium-rich foods; avoid kelp, seaweed, excess iodine & heavy caffeine"
     },
     recommendedFoods: isHindi ? [
       "पीली मूंग दाल (पेट पर बहुत हल्की, प्रोटीन से भरपूर और पचाने में सबसे आसान)",
@@ -355,6 +369,7 @@ export async function POST(req: Request) {
       patientName, age, gender, weightKg, heightCm, disease,
       allergies, comorbidities, bmi, hba1c, fastingGlucose,
       creatinine, egfr, sodiumNa, potassiumK, totalCholesterol,
+      triglyceride, ldl, hdl, tsh,
       bpSystolic, bpDiastolic, dietaryPreference, language,
       customCalories, targetCalories
     } = body;
@@ -380,6 +395,7 @@ export async function POST(req: Request) {
         patientName, age, gender, weightKg, heightCm, disease,
         allergies, comorbidities, bmi, hba1c, fastingGlucose,
         creatinine, egfr, sodiumNa, potassiumK, totalCholesterol,
+        triglyceride, ldl, hdl, tsh,
         bpSystolic, bpDiastolic, dietaryPreference,
         language: effectiveLanguage,
         customCalories: effectiveCalories

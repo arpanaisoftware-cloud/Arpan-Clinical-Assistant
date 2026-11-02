@@ -27,6 +27,7 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import CircularProgress from "@mui/material/CircularProgress";
+import Backdrop from "@mui/material/Backdrop";
 import LinearProgress from "@mui/material/LinearProgress";
 import Fade from "@mui/material/Fade";
 import InputAdornment from "@mui/material/InputAdornment";
@@ -83,11 +84,13 @@ import EditNote from "@mui/icons-material/EditNote";
 import Undo from "@mui/icons-material/Undo";
 import ArrowUpward from "@mui/icons-material/ArrowUpward";
 import ArrowDownward from "@mui/icons-material/ArrowDownward";
+import NoteAdd from "@mui/icons-material/NoteAdd";
 import { toast } from "react-toastify";
 import confetti from "canvas-confetti";
 import { useAppSelector } from "../redux/hooks";
 import { HistoryRecord, DietHistoryRecord, isSuperAdminUser } from "../types/clinical";
 import DietAnalysisLoader from "./DietAnalysisLoader";
+import DietRecalculateLoader from "./DietRecalculateLoader";
 import DietHistoryTable from "./DietHistoryTable";
 import HinglishTextField from "./HinglishTextField";
 import { transliterateHinglishText, convertHindiDigitsToArabic, normalizeDietPlanDigits } from "@/lib/transliterate";
@@ -98,6 +101,7 @@ interface MealSlot {
   portion: string;
   focus: string;
   clinicalNote: string;
+  patientRecall?: string;
 }
 
 interface EditableMealSlot extends MealSlot {
@@ -144,6 +148,16 @@ export interface ElectrolyteItemConfig {
   defaultText: string;
   simpleRule: string;
 }
+
+export const populateMissingElectrolytes = (limits?: Record<string, any>): Record<string, string> => {
+  const result: Record<string, string> = { ...(limits || {}) };
+  ALL_ELECTROLYTE_CONFIG.forEach((cfg) => {
+    if (result[cfg.key] === undefined || result[cfg.key] === "") {
+      result[cfg.key] = cfg.defaultText;
+    }
+  });
+  return result;
+};
 
 export const ALL_ELECTROLYTE_CONFIG: ElectrolyteItemConfig[] = [
   {
@@ -235,6 +249,26 @@ export const ALL_ELECTROLYTE_CONFIG: ElectrolyteItemConfig[] = [
     icon: "🧪",
     defaultText: "Purine & Uric Acid Control - Drink 2.5-3L water, avoid sugary drinks & purine-heavy foods, enjoy amla",
     simpleRule: "Drink 2.5-3L water, avoid sugary drinks & high-purine foods"
+  },
+  {
+    key: "hypothyroidism",
+    label: "🦋 Hypothyroidism",
+    placeholder: "e.g. Thyroid-Friendly Diet — Selenium-rich foods, limit raw goitrogens, iodized salt",
+    badge: "Thyroid Support",
+    statusColor: "#0EA5E9",
+    icon: "🦋",
+    defaultText: "Thyroid-Friendly Diet — Include selenium-rich foods (Brazil nuts, sunflower seeds), limit raw goitrogens (cabbage, broccoli), use iodized salt",
+    simpleRule: "Selenium-rich foods, iodized salt, limit raw cabbage & broccoli"
+  },
+  {
+    key: "hyperthyroidism",
+    label: "⚡ Hyperthyroidism",
+    placeholder: "e.g. Calorie-Dense Diet — High protein, calcium-rich foods, avoid excess iodine",
+    badge: "Thyroid Calm",
+    statusColor: "#F97316",
+    icon: "⚡",
+    defaultText: "High-Calorie Thyroid Calm Diet — Increase protein & calcium-rich foods, avoid kelp/seaweed, limit caffeine and iodine-rich supplements",
+    simpleRule: "High protein, limit iodine supplements, avoid kelp & caffeine"
   }
 ];
 
@@ -279,6 +313,55 @@ export const formatMacroOnly = (
   return `${Math.round((targetCalories * 0.63) / 4)}g`;
 };
 
+/**
+ * Compares two meal schedules to determine if there are actual nutritional changes
+ * (e.g. meals added, deleted, mealName changed, portion changed, or foods/ingredients changed).
+ * EXCLUDES patientRecall so that editing patient recall does NOT trigger the recalculate API.
+ */
+export const hasMealScheduleNutritionChanges = (
+  oldSchedule?: MealSlot[] | null,
+  newSchedule?: MealSlot[] | null
+): boolean => {
+  if (!Array.isArray(oldSchedule) && !Array.isArray(newSchedule)) return false;
+  if (!Array.isArray(oldSchedule) || !Array.isArray(newSchedule)) return true;
+  if (oldSchedule.length !== newSchedule.length) return true;
+
+  for (let i = 0; i < oldSchedule.length; i++) {
+    const oldM = oldSchedule[i];
+    const newM = newSchedule[i];
+
+    const oldName = (oldM.mealName || "").trim().toLowerCase();
+    const newName = (newM.mealName || "").trim().toLowerCase();
+    if (oldName !== newName) return true;
+
+    const oldFocus = (oldM.focus || "").replace(/\s+/g, ' ').trim().toLowerCase();
+    const newFocus = (newM.focus || "").replace(/\s+/g, ' ').trim().toLowerCase();
+    if (oldFocus !== newFocus) return true;
+
+    const oldPortion = (oldM.portion || "").replace(/\s+/g, ' ').trim().toLowerCase();
+    const newPortion = (newM.portion || "").replace(/\s+/g, ' ').trim().toLowerCase();
+    if (oldPortion !== newPortion && oldPortion !== "standard portion" && newPortion !== "standard portion") {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+/**
+ * Extracts a concise household portion preview from a merged food & portion text
+ * (e.g. "2 Phulkas + 1 Katori Dal" -> "2 Phulkas")
+ */
+export const extractPortionPreview = (text?: string): string => {
+  if (!text) return "Standard Portion";
+  const trimmed = text.trim();
+  const match = trimmed.match(/^([^+,;|—–\n]+)/);
+  if (match && match[1].trim().length <= 30 && match[1].trim().length > 0) {
+    return match[1].trim();
+  }
+  return trimmed.length <= 25 ? trimmed : "Standard Portion";
+};
+
 export const serializeMealSchedule = (schedule?: MealSlot[] | null): string => {
   if (!Array.isArray(schedule)) return "";
   return JSON.stringify(
@@ -318,6 +401,10 @@ interface PatientFormData {
   sodiumNa: string;
   potassiumK: string;
   totalCholesterol: string;
+  triglyceride: string;
+  ldl: string;
+  hdl: string;
+  tsh: string;
 }
 
 const EMPTY_FORM: PatientFormData = {
@@ -340,7 +427,11 @@ const EMPTY_FORM: PatientFormData = {
   egfr: "",
   sodiumNa: "",
   potassiumK: "",
-  totalCholesterol: ""
+  totalCholesterol: "",
+  triglyceride: "",
+  ldl: "",
+  hdl: "",
+  tsh: ""
 };
 
 type InputMode = "manual" | "prescription" | "history";
@@ -758,6 +849,10 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
       sodiumNa: String(pi.sodiumNa || ""),
       potassiumK: String(pi.potassiumK || ""),
       totalCholesterol: String(pi.totalCholesterol || ""),
+      triglyceride: String((pi as any).triglyceride || ""),
+      ldl: String((pi as any).ldl || ""),
+      hdl: String((pi as any).hdl || ""),
+      tsh: String((pi as any).tsh || ""),
       customCalories: ""
     });
     confetti({ particleCount: 35, spread: 50, origin: { y: 0.5 } });
@@ -791,7 +886,11 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
       egfr: String(pi.egfr || ""),
       sodiumNa: String(pi.sodiumNa || ""),
       potassiumK: String(pi.potassiumK || ""),
-      totalCholesterol: String(pi.totalCholesterol || "")
+      totalCholesterol: String(pi.totalCholesterol || ""),
+      triglyceride: String((pi as any).triglyceride || ""),
+      ldl: String((pi as any).ldl || ""),
+      hdl: String((pi as any).hdl || ""),
+      tsh: String((pi as any).tsh || "")
     });
     confetti({ particleCount: 40, spread: 60, origin: { y: 0.5 } });
     toast.success(`Loaded active patient: ${pi.patientName}`);
@@ -832,7 +931,11 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
       }
       if (json.provider) setAiPlanProvider(json.provider);
       if (json.model) setAiPlanModel(json.model);
-      setAiDietPlan(normalizeDietPlanDigits({ ...json.data, patientName: activeForm.patientName }));
+      const planWithElectrolytes = { ...json.data, patientName: activeForm.patientName };
+      if (planWithElectrolytes.electrolyteLimits) {
+        planWithElectrolytes.electrolyteLimits = populateMissingElectrolytes(planWithElectrolytes.electrolyteLimits);
+      }
+      setAiDietPlan(normalizeDietPlanDigits(planWithElectrolytes));
       lastCalculatedScheduleRef.current = serializeMealSchedule(json.data?.mealSchedule);
       confetti({ particleCount: 90, spread: 100, origin: { y: 0.5 } });
       toast.success("Indian Diet & Electrolyte Plan ready!");
@@ -905,7 +1008,11 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
       setHistoryForm(restored);
     }
     if (record.dietPlan) {
-      setAiDietPlan(normalizeDietPlanDigits(record.dietPlan));
+      const loadedPlan = { ...record.dietPlan };
+      if (loadedPlan.electrolyteLimits) {
+        loadedPlan.electrolyteLimits = populateMissingElectrolytes(loadedPlan.electrolyteLimits);
+      }
+      setAiDietPlan(normalizeDietPlanDigits(loadedPlan));
       lastCalculatedScheduleRef.current = serializeMealSchedule(record.dietPlan?.mealSchedule);
     }
     confetti({ particleCount: 50, spread: 70, origin: { y: 0.5 } });
@@ -1044,6 +1151,25 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
     setEditMealsOpen(true);
   };
 
+  // Patient Recall per-meal handlers
+  const handleAddPatientRecall = (index: number) => {
+    setTempMealSchedule((prev) =>
+      prev.map((m, i) => (i === index ? { ...m, patientRecall: m.patientRecall || "" } : m))
+    );
+  };
+
+  const handleDeletePatientRecall = (index: number) => {
+    setTempMealSchedule((prev) =>
+      prev.map((m, i) => {
+        if (i !== index) return m;
+        const copy = { ...m };
+        delete copy.patientRecall;
+        return copy;
+      })
+    );
+    toast.info("Patient recall field removed for this meal.");
+  };
+
   const handleUpdateTempMeal = (index: number, field: keyof EditableMealSlot, val: string) => {
     const cleanVal = convertHindiDigitsToArabic(val);
     setTempMealSchedule((prev) => {
@@ -1152,7 +1278,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
             portion: convertHindiDigitsToArabic(newPortion || m.portion),
             focus: convertHindiDigitsToArabic(newFocus || m.focus),
             clinicalNote: convertHindiDigitsToArabic(newNote || m.clinicalNote),
-            customMealName: convertHindiDigitsToArabic(newCustom || m.customMealName)
+            customMealName: convertHindiDigitsToArabic(newCustom || m.customMealName || "")
           };
         })
       );
@@ -1211,6 +1337,10 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
             sodiumNa: activeForm?.sodiumNa,
             potassiumK: activeForm?.potassiumK,
             totalCholesterol: activeForm?.totalCholesterol,
+            triglyceride: activeForm?.triglyceride,
+            ldl: activeForm?.ldl,
+            hdl: activeForm?.hdl,
+            tsh: activeForm?.tsh,
             bpSystolic: activeForm?.bpSystolic,
             bpDiastolic: activeForm?.bpDiastolic,
             language: activeForm?.language || "Hindi",
@@ -1254,19 +1384,43 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
       } else if (m.slotType) {
         finalName = m.slotType;
       }
+      const oldSlot = aiDietPlan.mealSchedule?.[idx];
+      const focusUnchanged = oldSlot && (oldSlot.focus || "").trim().toLowerCase() === (m.focus || "").trim().toLowerCase();
+      const finalPortion = focusUnchanged && oldSlot?.portion
+        ? oldSlot.portion
+        : (m.portion?.trim() || extractPortionPreview(m.focus) || "Standard Portion");
+
       return {
         time: m.time?.trim() || "Flexible",
         mealName: finalName || `Meal Slot #${idx + 1}`,
-        portion: m.portion?.trim() || "Standard Portion",
+        portion: finalPortion,
         focus: m.focus?.trim() || "Balanced Indian meal",
-        clinicalNote: m.clinicalNote?.trim() || "Nutritional support"
+        clinicalNote: m.clinicalNote?.trim() || "Nutritional support",
+        ...(m.patientRecall !== undefined && m.patientRecall !== null ? { patientRecall: m.patientRecall } : {})
       };
     });
 
+    // Compare old meal schedule with new to check if food portions/items were added, deleted or edited
+    // If only patient recall was edited, skip recalculate API call
+    const hasNutritionalEdits = hasMealScheduleNutritionChanges(aiDietPlan.mealSchedule, sanitized);
+
     setEditMealsOpen(false);
+
+    if (!hasNutritionalEdits) {
+      // Only patient recall (or non-caloric fields) changed — update directly without calling recalculate API
+      const updatedPlan: AIDietPlan = {
+        ...aiDietPlan,
+        mealSchedule: sanitized
+      };
+      setAiDietPlan(updatedPlan);
+      await syncDietPlanUpdate(updatedPlan);
+      toast.success("Meal schedule updated (patient recall saved without macro recalculation).");
+      return;
+    }
+
+    // Nutritional changes detected (meals added, deleted, or portions/foods edited) — call recalculate API with full-page loader
     setIsRecalculating(true);
     try {
-      // Auto-recalculate macros for the added/edited/deleted meal schedule
       const newPlan = await recalculateForSchedule(sanitized, aiDietPlan);
       setAiDietPlan(newPlan);
       lastCalculatedScheduleRef.current = serializeMealSchedule(sanitized);
@@ -1284,6 +1438,11 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
   // Recalculate Calories & Macros on explicit button click (uses shared recalculateForSchedule)
   const handleRecalculateMacros = async () => {
     if (!aiDietPlan) return;
+    const currentSerialized = serializeMealSchedule(aiDietPlan.mealSchedule);
+    if (lastCalculatedScheduleRef.current && currentSerialized === lastCalculatedScheduleRef.current) {
+      toast.info("No changes in meal schedule since last calculation.");
+      return;
+    }
     setIsRecalculating(true);
     try {
       const newPlan = await recalculateForSchedule(aiDietPlan.mealSchedule, aiDietPlan);
@@ -1903,6 +2062,10 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                       sodiumNa: "139",
                       potassiumK: "4.3",
                       totalCholesterol: "218",
+                      triglyceride: "180",
+                      ldl: "130",
+                      hdl: "38",
+                      tsh: "",
                       customCalories: ""
                     });
                     toast.info("Demo patient 'Sandeep' loaded.");
@@ -2150,6 +2313,46 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                     label="Cholesterol (mg/dL)"
                     value={form.totalCholesterol}
                     onChange={(e) => updateForm("totalCholesterol", e.target.value)}
+                  />
+                </Grid>
+                <Grid item xs={6} sm={3}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    type="number"
+                    label="Triglyceride (mg/dL)"
+                    value={form.triglyceride}
+                    onChange={(e) => updateForm("triglyceride", e.target.value)}
+                  />
+                </Grid>
+                <Grid item xs={6} sm={3}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    type="number"
+                    label="LDL Cholesterol (mg/dL)"
+                    value={form.ldl}
+                    onChange={(e) => updateForm("ldl", e.target.value)}
+                  />
+                </Grid>
+                <Grid item xs={6} sm={3}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    type="number"
+                    label="HDL Cholesterol (mg/dL)"
+                    value={form.hdl}
+                    onChange={(e) => updateForm("hdl", e.target.value)}
+                  />
+                </Grid>
+                <Grid item xs={6} sm={3}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    type="number"
+                    label="TSH (mIU/L)"
+                    value={form.tsh}
+                    onChange={(e) => updateForm("tsh", e.target.value)}
                   />
                 </Grid>
 
@@ -4478,6 +4681,36 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                               Add Meal Below
                             </Button>
                           </Tooltip>
+                          {meal.patientRecall === undefined || meal.patientRecall === null ? (
+                            <Tooltip title="Add Patient Recall field to this meal slot">
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                color="info"
+                                startIcon={<NoteAdd />}
+                                onClick={() => handleAddPatientRecall(index)}
+                                sx={{
+                                  textTransform: "none",
+                                  fontWeight: 700,
+                                  fontSize: "0.74rem",
+                                  borderRadius: 1.5,
+                                  px: 1.2,
+                                  py: 0.4
+                                }}
+                              >
+                                + Patient Recall
+                              </Button>
+                            </Tooltip>
+                          ) : (
+                            <Chip
+                              label="Recall Active"
+                              size="small"
+                              color="info"
+                              variant="outlined"
+                              onDelete={() => handleDeletePatientRecall(index)}
+                              sx={{ fontSize: "0.72rem", fontWeight: 700, height: 26 }}
+                            />
+                          )}
                           <Tooltip title="Delete this meal slot">
                             <Button
                               size="small"
@@ -4500,7 +4733,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                       </Stack>
 
                       <Grid container spacing={1.5}>
-                        <Grid item xs={12} sm={4}>
+                        <Grid item xs={12} sm={isCustom ? 4 : 6}>
                           <TextField
                             fullWidth
                             size="small"
@@ -4510,7 +4743,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                             onChange={(e) => handleUpdateTempMeal(index, "time", e.target.value)}
                           />
                         </Grid>
-                        <Grid item xs={12} sm={isCustom ? 4 : 4}>
+                        <Grid item xs={12} sm={isCustom ? 4 : 6}>
                           <TextField
                             select
                             fullWidth
@@ -4550,28 +4783,70 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                           </Grid>
                         )}
 
-                        <Grid item xs={12} sm={isCustom ? 12 : 4}>
-                          <HinglishTextField
-                            fullWidth
-                            size="small"
-                            label="Household Portion"
-                            placeholder="e.g. 2 Phulkas + 1 Katori Dal"
-                            value={meal.portion}
-                            onChangeValue={(val) => handleUpdateTempMeal(index, "portion", val)}
-                            phoneticEnabled={phoneticHinglishEnabled}
-                          />
-                        </Grid>
+                        {/* Patient Recall field with Delete option (shown ONLY when user clicks + Patient Recall on this specific meal) */}
+                        {meal.patientRecall !== undefined && meal.patientRecall !== null && (
+                          <Grid item xs={12}>
+                            <Box
+                              sx={{
+                                p: 1.2,
+                                borderRadius: 1.5,
+                                bgcolor: isDark ? "rgba(14,165,233,0.08)" : "rgba(14,165,233,0.04)",
+                                border: "1px dashed",
+                                borderColor: isDark ? "rgba(14,165,233,0.35)" : "rgba(14,165,233,0.4)"
+                              }}
+                            >
+                              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={0.8}>
+                                <Typography variant="caption" sx={{ fontWeight: 800, color: "#0284C7", display: "flex", alignItems: "center", gap: 0.5 }}>
+                                  📝 Patient Recall (Food actually eaten by patient)
+                                </Typography>
+                                <Tooltip title="Delete Patient Recall field for this meal">
+                                  <Button
+                                    size="small"
+                                    color="error"
+                                    startIcon={<Delete sx={{ fontSize: 14 }} />}
+                                    onClick={() => handleDeletePatientRecall(index)}
+                                    sx={{
+                                      textTransform: "none",
+                                      fontSize: "0.7rem",
+                                      fontWeight: 700,
+                                      py: 0.2,
+                                      px: 0.8
+                                    }}
+                                  >
+                                    Delete Recall
+                                  </Button>
+                                </Tooltip>
+                              </Stack>
+                              <HinglishTextField
+                                fullWidth
+                                size="small"
+                                label="Patient Recall (Reported Food Eaten)"
+                                placeholder="e.g. 2 Phulkas + 1 Katori Dal + Sabzi (as recalled by patient)"
+                                value={meal.patientRecall || ""}
+                                onChangeValue={(val) => handleUpdateTempMeal(index, "patientRecall", val)}
+                                phoneticEnabled={phoneticHinglishEnabled}
+                                helperText="Shown in diet print only • Not counted in calories or macro calculations"
+                              />
+                            </Box>
+                          </Grid>
+                        )}
+
+                        {/* UNIFIED SINGLE FIELD: Household Portion & Food Details & Additional Notes */}
                         <Grid item xs={12}>
                           <HinglishTextField
                             fullWidth
                             size="small"
                             multiline
                             minRows={2}
-                            label="Recommended Indian Food & Ingredients"
+                            label="Household Portion & Food Details (Ingredients / Notes)"
                             placeholder="e.g. 2 Jowar Rotis (no ghee) + 1 Katori Yellow Moong Dal + Lauki Sabzi + Cucumber Salad + 1 Glass Spiced Chaas"
                             value={meal.focus}
-                            onChangeValue={(val) => handleUpdateTempMeal(index, "focus", val)}
+                            onChangeValue={(val) => {
+                              handleUpdateTempMeal(index, "focus", val);
+                              handleUpdateTempMeal(index, "portion", extractPortionPreview(val));
+                            }}
                             phoneticEnabled={phoneticHinglishEnabled}
+                            helperText="🍛 Enter household portion, Indian food items & ingredients together"
                           />
                         </Grid>
                         <Grid item xs={12}>
@@ -4585,6 +4860,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                             phoneticEnabled={phoneticHinglishEnabled}
                           />
                         </Grid>
+
                       </Grid>
                     </Paper>
                     {index < tempMealSchedule.length - 1 && (
@@ -5564,7 +5840,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                   <Grid container spacing={1} sx={{ mb: 1.5 }}>
                     <Grid item xs={3}>
                       <Box sx={{ p: 0.7, bgcolor: "#FFFFFF !important", border: "1px solid #000000 !important", borderRadius: 1 }}>
-                        <Typography variant="caption" sx={{ fontWeight: 900, color: "#000000 !important", display: "block", fontSize: "0.72rem", textTransform: "uppercase" }}>
+                        <Typography variant="caption" sx={{ fontWeight: 900, color: "#800000 !important", display: "block", fontSize: "0.82rem", textTransform: "uppercase" }}>
                           CALORIES:
                         </Typography>
                         <Typography variant="body2" sx={{ fontWeight: 700, color: "#000000 !important", fontSize: "0.8rem", mt: 0.1 }}>
@@ -5574,7 +5850,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                     </Grid>
                     <Grid item xs={3}>
                       <Box sx={{ p: 0.7, bgcolor: "#FFFFFF !important", border: "1px solid #000000 !important", borderRadius: 1 }}>
-                        <Typography variant="caption" sx={{ fontWeight: 900, color: "#000000 !important", display: "block", fontSize: "0.72rem", textTransform: "uppercase" }}>
+                        <Typography variant="caption" sx={{ fontWeight: 900, color: "#800000 !important", display: "block", fontSize: "0.82rem", textTransform: "uppercase" }}>
                           PROTEIN:
                         </Typography>
                         <Typography variant="body2" sx={{ fontWeight: 700, color: "#000000 !important", fontSize: "0.8rem", mt: 0.1 }}>
@@ -5584,7 +5860,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                     </Grid>
                     <Grid item xs={3}>
                       <Box sx={{ p: 0.7, bgcolor: "#FFFFFF !important", border: "1px solid #000000 !important", borderRadius: 1 }}>
-                        <Typography variant="caption" sx={{ fontWeight: 900, color: "#000000 !important", display: "block", fontSize: "0.72rem", textTransform: "uppercase" }}>
+                        <Typography variant="caption" sx={{ fontWeight: 900, color: "#800000 !important", display: "block", fontSize: "0.82rem", textTransform: "uppercase" }}>
                           FAT:
                         </Typography>
                         <Typography variant="body2" sx={{ fontWeight: 700, color: "#000000 !important", fontSize: "0.8rem", mt: 0.1 }}>
@@ -5594,7 +5870,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                     </Grid>
                     <Grid item xs={3}>
                       <Box sx={{ p: 0.7, bgcolor: "#FFFFFF !important", border: "1px solid #000000 !important", borderRadius: 1 }}>
-                        <Typography variant="caption" sx={{ fontWeight: 900, color: "#000000 !important", display: "block", fontSize: "0.72rem", textTransform: "uppercase" }}>
+                        <Typography variant="caption" sx={{ fontWeight: 900, color: "#800000 !important", display: "block", fontSize: "0.82rem", textTransform: "uppercase" }}>
                           CARBS:
                         </Typography>
                         <Typography variant="body2" sx={{ fontWeight: 700, color: "#000000 !important", fontSize: "0.8rem", mt: 0.1 }}>
@@ -5605,7 +5881,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                   </Grid>
 
                   {/* DISTINCT HEADING 1: DAILY INDIAN MEAL SCHEDULE */}
-                  <Box className="print-heading-box" sx={{ bgcolor: "#000000 !important", color: "#FFFFFF !important", px: 1.5, py: 0.6, borderRadius: 1, mb: 1, mt: 0.5 }}>
+                  <Box className="print-heading-box" sx={{ bgcolor: "#1B5E20 !important", color: "#FFFFFF !important", px: 1.5, py: 0.6, borderRadius: 1, mb: 1, mt: 0.5 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 900, fontSize: "0.98rem", letterSpacing: "0.5px", textTransform: "uppercase", color: "#FFFFFF !important" }}>
                       1. DAILY INDIAN MEAL SCHEDULE &amp; PORTIONS
                     </Typography>
@@ -5616,7 +5892,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                     {aiDietPlan.mealSchedule?.map((ms, i) => (
                       <Box key={i} sx={{ p: 0.7, bgcolor: "#FFFFFF !important", border: "1px solid #000000 !important", borderRadius: 1 }}>
                         <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={0.3} flexWrap="wrap" gap={0.8}>
-                          <Typography variant="body2" sx={{ fontWeight: 900, color: "#000000 !important", fontSize: "0.82rem", flex: "1 1 auto", wordBreak: "break-word" }}>
+                          <Typography variant="body2" sx={{ fontWeight: 900, color: "#800000 !important", fontSize: "0.9rem", flex: "1 1 auto", wordBreak: "break-word" }}>
                             {ms.time} — {ms.mealName}
                           </Typography>
                           <Box sx={{ flexShrink: 0, bgcolor: "#FFFFFF !important", border: "1.2px solid #000000 !important", borderRadius: 1, px: 0.8, py: 0.2 }}>
@@ -5631,6 +5907,11 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                         {ms.clinicalNote && (
                           <Typography variant="caption" sx={{ color: "#000000 !important", fontWeight: 600, display: "block", mt: 0.3, fontSize: "0.7rem", lineHeight: 1.2, wordBreak: "break-word" }}>
                             {ms.clinicalNote}
+                          </Typography>
+                        )}
+                        {(ms as any).patientRecall && (
+                          <Typography variant="caption" sx={{ color: "#000000 !important", fontStyle: "italic", fontWeight: 600, display: "block", mt: 0.4, fontSize: "0.68rem", lineHeight: 1.2, wordBreak: "break-word", borderTop: "1px dashed #ccc", pt: 0.3 }}>
+                            📝 Patient Recall: {(ms as any).patientRecall}
                           </Typography>
                         )}
                       </Box>
@@ -5665,7 +5946,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                 <>
                   {/* DOCTOR CLINICAL REMARKS & SPECIAL INSTRUCTIONS (SPLIT TO PAGE 2) */}
                   <Box className="print-avoid-break" sx={{ mb: 1.8 }}>
-                    <Box className="print-heading-box" sx={{ bgcolor: "#000000 !important", color: "#FFFFFF !important", px: 1.5, py: 0.6, borderRadius: 1, mb: 0.8 }}>
+                    <Box className="print-heading-box" sx={{ bgcolor: "#1B5E20 !important", color: "#FFFFFF !important", px: 1.5, py: 0.6, borderRadius: 1, mb: 0.8 }}>
                       <Typography variant="subtitle1" sx={{ fontWeight: 900, fontSize: "0.95rem", letterSpacing: "0.5px", textTransform: "uppercase", color: "#FFFFFF !important" }}>
                         DOCTOR CLINICAL REMARKS &amp; SPECIAL INSTRUCTIONS
                       </Typography>
@@ -5692,7 +5973,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                   {/* 2. ELECTROLYTES (IF PRESENT / NOT DELETED) */}
                   {visibleSections.electrolytes && aiDietPlan.electrolyteLimits && (
                     <Box className="print-avoid-break" sx={{ mb: 1.8 }}>
-                      <Box className="print-heading-box" sx={{ bgcolor: "#000000 !important", color: "#FFFFFF !important", px: 1.5, py: 0.6, borderRadius: 1, mb: 0.8 }}>
+                      <Box className="print-heading-box" sx={{ bgcolor: "#1B5E20 !important", color: "#FFFFFF !important", px: 1.5, py: 0.6, borderRadius: 1, mb: 0.8 }}>
                         <Typography variant="subtitle1" sx={{ fontWeight: 900, fontSize: "0.98rem", letterSpacing: "0.5px", textTransform: "uppercase", color: "#FFFFFF !important" }}>
                           ELECTROLYTE, MINERAL &amp; ORGAN SAFETY LIMITS (SALT, POTASSIUM &amp; MINERALS)
                         </Typography>
@@ -5705,7 +5986,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                             return (
                               <Grid item xs={6} key={cfg.key}>
                                 <Box sx={{ p: 0.7, bgcolor: "#FFFFFF !important", border: "1px solid #000000 !important", borderRadius: 1 }}>
-                                  <Typography variant="caption" sx={{ fontWeight: 900, color: "#000000 !important", display: "block", fontSize: "0.72rem" }}>
+                                  <Typography variant="caption" sx={{ fontWeight: 900, color: "#800000 !important", display: "block", fontSize: "0.86rem", letterSpacing: "0.4px" }}>
                                     {cfg.label.toUpperCase()}:
                                   </Typography>
                                   <Typography variant="body2" sx={{ fontWeight: 700, color: "#000000 !important", fontSize: "0.8rem", mt: 0.1 }}>
@@ -5724,7 +6005,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                     <Grid container spacing={1.5} className="print-avoid-break" sx={{ mb: 1.8 }}>
                       {visibleSections.recommendedFoods && aiDietPlan.recommendedFoods?.length > 0 && (
                         <Grid item xs={12} md={visibleSections.foodsToAvoid ? 6 : 12}>
-                          <Box className="print-heading-box" sx={{ bgcolor: "#000000 !important", color: "#FFFFFF !important", px: 1.2, py: 0.5, borderRadius: 1, mb: 0.8 }}>
+                          <Box className="print-heading-box" sx={{ bgcolor: "#1B5E20 !important", color: "#FFFFFF !important", px: 1.2, py: 0.5, borderRadius: 1, mb: 0.8 }}>
                             <Typography variant="subtitle1" sx={{ fontWeight: 900, fontSize: "0.9rem", letterSpacing: "0.5px", textTransform: "uppercase", color: "#FFFFFF !important" }}>
                               EAT MORE OF THESE WHOLESOME INDIAN FOODS
                             </Typography>
@@ -5744,7 +6025,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
 
                       {visibleSections.foodsToAvoid && aiDietPlan.foodsToAvoid?.length > 0 && (
                         <Grid item xs={12} md={visibleSections.recommendedFoods ? 6 : 12}>
-                          <Box className="print-heading-box" sx={{ bgcolor: "#000000 !important", color: "#FFFFFF !important", px: 1.2, py: 0.5, borderRadius: 1, mb: 0.8 }}>
+                          <Box className="print-heading-box" sx={{ bgcolor: "#1B5E20 !important", color: "#FFFFFF !important", px: 1.2, py: 0.5, borderRadius: 1, mb: 0.8 }}>
                             <Typography variant="subtitle1" sx={{ fontWeight: 900, fontSize: "0.9rem", letterSpacing: "0.5px", textTransform: "uppercase", color: "#FFFFFF !important" }}>
                               FOODS TO AVOID OR STRICTLY LIMIT
                             </Typography>
@@ -5767,7 +6048,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                   {/* HYDRATION & HEALTHY HABITS (IF PRESENT / NOT DELETED) */}
                   {(visibleSections.hydration || visibleSections.lifestyle) && (
                     <Box className="print-avoid-break" sx={{ mb: 1.8 }}>
-                      <Box className="print-heading-box" sx={{ bgcolor: "#000000 !important", color: "#FFFFFF !important", px: 1.2, py: 0.5, borderRadius: 1, mb: 0.8 }}>
+                      <Box className="print-heading-box" sx={{ bgcolor: "#1B5E20 !important", color: "#FFFFFF !important", px: 1.2, py: 0.5, borderRadius: 1, mb: 0.8 }}>
                         <Typography variant="subtitle1" sx={{ fontWeight: 900, fontSize: "0.92rem", letterSpacing: "0.5px", textTransform: "uppercase", color: "#FFFFFF !important" }}>
                           HYDRATION &amp; HEALTHY DAILY HABITS
                         </Typography>
@@ -5865,6 +6146,9 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
             </Button>
           </DialogActions>
         </Dialog>
+
+                {/* Full Page Diet Recalculate Loader (matches Diet Prescription styling) */}
+        <DietRecalculateLoader open={isRecalculating} />
 
         {/* Full Page Analysis Loader for Diet Generation */}
         <DietAnalysisLoader
