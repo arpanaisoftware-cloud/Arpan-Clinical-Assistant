@@ -162,7 +162,7 @@ export const populateMissingElectrolytes = (limits?: Record<string, any>): Recor
 export const ALL_ELECTROLYTE_CONFIG: ElectrolyteItemConfig[] = [
   {
     key: "sodium",
-    label: "🧂 Salt (Sodium Na)",
+    label: "Salt (Sodium Na)",
     placeholder: "e.g. Strict Salt Control (< 1,500 mg/day) - Avoid pickles, papad",
     badge: "Strict Salt Control",
     statusColor: "#FFB703",
@@ -172,7 +172,7 @@ export const ALL_ELECTROLYTE_CONFIG: ElectrolyteItemConfig[] = [
   },
   {
     key: "potassium",
-    label: "🍌 Potassium (K)",
+    label: "Potassium (K)",
     placeholder: "e.g. Balanced Potassium - Moderate coconut water & bottle gourd",
     badge: "Heart & Kidney Balance",
     statusColor: "#00B4D8",
@@ -182,7 +182,7 @@ export const ALL_ELECTROLYTE_CONFIG: ElectrolyteItemConfig[] = [
   },
   {
     key: "phosphorus",
-    label: "⚡ Phosphorus (P)",
+    label: "Phosphorus (P)",
     placeholder: "e.g. Kidney-Safe Phosphorus - Light yellow dals, avoid processed snacks",
     badge: "Kidney Safe",
     statusColor: "#6C5CE7",
@@ -192,7 +192,7 @@ export const ALL_ELECTROLYTE_CONFIG: ElectrolyteItemConfig[] = [
   },
   {
     key: "calcium",
-    label: "🥛 Calcium (Ca)",
+    label: "Calcium (Ca)",
     placeholder: "e.g. Strong Bones Calcium - 1 bowl curd and 1 glass skimmed milk",
     badge: "Strong Bones",
     statusColor: "#00C9A7",
@@ -202,7 +202,7 @@ export const ALL_ELECTROLYTE_CONFIG: ElectrolyteItemConfig[] = [
   },
   {
     key: "magnesium",
-    label: "🥑 Magnesium (Mg)",
+    label: "Magnesium (Mg)",
     placeholder: "e.g. Relaxing Magnesium - Pumpkin seeds, almonds & spinach",
     badge: "Muscle & Nerve Calm",
     statusColor: "#10B981",
@@ -212,7 +212,7 @@ export const ALL_ELECTROLYTE_CONFIG: ElectrolyteItemConfig[] = [
   },
   {
     key: "iron",
-    label: "🩸 Iron (Fe)",
+    label: "Iron (Fe)",
     placeholder: "e.g. Haemoglobin Booster - Steamed palak dal, roasted chana & amla",
     badge: "Haemoglobin & Blood",
     statusColor: "#EF4444",
@@ -222,7 +222,7 @@ export const ALL_ELECTROLYTE_CONFIG: ElectrolyteItemConfig[] = [
   },
   {
     key: "vitaminD",
-    label: "☀️ Vitamin D",
+    label: "Vitamin D",
     placeholder: "e.g. Sunlight & Bone Vitamin D - 15 mins morning sun, fortified dairy",
     badge: "Sunlight & Immunity",
     statusColor: "#F59E0B",
@@ -232,7 +232,7 @@ export const ALL_ELECTROLYTE_CONFIG: ElectrolyteItemConfig[] = [
   },
   {
     key: "vitaminB12",
-    label: "🧬 Vitamin B12",
+    label: "Vitamin B12",
     placeholder: "e.g. Nerve & Energy B12 - Paneer, curd, fortified foods or supplement",
     badge: "Nerve & Energy",
     statusColor: "#8B5CF6",
@@ -242,7 +242,7 @@ export const ALL_ELECTROLYTE_CONFIG: ElectrolyteItemConfig[] = [
   },
   {
     key: "uricAcid",
-    label: "🧪 Uric Acid Watch",
+    label: "Uric Acid Watch",
     placeholder: "e.g. Purine & Uric Acid Control - Drink 2.5-3L water, avoid sugary sodas",
     badge: "Joint & Kidney Safety",
     statusColor: "#EC4899",
@@ -252,7 +252,7 @@ export const ALL_ELECTROLYTE_CONFIG: ElectrolyteItemConfig[] = [
   },
   {
     key: "hypothyroidism",
-    label: "🦋 Hypothyroidism",
+    label: "Hypothyroidism",
     placeholder: "e.g. Thyroid-Friendly Diet — Selenium-rich foods, limit raw goitrogens, iodized salt",
     badge: "Thyroid Support",
     statusColor: "#0EA5E9",
@@ -262,7 +262,7 @@ export const ALL_ELECTROLYTE_CONFIG: ElectrolyteItemConfig[] = [
   },
   {
     key: "hyperthyroidism",
-    label: "⚡ Hyperthyroidism",
+    label: "Hyperthyroidism",
     placeholder: "e.g. Calorie-Dense Diet — High protein, calcium-rich foods, avoid excess iodine",
     badge: "Thyroid Calm",
     statusColor: "#F97316",
@@ -4140,8 +4140,19 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                       >
                         <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap" gap={1}>
                           <Stack direction="row" alignItems="center" spacing={1}>
-                            <Box sx={{ bgcolor: "rgba(0, 201, 167, 0.15)", p: 0.8, borderRadius: 1.5 }}>
-                              <CheckCircle sx={{ color: "#00C9A7" }} />
+                            <Box
+                              sx={{
+                                width: 40,
+                                height: 40,
+                                borderRadius: "50%",
+                                bgcolor: "rgba(0, 201, 167, 0.15)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0
+                              }}
+                            >
+                              <CheckCircle sx={{ color: "#00C9A7", fontSize: 22 }} />
                             </Box>
                             <Box>
                               <Typography variant="subtitle1" sx={{ fontWeight: 900, color: "#00C9A7" }}>
@@ -4223,8 +4234,19 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                       >
                         <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap" gap={1}>
                           <Stack direction="row" alignItems="center" spacing={1}>
-                            <Box sx={{ bgcolor: "rgba(255, 77, 109, 0.15)", p: 0.8, borderRadius: 1.5 }}>
-                              <Warning sx={{ color: "#FF4D6D" }} />
+                            <Box
+                              sx={{
+                                width: 40,
+                                height: 40,
+                                borderRadius: "50%",
+                                bgcolor: "rgba(255, 77, 109, 0.15)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0
+                              }}
+                            >
+                              <Warning sx={{ color: "#FF4D6D", fontSize: 22 }} />
                             </Box>
                             <Box>
                               <Typography variant="subtitle1" sx={{ fontWeight: 900, color: "#FF4D6D" }}>
@@ -4530,8 +4552,19 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
             }}
           >
             <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0, flex: 1 }}>
-              <Box sx={{ bgcolor: "rgba(108,92,231,0.15)", p: 0.8, borderRadius: 1.5, flexShrink: 0 }}>
-                <Edit sx={{ color: "#6C5CE7" }} />
+              <Box
+                sx={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: "50%",
+                  bgcolor: "rgba(108,92,231,0.15)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0
+                }}
+              >
+                <Edit sx={{ color: "#6C5CE7", fontSize: 20 }} />
               </Box>
               <Box sx={{ minWidth: 0 }}>
                 <Typography variant="h6" sx={{ fontWeight: 900, fontSize: { xs: "1rem", sm: "1.2rem" }, lineHeight: 1.3 }}>
@@ -4604,7 +4637,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                   borderStyle: "dashed"
                 }}
               >
-                Insert Blank Meal at Beginning (Slot #1)
+                Insert Blank Meal at Beginning (Slot 1)
               </Button>
             </Box>
 
@@ -4616,7 +4649,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                   : (meal.slotType || (MEAL_SLOT_OPTIONS.some((o) => o.value === meal.mealName) ? meal.mealName : "Custom"));
                 const displayTitle = isCustom
                   ? (meal.customMealName?.trim() || meal.mealName?.trim() || "Custom Meal")
-                  : (meal.slotType || meal.mealName || `Meal Slot #${index + 1}`);
+                  : (meal.slotType || meal.mealName || `Meal Slot ${index + 1}`);
 
                 return (
                   <React.Fragment key={index}>
@@ -4632,7 +4665,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                     >
                       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5} flexWrap="wrap" gap={1}>
                         <Chip
-                          label={`Meal Slot #${index + 1}: ${displayTitle}`}
+                          label={`Meal Slot ${index + 1}: ${displayTitle}`}
                           color="secondary"
                           size="small"
                           sx={{ fontWeight: 800, fontSize: "0.75rem" }}
@@ -4698,7 +4731,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                                   py: 0.4
                                 }}
                               >
-                                + Patient Recall
+                                Patient Recall
                               </Button>
                             </Tooltip>
                           ) : (
@@ -4846,7 +4879,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                               handleUpdateTempMeal(index, "portion", extractPortionPreview(val));
                             }}
                             phoneticEnabled={phoneticHinglishEnabled}
-                            helperText="🍛 Enter household portion, Indian food items & ingredients together"
+                          // helperText="🍛 Enter household portion, Indian food items & ingredients together"
                           />
                         </Grid>
                         <Grid item xs={12}>
@@ -4886,7 +4919,7 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
                             }
                           }}
                         >
-                          Insert Blank Meal in Middle (Between Slot #{index + 1} &amp; #{index + 2})
+                          Insert Blank Meal in Middle (Between Slot {index + 1} &amp; {index + 2})
                         </Button>
                       </Box>
                     )}
@@ -4997,8 +5030,19 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
             }}
           >
             <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0, flex: 1 }}>
-              <Box sx={{ bgcolor: "rgba(0,201,167,0.15)", p: 0.8, borderRadius: 1.5, flexShrink: 0 }}>
-                <Edit sx={{ color: "#00C9A7" }} />
+              <Box
+                sx={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: "50%",
+                  bgcolor: "rgba(0,201,167,0.15)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0
+                }}
+              >
+                <Edit sx={{ color: "#00C9A7", fontSize: 20 }} />
               </Box>
               <Box sx={{ minWidth: 0 }}>
                 <Typography variant="h6" sx={{ fontWeight: 900, fontSize: { xs: "1rem", sm: "1.2rem" }, lineHeight: 1.3 }}>
@@ -5098,8 +5142,19 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
             }}
           >
             <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0, flex: 1 }}>
-              <Box sx={{ bgcolor: "rgba(255,77,109,0.15)", p: 0.8, borderRadius: 1.5, flexShrink: 0 }}>
-                <Warning sx={{ color: "#FF4D6D" }} />
+              <Box
+                sx={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: "50%",
+                  bgcolor: "rgba(255,77,109,0.15)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0
+                }}
+              >
+                <Warning sx={{ color: "#FF4D6D", fontSize: 20 }} />
               </Box>
               <Box sx={{ minWidth: 0 }}>
                 <Typography variant="h6" sx={{ fontWeight: 900, fontSize: { xs: "1rem", sm: "1.2rem" }, lineHeight: 1.3 }}>
@@ -5208,8 +5263,19 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
             }}
           >
             <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0, flex: 1 }}>
-              <Box sx={{ bgcolor: "rgba(255,183,3,0.15)", p: 0.8, borderRadius: 1.5, flexShrink: 0 }}>
-                <MonitorHeart sx={{ color: "#FFB703" }} />
+              <Box
+                sx={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: "50%",
+                  bgcolor: "rgba(255,183,3,0.15)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0
+                }}
+              >
+                <MonitorHeart sx={{ color: "#FFB703", fontSize: 20 }} />
               </Box>
               <Box sx={{ minWidth: 0 }}>
                 <Typography variant="h6" sx={{ fontWeight: 900, fontSize: { xs: "0.95rem", sm: "1.15rem" }, lineHeight: 1.3 }}>
@@ -5398,8 +5464,19 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
             }}
           >
             <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0, flex: 1 }}>
-              <Box sx={{ bgcolor: "rgba(0,201,167,0.15)", p: 0.8, borderRadius: 1.5, flexShrink: 0 }}>
-                <CheckCircle sx={{ color: "#00C9A7" }} />
+              <Box
+                sx={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: "50%",
+                  bgcolor: "rgba(0,201,167,0.15)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0
+                }}
+              >
+                <CheckCircle sx={{ color: "#00C9A7", fontSize: 20 }} />
               </Box>
               <Box sx={{ minWidth: 0 }}>
                 <Typography variant="h6" sx={{ fontWeight: 900, fontSize: { xs: "1rem", sm: "1.2rem" }, lineHeight: 1.3 }}>
@@ -5511,8 +5588,19 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
             }}
           >
             <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0, flex: 1 }}>
-              <Box sx={{ bgcolor: "rgba(255,77,109,0.15)", p: 0.8, borderRadius: 1.5, flexShrink: 0 }}>
-                <Warning sx={{ color: "#FF4D6D" }} />
+              <Box
+                sx={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: "50%",
+                  bgcolor: "rgba(255,77,109,0.15)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0
+                }}
+              >
+                <Warning sx={{ color: "#FF4D6D", fontSize: 20 }} />
               </Box>
               <Box sx={{ minWidth: 0 }}>
                 <Typography variant="h6" sx={{ fontWeight: 900, fontSize: { xs: "1rem", sm: "1.2rem" }, lineHeight: 1.3 }}>
@@ -5624,8 +5712,19 @@ export default function DietsModule({ patientName = "", patientAge = "", patient
             }}
           >
             <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0, flex: 1 }}>
-              <Box sx={{ bgcolor: "rgba(108,92,231,0.15)", p: 0.8, borderRadius: 1.5, flexShrink: 0 }}>
-                <FitnessCenter sx={{ color: "#6C5CE7" }} />
+              <Box
+                sx={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: "50%",
+                  bgcolor: "rgba(108,92,231,0.15)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0
+                }}
+              >
+                <FitnessCenter sx={{ color: "#6C5CE7", fontSize: 20 }} />
               </Box>
               <Box sx={{ minWidth: 0 }}>
                 <Typography variant="h6" sx={{ fontWeight: 900, fontSize: { xs: "1rem", sm: "1.2rem" }, lineHeight: 1.3 }}>

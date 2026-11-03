@@ -265,7 +265,7 @@ export default function HistoryTable({
                 Recent Patient Prescription Analysis History
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Paginated MongoDB archive ({rowsPerPage} records/page) &bull; Max 2000 latest consultations retained automatically.
+                {rowsPerPage} records/page &bull; Max 2000 latest consultations retained automatically.
               </Typography>
             </Box>
           </Stack>
@@ -485,8 +485,8 @@ export default function HistoryTable({
                       {loading
                         ? 'Loading prescription analysis records...'
                         : debouncedSearch
-                        ? `No prescription records found matching "${debouncedSearch}".`
-                        : 'No prescription analysis records found in MongoDB.'}
+                          ? `No prescription records found matching "${debouncedSearch}".`
+                          : 'No prescription analysis records found in MongoDB.'}
                     </Typography>
                   </TableCell>
                 </TableRow>

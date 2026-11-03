@@ -549,7 +549,7 @@ export default function StaffManagementModule({
           {isMaxUsersReached && (
             <Box sx={{ p: 2, mb: 3, borderRadius: 1, bgcolor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
               <Typography variant="body2" sx={{ color: '#EF4444', fontWeight: 800 }}>
-                Note: Maximum limit of 5 users reached. You cannot add any more staff members or doctors.
+                Note: Maximum limit of 6 users reached. You cannot add any more staff members or doctors.
               </Typography>
             </Box>
           )}
